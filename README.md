@@ -23,11 +23,11 @@ Add a `.env` file in the root directory with the following content:
 
 ```env
 # Database
-DATABASE_URL="postgresql://postgres:mysecretpassword@localhost:5432/postgres"
+DATABASE_URL=""
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="7BzK+Flmt+PZq+NsmLSMLdPZ8WYoJ8v3A7VtdNFBH6Y="
+NEXTAUTH_SECRET=""
 
 # App
 NODE_ENV="development"
