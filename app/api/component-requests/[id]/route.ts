@@ -46,8 +46,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           },
         },
       })
-    } else if (data.status === "RETURNED" && currentRequest.status === "COLLECTED") {
-      // Increase available quantity when returned
+    } else if (data.status === "RETURNED" && currentRequest.status === "PENDING_RETURN") {
+      // Increase available quantity when faculty confirms return
       await prisma.labComponent.update({
         where: { id: currentRequest.componentId },
         data: {
