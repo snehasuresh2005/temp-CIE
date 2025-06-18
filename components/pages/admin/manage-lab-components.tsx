@@ -24,7 +24,7 @@ interface LabComponent {
   name: string
   description: string
   category: string
-  quantity: number
+  totalQuantity: number
   availableQuantity: number
   location: string
   specifications: string
@@ -42,10 +42,12 @@ export function ManageLabComponents() {
     name: "",
     description: "",
     category: "",
-    quantity: 1,
+    totalQuantity: 1,
     location: "",
     specifications: "",
   })
+
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   useEffect(() => {
     fetchComponents()
@@ -86,6 +88,27 @@ export function ManageLabComponents() {
       return
     }
 
+    let imageUrl = undefined
+    if (imageFile) {
+      const formData = new FormData()
+      formData.append('image', imageFile)
+      const uploadRes = await fetch('/api/lab-components/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (uploadRes.ok) {
+        const data = await uploadRes.json()
+        imageUrl = data.imageUrl
+      } else {
+        toast({
+          title: "Error",
+          description: "Image upload failed",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     try {
       const response = await fetch("/api/lab-components", {
         method: "POST",
@@ -94,7 +117,8 @@ export function ManageLabComponents() {
         },
         body: JSON.stringify({
           ...newComponent,
-          availableQuantity: newComponent.quantity,
+          availableQuantity: newComponent.totalQuantity,
+          imageUrl,
         }),
       })
 
@@ -105,7 +129,7 @@ export function ManageLabComponents() {
           name: "",
           description: "",
           category: "",
-          quantity: 1,
+          totalQuantity: 1,
           location: "",
           specifications: "",
         })
@@ -232,13 +256,13 @@ export function ManageLabComponents() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="quantity">Quantity</Label>
+                  <Label htmlFor="quantity">Total Quantity</Label>
                   <Input
                     id="quantity"
                     type="number"
-                    value={newComponent.quantity}
+                    value={newComponent.totalQuantity}
                     onChange={(e) =>
-                      setNewComponent((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))
+                      setNewComponent((prev) => ({ ...prev, totalQuantity: Number.parseInt(e.target.value) }))
                     }
                     min="1"
                   />
@@ -275,6 +299,15 @@ export function ManageLabComponents() {
                     value={newComponent.specifications}
                     onChange={(e) => setNewComponent((prev) => ({ ...prev, specifications: e.target.value }))}
                     placeholder="Technical specifications"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="image">Component Image</Label>
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={e => setImageFile(e.target.files?.[0] || null)}
                   />
                 </div>
               </div>
@@ -319,19 +352,31 @@ export function ManageLabComponents() {
                     </CardTitle>
                     <CardDescription>{component.category}</CardDescription>
                   </div>
-                  <Badge className={getAvailabilityColor(component.availableQuantity, component.quantity)}>
-                    {getAvailabilityText(component.availableQuantity, component.quantity)}
+                  <Badge className={getAvailabilityColor(component.availableQuantity, component.totalQuantity)}>
+                    {getAvailabilityText(component.availableQuantity, component.totalQuantity)}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">{component.description}</p>
+                  <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={component.imageUrl || "/placeholder.jpg"}
+                      alt={component.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.jpg"
+                      }}
+                    />
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 line-clamp-2">{component.description}</p>
+                  <div className="text-xs text-gray-500">Location: {component.location}</div>
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
-                      <p className="font-medium">{component.quantity}</p>
+                      <p className="font-medium">{component.totalQuantity}</p>
                     </div>
                     <div>
                       <Label className="text-xs font-medium text-gray-500">Available</Label>
@@ -340,27 +385,20 @@ export function ManageLabComponents() {
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Location</Label>
-                    <p className="text-sm text-gray-600">{component.location}</p>
+                    <Label className="text-sm font-medium">Specifications</Label>
+                    <p className="text-sm text-gray-600">{component.specifications}</p>
                   </div>
-
-                  {component.specifications && (
-                    <div>
-                      <Label className="text-sm font-medium">Specifications</Label>
-                      <p className="text-sm text-gray-600">{component.specifications}</p>
-                    </div>
-                  )}
 
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full"
                       style={{
-                        width: `${(component.availableQuantity / component.quantity) * 100}%`,
+                        width: `${(component.availableQuantity / component.totalQuantity) * 100}%`,
                       }}
                     />
                   </div>
                   <div className="text-xs text-gray-500 text-center">
-                    {Math.round((component.availableQuantity / component.quantity) * 100)}% Available
+                    {Math.round((component.availableQuantity / component.totalQuantity) * 100)}% Available
                   </div>
 
                   <div className="flex justify-end space-x-2">
