@@ -29,13 +29,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const data = await request.json()
+    const data = await req.json()
 
     // Get current user session (you'll need to implement this based on your auth)
-    // For now, we'll use a placeholder student ID
-    const studentId = "student_profile1" // This should come from the authenticated user
+    // For now, we'll get the first available student
+    const students = await prisma.student.findMany({ take: 1 })
+    if (students.length === 0) {
+      return NextResponse.json({ error: "No students found in database" }, { status: 400 })
+    }
+    const studentId = students[0].id
 
     // Check if component exists and has enough quantity
     const component = await prisma.labComponent.findUnique({
@@ -56,9 +60,10 @@ export async function POST(request: NextRequest) {
         studentId: studentId,
         componentId: data.componentId,
         quantity: data.quantity,
-        expectedReturnDate: new Date(data.expectedReturnDate),
-        notes: data.notes,
+        expectedReturnDate: new Date(data.requiredDate || data.expectedReturnDate),
+        notes: data.purpose || data.notes,
         status: "PENDING",
+        facultyId: data.facultyId || null,
       },
       include: {
         student: {

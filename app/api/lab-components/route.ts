@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
         name: data.name,
         description: data.description,
         imageUrl: data.imageUrl || "/placeholder.svg?height=200&width=200",
-        totalQuantity: data.totalQuantity,
-        availableQuantity: data.availableQuantity,
+        totalQuantity: data.totalQuantity || data.quantity,
+        availableQuantity: data.availableQuantity || data.quantity,
         category: data.category,
       },
     })
