@@ -25,10 +25,11 @@ interface LabComponent {
   name: string
   description: string
   category: string
-  quantity: number
+  totalQuantity: number
   availableQuantity: number
   location: string
   specifications: string
+  imageUrl: string | null
 }
 
 interface ComponentRequest {
@@ -43,6 +44,7 @@ interface ComponentRequest {
   approvedDate: string | null
   returnDate: string | null
   notes: string | null
+  facultyId: string | null
 }
 
 export function LabComponentsRequest() {
@@ -61,8 +63,12 @@ export function LabComponentsRequest() {
     requiredDate: "",
   })
 
+  const [facultyList, setFacultyList] = useState<any[]>([])
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("")
+
   useEffect(() => {
     fetchData()
+    fetchFaculty()
   }, [])
 
   const fetchData = async () => {
@@ -90,6 +96,16 @@ export function LabComponentsRequest() {
     }
   }
 
+  const fetchFaculty = async () => {
+    try {
+      const res = await fetch('/api/faculty')
+      const data = await res.json()
+      setFacultyList(data.faculty || [])
+    } catch (e) {
+      // ignore
+    }
+  }
+
   const filteredComponents = components.filter(
     (component) =>
       component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -98,7 +114,7 @@ export function LabComponentsRequest() {
   )
 
   const handleRequestComponent = async () => {
-    if (!selectedComponent || !newRequest.purpose || !newRequest.requiredDate) {
+    if (!selectedComponent || !newRequest.purpose || !newRequest.requiredDate || !selectedFacultyId) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -127,6 +143,7 @@ export function LabComponentsRequest() {
           quantity: newRequest.quantity,
           purpose: newRequest.purpose,
           requiredDate: newRequest.requiredDate,
+          facultyId: selectedFacultyId,
         }),
       })
 
@@ -169,6 +186,45 @@ export function LabComponentsRequest() {
     }
   }
 
+  const handleReturnComponent = async (requestId: string) => {
+    if (!confirm("Are you sure you want to mark this component as returned? This will be reviewed by faculty.")) return
+
+    try {
+      const response = await fetch(`/api/component-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "PENDING_RETURN",
+          returnDate: new Date().toISOString(),
+        }),
+      })
+
+      if (response.ok) {
+        // Refresh data to update the UI
+        fetchData()
+        toast({
+          title: "Return Request Submitted",
+          description: "Your return request has been submitted and is pending faculty approval",
+        })
+      } else {
+        throw new Error("Failed to submit return request")
+      }
+    } catch (error) {
+      console.error("Error submitting return request:", error)
+      toast({
+        title: "Error",
+        description: "Failed to submit return request",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const isOverdue = (expectedReturnDate: string) => {
+    return new Date(expectedReturnDate) < new Date()
+  }
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
@@ -177,8 +233,12 @@ export function LabComponentsRequest() {
         return "bg-green-100 text-green-800"
       case "rejected":
         return "bg-red-100 text-red-800"
-      case "returned":
+      case "collected":
         return "bg-blue-100 text-blue-800"
+      case "pending_return":
+        return "bg-orange-100 text-orange-800"
+      case "returned":
+        return "bg-purple-100 text-purple-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -192,8 +252,12 @@ export function LabComponentsRequest() {
         return <CheckCircle className="h-4 w-4" />
       case "rejected":
         return <XCircle className="h-4 w-4" />
-      case "returned":
+      case "collected":
         return <Package className="h-4 w-4" />
+      case "pending_return":
+        return <Clock className="h-4 w-4" />
+      case "returned":
+        return <CheckCircle className="h-4 w-4" />
       default:
         return <Clock className="h-4 w-4" />
     }
@@ -264,23 +328,36 @@ export function LabComponentsRequest() {
                         </CardTitle>
                         <CardDescription>{component.category}</CardDescription>
                       </div>
-                      <Badge className={getAvailabilityColor(component.availableQuantity, component.quantity)}>
+                      <Badge className={getAvailabilityColor(component.availableQuantity, component.totalQuantity)}>
                         {component.availableQuantity > 0 ? "Available" : "Out of Stock"}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <p className="text-sm text-gray-600">{component.description}</p>
+                      {/* Component Image */}
+                      <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={component.imageUrl || "/placeholder.jpg"}
+                          alt={component.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.jpg"
+                          }}
+                        />
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 line-clamp-2">{component.description}</p>
+                      <div className="text-xs text-gray-500">Location: {component.location}</div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <Label className="text-xs font-medium text-gray-500">Available</Label>
-                          <p className="font-medium">{component.availableQuantity}</p>
+                          <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
+                          <p className="font-medium">{component.totalQuantity}</p>
                         </div>
                         <div>
-                          <Label className="text-xs font-medium text-gray-500">Location</Label>
-                          <p className="font-medium">{component.location}</p>
+                          <Label className="text-xs font-medium text-gray-500">Available</Label>
+                          <p className="font-medium">{component.availableQuantity}</p>
                         </div>
                       </div>
 
@@ -295,9 +372,12 @@ export function LabComponentsRequest() {
                         <div
                           className="bg-blue-600 h-2 rounded-full"
                           style={{
-                            width: `${(component.availableQuantity / component.quantity) * 100}%`,
+                            width: `${(component.availableQuantity / component.totalQuantity) * 100}%`,
                           }}
                         />
+                      </div>
+                      <div className="text-xs text-gray-500 text-center">
+                        {Math.round((component.availableQuantity / component.totalQuantity) * 100)}% Available
                       </div>
 
                       <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
@@ -317,6 +397,20 @@ export function LabComponentsRequest() {
                             <DialogDescription>Request {selectedComponent?.name} for your project</DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="faculty">Faculty *</Label>
+                              <select
+                                id="faculty"
+                                className="w-full border rounded px-2 py-1"
+                                value={selectedFacultyId}
+                                onChange={e => setSelectedFacultyId(e.target.value)}
+                              >
+                                <option value="">Select Faculty</option>
+                                {facultyList.map(fac => (
+                                  <option key={fac.id} value={fac.id}>{fac.user?.name || fac.id}</option>
+                                ))}
+                              </select>
+                            </div>
                             <div>
                               <Label htmlFor="quantity">Quantity *</Label>
                               <Input
@@ -403,8 +497,18 @@ export function LabComponentsRequest() {
                             Requested: {new Date(request.requestDate).toLocaleDateString()}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Required by: {new Date(request.requiredDate).toLocaleDateString()}
+                            Return by: {new Date(request.requiredDate).toLocaleDateString()}
                           </p>
+                          {request.facultyId && (
+                            <p className="text-xs text-blue-600">
+                              Faculty: {facultyList.find(f => f.id === request.facultyId)?.user?.name || 'Unknown'}
+                            </p>
+                          )}
+                          {request.status === "COLLECTED" && isOverdue(request.requiredDate) && (
+                            <p className="text-xs text-red-600 font-medium">
+                              ⚠️ OVERDUE - Please return immediately
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="text-right space-y-2">
@@ -414,26 +518,37 @@ export function LabComponentsRequest() {
                             <span>{request.status}</span>
                           </div>
                         </Badge>
-                        {request.approvedDate && (
-                          <p className="text-xs text-gray-500">
-                            Approved: {new Date(request.approvedDate).toLocaleDateString()}
+                        {request.status === "APPROVED" && (
+                          <p className="text-xs text-green-600">
+                            ✓ Ready for collection
                           </p>
                         )}
-                        {request.returnDate && (
-                          <p className="text-xs text-gray-500">
-                            Returned: {new Date(request.returnDate).toLocaleDateString()}
+                        {request.status === "COLLECTED" && (
+                          <p className="text-xs text-blue-600">
+                            📦 In your possession
+                          </p>
+                        )}
+                        {request.status === "RETURNED" && (
+                          <p className="text-xs text-gray-600">
+                            ✅ Successfully returned
+                          </p>
+                        )}
+                        {request.status === "REJECTED" && (
+                          <p className="text-xs text-red-600">
+                            ❌ Request rejected
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className="mt-4">
-                      <Label className="text-sm font-medium">Purpose:</Label>
-                      <p className="text-sm text-gray-600">{request.purpose}</p>
-                      {request.notes && (
-                        <div className="mt-2">
-                          <Label className="text-sm font-medium">Notes:</Label>
-                          <p className="text-sm text-gray-600">{request.notes}</p>
-                        </div>
+                    <div className="mt-4 flex justify-end space-x-2">
+                      {request.status === "COLLECTED" && (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleReturnComponent(request.id)}
+                          className={isOverdue(request.requiredDate) ? "border-red-500 text-red-600 hover:bg-red-50" : ""}
+                        >
+                          {isOverdue(request.requiredDate) ? "⚠️ Return Overdue Item" : "Return Component"}
+                        </Button>
                       )}
                     </div>
                   </CardContent>
