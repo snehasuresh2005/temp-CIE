@@ -77,16 +77,25 @@ export function LoginForm() {
             <p className="font-semibold mb-2">Test Credentials:</p>
             <div className="space-y-1">
               <p>
-                <strong>Admin:</strong> admin@cie.edu
+                <strong>Admin:</strong> admin@college.edu
               </p>
               <p>
-                <strong>Faculty:</strong> faculty@cie.edu
+                <strong>Faculty (Dr. Rajesh Kumar):</strong> rajesh.kumar@college.edu
               </p>
               <p>
-                <strong>Student:</strong> student@cie.edu
+                <strong>Faculty (Prof. Priya Sharma):</strong> priya.sharma@college.edu
               </p>
               <p>
-                <strong>Password:</strong> password123
+                <strong>Faculty (Dr. Amit Patel):</strong> amit.patel@college.edu
+              </p>
+              <p>
+                <strong>Student (Student 001):</strong> student001@college.edu
+              </p>
+              <p>
+                <strong>Student (Student 002):</strong> student002@college.edu
+              </p>
+              <p>
+                <strong>Password for all:</strong> password123
               </p>
             </div>
           </div>
