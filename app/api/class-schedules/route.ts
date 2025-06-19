@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     // For now, we'll allow access without authentication
     // In a real app, you'd implement proper session checking here
-    
+
     const searchParams = request.nextUrl.searchParams
     const facultyId = searchParams.get("facultyId")
     const courseId = searchParams.get("courseId")
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
   try {
     // For now, we'll allow access without authentication
     // In a real app, you'd implement proper session checking here
-    
+
     const data = await request.json()
 
     const schedule = await prisma.classSchedule.create({

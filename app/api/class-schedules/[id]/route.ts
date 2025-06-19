@@ -5,7 +5,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     // For now, we'll allow access without authentication
     // In a real app, you'd implement proper session checking here
-    
+
     const schedule = await prisma.classSchedule.findUnique({
       where: { id: params.id },
       include: {
@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     // For now, we'll allow access without authentication
     // In a real app, you'd implement proper session checking here
-    
+
     const data = await request.json()
 
     const schedule = await prisma.classSchedule.update({
@@ -68,7 +68,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     // For now, we'll allow access without authentication
     // In a real app, you'd implement proper session checking here
-    
+
     await prisma.classSchedule.delete({
       where: { id: params.id },
     })

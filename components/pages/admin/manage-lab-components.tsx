@@ -384,10 +384,10 @@ export function ManageLabComponents() {
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-sm font-medium">Specifications</Label>
-                    <p className="text-sm text-gray-600">{component.specifications}</p>
-                  </div>
+                    <div>
+                      <Label className="text-sm font-medium">Specifications</Label>
+                      <p className="text-sm text-gray-600">{component.specifications}</p>
+                    </div>
 
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div

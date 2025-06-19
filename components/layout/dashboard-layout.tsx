@@ -132,12 +132,8 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
             </Button>
           </div>
 
-          {/* Desktop sidebar toggle */}
-          <div className="hidden lg:block">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
-              <Menu className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Spacer for desktop to push profile to the right */}
+          <div className="hidden lg:block flex-1" />
 
           {/* Profile dropdown */}
           <DropdownMenu>

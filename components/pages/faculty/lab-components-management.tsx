@@ -530,54 +530,54 @@ export function LabComponentsManagement() {
             ) : (
               activeRequests.map((request) => (
                 <Card key={request.id} className={isOverdue(request.expectedReturnDate) ? "border-red-200 bg-red-50" : ""}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Avatar>
-                          <AvatarFallback>
-                            {request.student.user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">{request.student.user.name}</h3>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Avatar>
+                        <AvatarFallback>
+                          {request.student.user.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">{request.student.user.name}</h3>
                           <p className="text-sm text-gray-600">{request.student.user.email}</p>
                           <p className="text-sm font-medium text-blue-600">
                             Component: {request.component?.name || `ID: ${request.componentId}`} × {request.quantity}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Expected Return: {new Date(request.expectedReturnDate).toLocaleDateString()}
+                        </p>
+                        {request.collectionDate && (
+                          <p className="text-xs text-green-600">
+                            Collected: {new Date(request.collectionDate).toLocaleDateString()}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            Expected Return: {new Date(request.expectedReturnDate).toLocaleDateString()}
-                          </p>
-                          {request.collectionDate && (
-                            <p className="text-xs text-green-600">
-                              Collected: {new Date(request.collectionDate).toLocaleDateString()}
-                            </p>
-                          )}
+                        )}
                           {isOverdue(request.expectedReturnDate) && (
                             <p className="text-xs text-red-600 font-medium">
                               ⚠️ OVERDUE - {getOverdueDays(request.expectedReturnDate)} days late
                             </p>
                           )}
-                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getStatusColor(request.status)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(request.status)}
-                            <span className="capitalize">{request.status.toLowerCase()}</span>
-                          </div>
-                        </Badge>
-                        {request.status === "APPROVED" && (
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getStatusColor(request.status)}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(request.status)}
+                          <span className="capitalize">{request.status.toLowerCase()}</span>
+                        </div>
+                      </Badge>
+                      {request.status === "APPROVED" && (
                           <div className="text-right">
                             <p className="text-xs text-blue-600 mb-1">✓ Approved - Ready for collection</p>
-                            <Button size="sm" onClick={() => handleMarkCollected(request.id)}>
-                              Mark Collected
-                            </Button>
+                        <Button size="sm" onClick={() => handleMarkCollected(request.id)}>
+                          Mark Collected
+                        </Button>
                           </div>
-                        )}
-                        {request.status === "COLLECTED" && (
+                      )}
+                      {request.status === "COLLECTED" && (
                           <div className="text-right">
                             <p className="text-xs text-green-600 mb-1">
                               📦 Collected - Student has the component
@@ -591,16 +591,16 @@ export function LabComponentsManagement() {
                               variant={isOverdue(request.expectedReturnDate) ? "destructive" : "default"}
                             >
                               {isOverdue(request.expectedReturnDate) ? "Mark Returned (Overdue)" : "Mark Returned"}
-                            </Button>
+                        </Button>
                           </div>
-                        )}
+                      )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))
             )}
-          </div>
+                  </div>
         </TabsContent>
 
         <TabsContent value="pending-returns" className="space-y-4">
@@ -679,27 +679,27 @@ export function LabComponentsManagement() {
               </Card>
             ) : (
               completedRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Avatar>
-                          <AvatarFallback>
-                            {request.student.user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">{request.student.user.name}</h3>
+              <Card key={request.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Avatar>
+                        <AvatarFallback>
+                          {request.student.user.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">{request.student.user.name}</h3>
                           <p className="text-sm text-gray-600">{request.student.user.email}</p>
                           <p className="text-sm font-medium text-blue-600">
                             Component: {request.component?.name || `ID: ${request.componentId}`} × {request.quantity}
-                          </p>
-                          <p className="text-xs text-gray-500">
+                        </p>
+                        <p className="text-xs text-gray-500">
                             Requested: {new Date(request.requestDate).toLocaleDateString()} | Expected Return: {new Date(request.expectedReturnDate).toLocaleDateString()}
-                          </p>
+                        </p>
                           {request.status === "RETURNED" && request.returnDate && (
                             <p className="text-xs text-green-600">
                               Returned: {new Date(request.returnDate).toLocaleDateString()}
@@ -713,17 +713,17 @@ export function LabComponentsManagement() {
                           {request.status === "REJECTED" && (
                             <p className="text-xs text-red-600">
                               Rejected: {new Date(request.requestDate).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
+                          </p>
+                        )}
                       </div>
-                      <Badge className={getStatusColor(request.status)}>
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(request.status)}
-                          <span className="capitalize">{request.status.toLowerCase()}</span>
-                        </div>
-                      </Badge>
                     </div>
+                    <Badge className={getStatusColor(request.status)}>
+                      <div className="flex items-center space-x-1">
+                        {getStatusIcon(request.status)}
+                        <span className="capitalize">{request.status.toLowerCase()}</span>
+                      </div>
+                    </Badge>
+                  </div>
                     {request.facultyNotes && (
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                         <Label className="text-sm font-medium text-gray-700">Faculty Notes:</Label>
@@ -736,8 +736,8 @@ export function LabComponentsManagement() {
                         <p className="text-sm text-blue-600 mt-1">"{request.notes}"</p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                </CardContent>
+              </Card>
               ))
             )}
           </div>
@@ -768,35 +768,35 @@ export function LabComponentsManagement() {
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Available:</span>
-                        <span className="font-medium">{component.availableQuantity}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Total:</span>
-                        <span className="font-medium">{component.totalQuantity}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${
-                            component.availableQuantity === 0
-                              ? "bg-red-500"
-                              : component.availableQuantity < component.totalQuantity * 0.2
-                                ? "bg-yellow-500"
-                                : "bg-green-500"
-                          }`}
-                          style={{
-                            width: `${(component.availableQuantity / component.totalQuantity) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <Badge
-                        variant={component.availableQuantity > 0 ? "default" : "destructive"}
-                        className="w-full justify-center"
-                      >
-                        {component.availableQuantity > 0 ? "Available" : "Out of Stock"}
-                      </Badge>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Available:</span>
+                      <span className="font-medium">{component.availableQuantity}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Total:</span>
+                      <span className="font-medium">{component.totalQuantity}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          component.availableQuantity === 0
+                            ? "bg-red-500"
+                            : component.availableQuantity < component.totalQuantity * 0.2
+                              ? "bg-yellow-500"
+                              : "bg-green-500"
+                        }`}
+                        style={{
+                          width: `${(component.availableQuantity / component.totalQuantity) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <Badge
+                      variant={component.availableQuantity > 0 ? "default" : "destructive"}
+                      className="w-full justify-center"
+                    >
+                      {component.availableQuantity > 0 ? "Available" : "Out of Stock"}
+                    </Badge>
                     </div>
                   </div>
                 </CardContent>
