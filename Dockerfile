@@ -4,6 +4,9 @@ FROM node:18-alpine
 # Install pnpm globally
 RUN npm install -g pnpm
 
+# Install necessary packages for Prisma and health checks
+RUN apk add --no-cache openssl netcat-openbsd
+
 # Set working directory
 WORKDIR /app
 
@@ -22,8 +25,29 @@ RUN pnpm prisma generate
 # Build the application
 RUN pnpm build
 
+# Create startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "Waiting for database to be ready..."' >> /app/start.sh && \
+    echo 'while ! nc -z postgres 5432; do' >> /app/start.sh && \
+    echo '  sleep 1' >> /app/start.sh && \
+    echo 'done' >> /app/start.sh && \
+    echo 'echo "Database is ready!"' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "Running database migrations..."' >> /app/start.sh && \
+    echo 'pnpm prisma migrate deploy' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "Seeding database..."' >> /app/start.sh && \
+    echo 'node --loader ts-node/esm prisma/seed.ts' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "Starting application..."' >> /app/start.sh && \
+    echo 'pnpm start' >> /app/start.sh
+
+# Make the script executable
+RUN chmod +x /app/start.sh
+
 # Expose port
 EXPOSE 3000
 
 # Start the application
-CMD ["pnpm", "start"] 
+CMD ["/app/start.sh"] 
