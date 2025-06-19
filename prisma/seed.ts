@@ -125,6 +125,61 @@ async function main() {
     }
   }
 
+  // Create some sample lab components
+  const labComponents = [
+    {
+      component_name: "Arduino Uno R3",
+      component_description: "Microcontroller board based on the ATmega328P",
+      component_specification: "Operating Voltage: 5V, Input Voltage: 7-12V, Digital I/O Pins: 14, Analog Input Pins: 6",
+      component_quantity: 25,
+      component_tag_id: "ARDUINO-001",
+      component_category: "Microcontrollers",
+      component_location: "Lab A",
+      invoice_number: "INV-2025-001",
+      purchase_value: 2500.00,
+      purchased_from: "Robu.in",
+      purchase_currency: "INR",
+      purchase_date: new Date("2025-01-15"),
+      created_by: "admin@college.edu",
+    },
+    {
+      component_name: "Raspberry Pi 4 Model B",
+      component_description: "Single-board computer with 4GB RAM",
+      component_specification: "Processor: Broadcom BCM2711, RAM: 4GB LPDDR4, Storage: MicroSD card slot",
+      component_quantity: 10,
+      component_tag_id: "RPI-001",
+      component_category: "Single Board Computers",
+      component_location: "Lab B",
+      invoice_number: "INV-2025-002",
+      purchase_value: 4500.00,
+      purchased_from: "Element14",
+      purchase_currency: "INR",
+      purchase_date: new Date("2025-01-20"),
+      created_by: "admin@college.edu",
+    },
+    {
+      component_name: "Breadboard 830 Points",
+      component_description: "Solderless breadboard for prototyping circuits",
+      component_specification: "830 tie points, 2 power rails, 5.5\" x 3.3\" size",
+      component_quantity: 50,
+      component_tag_id: "BB-001",
+      component_category: "Prototyping",
+      component_location: "Storage Room",
+      invoice_number: "INV-2025-003",
+      purchase_value: 150.00,
+      purchased_from: "Amazon",
+      purchase_currency: "INR",
+      purchase_date: new Date("2025-01-25"),
+      created_by: "admin@college.edu",
+    }
+  ];
+
+  for (const component of labComponents) {
+    await prisma.labComponent.create({
+      data: component,
+    });
+  }
+
   console.log('✅ Database seeded successfully!');
   console.log('==================================================');
   console.log('LOGIN CREDENTIALS:');
