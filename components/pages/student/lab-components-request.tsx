@@ -336,11 +336,11 @@ export function LabComponentsRequest() {
                   <CardContent>
                     <div className="space-y-4">
                       {/* Component Image */}
-                      <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                      <div className="w-full h-48 bg-gray-50 rounded-lg overflow-hidden">
                         <img
                           src={component.imageUrl || "/placeholder.jpg"}
                           alt={component.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                           onError={(e) => {
                             e.currentTarget.src = "/placeholder.jpg"
                           }}
