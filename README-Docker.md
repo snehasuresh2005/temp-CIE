@@ -1,187 +1,339 @@
-# CIE Project - Docker Setup
+# CIE Application - Docker Setup
 
-This guide will help your teammates set up the CIE project quickly using Docker.
+This document describes how to run the CIE (College Information Exchange) application using Docker with automatic database seeding.
 
-## Prerequisites
+## 🚀 Quick Start
 
-- Docker Desktop installed on your machine
-- Git
+### Prerequisites
+- Docker
+- Docker Compose
 
-## Quick Start
-
-### 1. Clone the repository
+### 1. Clone the Repository
 ```bash
 git clone <repository-url>
 cd CIE
 ```
 
-### 2. Set up environment variables
-```bash
-# Copy the example environment file
-cp env.example .env
-
-# Edit the .env file with your secure credentials
-nano .env
-```
-
-### 3. Start the application with Docker
-```bash
-# Start the database and run migrations
-docker-compose --profile migrate up -d
-
-# Start the application (in a new terminal)
-docker-compose up -d
-```
-
-### 4. Access the application
-- **Application**: http://localhost:3000 (or your configured APP_PORT)
-- **Database**: localhost:5432 (or your configured POSTGRES_PORT)
-
-## Environment Variables
-
-Create a `.env` file in the project root with the following variables:
-
+### 2. Environment Setup
+Create a `.env` file in the root directory:
 ```bash
 # Database Configuration
-POSTGRES_DB=postgres
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_secure_password_here
-POSTGRES_PORT=5432
+POSTGRES_DB=cie_db
+POSTGRES_USER=cie_user
+POSTGRES_PASSWORD=cie_password
+POSTGRES_PORT=5433
 
 # Application Configuration
-APP_PORT=3000
+APP_PORT=3005
 NODE_ENV=production
+
+# Database URL (auto-generated from above variables)
+DATABASE_URL=postgresql://cie_user:cie_password@postgres:5432/cie_db
+
+# NextAuth Configuration
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3005"
 ```
 
-## Alternative Setup (Step by Step)
+### 3. Choose Your Setup
 
-### Option 1: Full Docker Setup (Recommended)
+#### Option A: Production Mode (Recommended for deployment)
 ```bash
 # Build and start all services
+docker-compose up --build
+
+# Or run in detached mode
 docker-compose up --build -d
-
-# Run migrations (if needed)
-docker-compose --profile migrate up -d
 ```
 
-### Option 2: Development Setup
+**Features:**
+- ✅ Optimized production build
+- ✅ Automatic database seeding
+- ✅ Health checks
+- ❌ No live code editing
+
+#### Option B: Development Mode (Recommended for development)
 ```bash
-# Start only the database
-docker-compose up postgres -d
+# Start development environment with live editing
+docker-compose up --build app-dev postgres
 
-# Install dependencies locally
-pnpm install
-
-# Generate Prisma client
-pnpm prisma generate
-
-# Run migrations
-pnpm prisma migrate deploy
-
-# Start development server
-pnpm dev
+# Or run in detached mode
+docker-compose up --build -d app-dev postgres
 ```
 
-## Useful Commands
+**Features:**
+- ✅ Live code editing (changes reflect immediately)
+- ✅ Hot reload
+- ✅ Automatic database seeding
+- ✅ Development tools and debugging
 
-### View logs
+### 4. Access the Application
+
+- **Production:** http://localhost:3005
+- **Development:** http://localhost:3006
+
+## 🔧 Development Workflow
+
+### For Live Editing:
+1. Start the development environment:
+   ```bash
+   docker-compose up --build app-dev postgres
+   ```
+
+2. Edit your code files locally
+3. Changes will automatically reflect in the browser
+4. The development server runs on http://localhost:3006
+
+### For Production Testing:
+1. Start the production environment:
+   ```bash
+   docker-compose up --build app postgres
+   ```
+
+2. Test the optimized build on http://localhost:3005
+
+## 📊 Default Login Credentials
+
+### Admin
+- **Email:** admin@college.edu
+- **Password:** password123
+
+### Faculty
+- **Dr. Rajesh Kumar:** rajesh.kumar@college.edu
+- **Prof. Priya Sharma:** priya.sharma@college.edu  
+- **Dr. Amit Patel:** amit.patel@college.edu
+- **Password:** password123 (for all)
+
+### Students
+- **Emails:** student001@college.edu to student030@college.edu
+- **Password:** password123 (for all)
+
+## 🛠️ Management Commands
+
+### View Logs
 ```bash
-# View all logs
-docker-compose logs -f
+# All services
+docker-compose logs
 
-# View specific service logs
+# Specific service
+docker-compose logs app-dev
+docker-compose logs postgres
+```
+
+### Stop Services
+```bash
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (resets database)
+docker-compose down -v
+```
+
+### Rebuild After Changes
+```bash
+# Rebuild and restart
+docker-compose up --build
+
+# Rebuild specific service
+docker-compose up --build app-dev
+```
+
+## 🔍 Troubleshooting
+
+### Database Connection Issues
+- Ensure PostgreSQL container is healthy: `docker-compose ps`
+- Check logs: `docker-compose logs postgres`
+
+### Application Issues
+- Check application logs: `docker-compose logs app-dev`
+- Verify environment variables in `.env` file
+
+### Port Conflicts
+- Change ports in `.env` file if 3005/3006 or 5433 are in use
+- Update `NEXTAUTH_URL` accordingly
+
+## 📁 Project Structure
+
+```
+CIE/
+├── app/                    # Next.js application
+├── components/             # React components
+├── prisma/                 # Database schema and migrations
+├── public/                 # Static assets
+├── Dockerfile              # Container configuration
+├── docker-compose.yml      # Multi-container setup
+├── .env                    # Environment variables
+└── README-Docker.md        # This file
+```
+
+## 🚀 Deployment
+
+The production setup is ready for deployment. Simply run:
+```bash
+docker-compose up --build -d
+```
+
+The application will be available on the configured port with automatic database seeding and health monitoring.
+
+## 🔧 What Happens During Startup
+
+The application container automatically performs the following steps:
+
+1. **Wait for Database**: Waits for PostgreSQL to be ready
+2. **Run Migrations**: Applies all Prisma migrations
+3. **Seed Database**: Populates the database with initial data
+4. **Start Application**: Launches the Next.js application
+
+## 📊 Seeded Data
+
+The database is automatically populated with:
+
+- **1 Admin user**
+- **3 Faculty users** (Computer Science, IT, Electronics departments)
+- **30 Student users** (10 students in each of 3 sections)
+- **3 Sample Lab Components** (Arduino, Raspberry Pi, Breadboard)
+- **Complete database schema** with all tables and relationships
+
+## 🐳 Docker Services
+
+### 1. PostgreSQL Database (`cie_postgres`)
+- **Image**: postgres:15-alpine
+- **Port**: 5432
+- **Volume**: postgres_data (persistent storage)
+- **Health Check**: Monitors database connectivity
+
+### 2. Next.js Application (`cie_app`)
+- **Build**: Custom Dockerfile
+- **Port**: 3000
+- **Features**:
+  - Automatic database migration
+  - Automatic seeding
+  - Health monitoring
+  - Volume mounting for public files and lab images
+
+## 🔍 Health Monitoring
+
+The application includes health checks:
+
+- **Database**: Monitored via `pg_isready`
+- **Application**: HTTP health check at `/api/health`
+- **Container**: Automatic restart on failure
+
+## 📁 Volume Mounts
+
+- **Public Files**: `./public` → `/app/public`
+- **Lab Images**: `./lab-images` → `/app/public/lab-images`
+- **Database**: `postgres_data` (Docker managed volume)
+
+## 🛠️ Development Commands
+
+```bash
+# View logs
 docker-compose logs -f app
-docker-compose logs -f postgres
-```
 
-### Stop services
-```bash
+# Access database
+docker-compose exec postgres psql -U cie_user -d cie_db
+
+# Run commands in app container
+docker-compose exec app sh
+
 # Stop all services
 docker-compose down
 
 # Stop and remove volumes (⚠️ This will delete all data)
 docker-compose down -v
+
+# Rebuild and restart
+docker-compose up --build --force-recreate
 ```
 
-### Reset database
+## 🔄 Reseeding the Database
+
+To reseed the database with fresh data:
+
 ```bash
-# Stop services and remove volumes
+# Stop the application
+docker-compose stop app
+
+# Remove the database volume
 docker-compose down -v
 
 # Start fresh
-docker-compose up --build -d
+docker-compose up --build
 ```
 
-### Access database
-```bash
-# Connect to PostgreSQL container
-docker exec -it cie_postgres psql -U postgres -d postgres
+## 🚨 Troubleshooting
 
-# Run Prisma commands
-docker exec -it cie_app pnpm prisma studio
-```
+### Common Issues
 
-## Security Considerations
+1. **Port Already in Use**
+   ```bash
+   # Check what's using the port
+   lsof -i :3000
+   lsof -i :5432
+   
+   # Change ports in .env file
+   APP_PORT=3001
+   POSTGRES_PORT=5433
+   ```
 
-⚠️ **Important Security Notes:**
+2. **Database Connection Issues**
+   ```bash
+   # Check database logs
+   docker-compose logs postgres
+   
+   # Check application logs
+   docker-compose logs app
+   ```
 
-1. **Never commit `.env` files** - They contain sensitive credentials
-2. **Use strong passwords** - Change the default password in production
-3. **Limit database access** - Only expose necessary ports
-4. **Regular updates** - Keep Docker images updated for security patches
+3. **Permission Issues**
+   ```bash
+   # Fix file permissions
+   sudo chown -R $USER:$USER .
+   ```
 
-## Troubleshooting
+4. **Build Failures**
+   ```bash
+   # Clean build
+   docker-compose build --no-cache
+   docker-compose up --build
+   ```
 
-### Port conflicts
-If ports are already in use:
-```bash
-# Check what's using the ports
-lsof -i :3000
-lsof -i :5432
+### Health Check Endpoint
 
-# Modify .env file to use different ports
-POSTGRES_PORT=5433
-APP_PORT=3001
-```
+The application provides a health check endpoint:
+- **URL**: http://localhost:3000/api/health
+- **Response**: JSON with status and database connectivity
 
-### Database connection issues
-```bash
-# Check if PostgreSQL is running
-docker-compose ps
+## 📝 Environment Variables
 
-# Check database logs
-docker-compose logs postgres
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_DB` | `cie_db` | Database name |
+| `POSTGRES_USER` | `cie_user` | Database user |
+| `POSTGRES_PASSWORD` | `cie_password` | Database password |
+| `POSTGRES_PORT` | `5432` | Database port |
+| `APP_PORT` | `3000` | Application port |
+| `NODE_ENV` | `production` | Node.js environment |
 
-# Restart database
-docker-compose restart postgres
-```
+## 🔒 Security Notes
 
-### Prisma issues
-```bash
-# Regenerate Prisma client
-docker exec -it cie_app pnpm prisma generate
+- Change default passwords in production
+- Use strong passwords for database
+- Consider using Docker secrets for sensitive data
+- Restrict database port access in production
 
-# Reset database and run migrations
-docker-compose down -v
-docker-compose --profile migrate up -d
-```
+## 📈 Performance
 
-## Development Workflow
+- **Memory**: ~512MB per container
+- **Storage**: ~2GB for application + database
+- **Startup Time**: ~2-3 minutes (including seeding)
 
-1. **Start services**: `docker-compose up -d`
-2. **Make changes** to your code
-3. **Rebuild**: `docker-compose up --build -d`
-4. **View logs**: `docker-compose logs -f app`
+## 🆘 Support
 
-## Production Deployment
+If you encounter issues:
 
-For production, consider:
-- Using environment-specific docker-compose files
-- Setting up proper secrets management
-- Configuring reverse proxy (nginx)
-- Setting up monitoring and logging
-- Using Docker secrets or external secret management
-
----
-
-**That's it!** Your teammates can now get started with just a few Docker commands. 🚀 
+1. Check the logs: `docker-compose logs`
+2. Verify environment variables
+3. Ensure ports are available
+4. Check Docker and Docker Compose versions 

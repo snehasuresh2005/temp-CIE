@@ -1,55 +1,84 @@
-# CIE - Next.js + Prisma Starter
+# CIE - College Information Exchange
 
-A boilerplate project using Next.js, Prisma, and PostgreSQL.
+A comprehensive laboratory management system built with Next.js, Prisma, and PostgreSQL.
 
-## 🛠 Setup Instructions
+## 🚀 Quick Start with Docker (Recommended)
+
+### Prerequisites
+- Docker
+- Docker Compose
+
+### One-Command Setup
+```bash
+# Clone the repository
+git clone https://github.com/preeeetham/CIE.git
+cd CIE
+
+# Start with Docker (includes database seeding)
+docker-compose up --build app-dev postgres
+```
+
+Visit: http://localhost:3006
+
+**For detailed Docker instructions, see [README-Docker.md](README-Docker.md)**
+
+## 🛠 Local Development Setup
 
 ### 1. Clone the repository
-
 ```bash
 git clone https://github.com/preeeetham/CIE.git
-cd cie
+cd CIE
 ```
 
 ### 2. Install dependencies
-
 ```bash
 pnpm install
 ```
 
 ### 3. Create `.env` file
-
 Add a `.env` file in the root directory with the following content:
 
 ```env
 # Database
-DATABASE_URL=""
+DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET=""
+NEXTAUTH_SECRET="your-secret-key-here"
 
 # App
 NODE_ENV="development"
 ```
 
 ### 4. Prisma setup
-
 ```bash
 pnpm prisma generate
 pnpm prisma migrate dev --name init
 pnpm prisma db seed
 ```
 
-> **Note:** Make sure `prisma/seed.ts` is configured correctly and that `ts-node` is installed.
-
 ### 5. Run the dev server
-
 ```bash
 pnpm dev
 ```
 
 Visit: http://localhost:3000
+
+## 📊 Default Login Credentials
+
+### Admin
+- **Email:** admin@college.edu
+- **Password:** password123
+
+### Faculty
+- **Dr. Rajesh Kumar:** rajesh.kumar@college.edu
+- **Prof. Priya Sharma:** priya.sharma@college.edu  
+- **Dr. Amit Patel:** amit.patel@college.edu
+- **Password:** password123 (for all)
+
+### Students
+- **Emails:** student001@college.edu to student030@college.edu
+- **Password:** password123 (for all)
 
 ## 📁 Tech Stack
 
@@ -58,12 +87,15 @@ Visit: http://localhost:3000
 - **Prisma** - Database ORM
 - **PostgreSQL** - Database
 - **NextAuth** - Authentication
+- **Tailwind CSS** - Styling
+- **Radix UI** - Component library
 
 ## 🧪 Development Notes
 
-- Ensure PostgreSQL is running locally
-- Use `.env` values suited for your local environment
-- Update the `DATABASE_URL` in `.env` to match your PostgreSQL configuration
+- Ensure PostgreSQL is running locally for manual setup
+- Use Docker for the easiest setup experience
+- The Docker setup includes automatic database seeding
+- Live code editing is available in Docker development mode
 
 ## 📝 License
 
