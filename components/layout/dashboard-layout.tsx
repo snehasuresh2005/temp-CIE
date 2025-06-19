@@ -42,6 +42,58 @@ interface DashboardLayoutProps {
   }>
 }
 
+// Profile data interfaces
+interface BaseProfileData {
+  name: string
+  email: string
+  id: string
+  role: string
+  phone: string
+  joinDate: string
+}
+
+interface AdminProfileData extends BaseProfileData {
+  role: "admin"
+  department: string
+  office: string
+  permissions: string[]
+  workingHours: string
+}
+
+interface FacultyProfileData extends BaseProfileData {
+  role: "faculty"
+  department: string
+  office: string
+  assignedClasses: string[]
+  specialization: string
+  officeHours: string
+}
+
+interface StudentProfileData extends BaseProfileData {
+  role: "student"
+  studentId: string
+  program: string
+  year: string
+  section: string
+  gpa: string
+  advisor: string
+}
+
+type ProfileData = AdminProfileData | FacultyProfileData | StudentProfileData
+
+// Type guards
+function isAdminProfile(data: ProfileData): data is AdminProfileData {
+  return data.role === "admin"
+}
+
+function isFacultyProfile(data: ProfileData): data is FacultyProfileData {
+  return data.role === "faculty"
+}
+
+function isStudentProfile(data: ProfileData): data is StudentProfileData {
+  return data.role === "student"
+}
+
 export function DashboardLayout({ children, currentPage, onPageChange, menuItems }: DashboardLayoutProps) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -64,14 +116,13 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   }
 
   // Hardcoded profile data based on user role
-  const getProfileData = () => {
+  const getProfileData = (): ProfileData | null => {
     if (!user) return null
 
     const baseData = {
       name: user.name,
       email: user.email,
       id: user.id,
-      role: user.role,
       phone: "+1 (555) 123-4567",
       joinDate: "January 2024",
     }
@@ -80,6 +131,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       case "admin":
         return {
           ...baseData,
+          role: "admin" as const,
           department: "Administration",
           office: "Admin Building, Room 101",
           permissions: ["Full System Access", "User Management", "System Configuration"],
@@ -88,6 +140,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       case "faculty":
         return {
           ...baseData,
+          role: "faculty" as const,
           department: "Computer Science",
           office: "Engineering Building, Room 205",
           assignedClasses: ["CS101 - Intro to Programming", "CS201 - Data Structures", "CS301 - Algorithms"],
@@ -97,6 +150,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       case "student":
         return {
           ...baseData,
+          role: "student" as const,
           studentId: "STU2024001",
           program: "Bachelor of Computer Science",
           year: "3rd Year",
@@ -105,7 +159,16 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           advisor: "Dr. John Smith",
         }
       default:
-        return baseData
+        return {
+          ...baseData,
+          role: "student" as const,
+          studentId: "STU2024001",
+          program: "Bachelor of Computer Science",
+          year: "3rd Year",
+          section: "Section A",
+          gpa: "3.85",
+          advisor: "Dr. John Smith",
+        }
     }
   }
 
@@ -195,13 +258,13 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                         {profileData?.role === "student" ? "Student ID" : "User ID"}
                       </p>
                       <p className="text-sm text-gray-900">
-                        {profileData?.role === "student" ? profileData.studentId : profileData?.id}
+                        {isStudentProfile(profileData!) ? profileData.studentId : profileData?.id}
                       </p>
                     </div>
                   </div>
 
                   {/* Role-specific Information */}
-                  {profileData?.role === "admin" && (
+                  {isAdminProfile(profileData!) && (
                     <>
                       <div className="flex items-center space-x-3 px-2">
                         <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
@@ -215,7 +278,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                         <div>
                           <p className="text-xs font-medium text-gray-700">Permissions</p>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {profileData.permissions?.map((permission) => (
+                            {profileData.permissions.map((permission: string) => (
                               <Badge key={permission} variant="outline" className="text-xs">
                                 {permission}
                               </Badge>
@@ -226,7 +289,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                     </>
                   )}
 
-                  {profileData?.role === "faculty" && (
+                  {isFacultyProfile(profileData!) && (
                     <>
                       <div className="flex items-center space-x-3 px-2">
                         <BookOpen className="h-4 w-4 text-gray-500 flex-shrink-0" />
@@ -247,7 +310,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                         <div>
                           <p className="text-xs font-medium text-gray-700">Assigned Classes</p>
                           <div className="space-y-1 mt-1">
-                            {profileData.assignedClasses?.map((className) => (
+                            {profileData.assignedClasses.map((className: string) => (
                               <Badge key={className} variant="outline" className="text-xs block w-fit">
                                 {className}
                               </Badge>
@@ -265,7 +328,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                     </>
                   )}
 
-                  {profileData?.role === "student" && (
+                  {isStudentProfile(profileData!) && (
                     <>
                       <div className="flex items-center space-x-3 px-2">
                         <BookOpen className="h-4 w-4 text-gray-500 flex-shrink-0" />
