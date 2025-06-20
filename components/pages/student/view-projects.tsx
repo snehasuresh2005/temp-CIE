@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock, CalendarDays } from "lucide-react"
+import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -471,125 +471,153 @@ export function ViewProjects() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project: Project) => {
+          // Find the rejected request if any
           const rejectedRequest = (project.project_requests || []).find((r: ProjectRequest) => r.status === "REJECTED")
 
-          let facultyName: string | undefined;
-          let facultyLabel = "Faculty: Unknown";
-
-          if (project.type === 'STUDENT_PROPOSED' && project.project_requests && project.project_requests.length > 0) {
-            const latestRequest = project.project_requests[project.project_requests.length - 1];
-            facultyName = latestRequest.faculty?.user?.name;
-          } 
-          else if (project.type === 'FACULTY_ASSIGNED' && project.accepted_by) {
-            const assignedFaculty = faculty.find(f => f.id === project.accepted_by);
-            facultyName = assignedFaculty?.user?.name;
+          // Faculty display logic
+          let facultyName: string | undefined
+          if (project.project_requests && project.project_requests.length > 0) {
+            const req = project.project_requests[project.project_requests.length - 1]
+            facultyName = req.faculty?.user?.name
+          } else if (project.accepted_by && faculty.length > 0) {
+            const fac = faculty.find(f => f.id === project.accepted_by)
+            facultyName = fac?.user?.name
           }
-          
-          if (facultyName) {
-            switch (project.status) {
-              case 'PENDING':
-                facultyLabel = `Requested to: ${facultyName}`;
-                break;
-              case 'REJECTED':
-                facultyLabel = `Rejected by: ${facultyName}`;
-                break;
-              default: // ONGOING, COMPLETED, etc.
-                facultyLabel = `Accepted by: ${facultyName}`;
-                break;
-            }
-          }
+          if (!facultyName) facultyName = "Unknown"
+          let facultyLabel = ""
+          if (project.status === "PENDING") facultyLabel = `Requested to ${facultyName}`
+          else if (project.status === "REJECTED") facultyLabel = `Rejected by ${facultyName}`
+          else facultyLabel = `Accepted by ${facultyName}`
 
           return (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow flex flex-col justify-between">
-              <div>
-                <CardHeader>
-                  <CardTitle className="flex items-start space-x-2">
-                    <FolderOpen className="h-5 w-5 mt-1" />
-                    <span>{project.name}</span>
-                  </CardTitle>
-                  <CardDescription>
-                    {courses.find(c => c.id === project.course_id)?.code} - {courses.find(c => c.id === project.course_id)?.name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col space-y-2">
-                    <Badge className={`${getStatusColor(project)} self-start`}>
-                      {getStatusText(project)}
-                    </Badge>
-                    <p className="text-sm text-gray-600">{facultyLabel}</p>
+            <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+              <CardHeader className="pb-4">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="flex items-center space-x-2 text-lg">
+                      <FolderOpen className="h-5 w-5 text-blue-600" />
+                      <span className="line-clamp-2">{project.name}</span>
+                    </CardTitle>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <CardDescription className="text-sm font-medium text-gray-700">
+                      {courses.find(c => c.id === project.course_id)?.code} - {courses.find(c => c.id === project.course_id)?.name}
+                    </CardDescription>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600 font-medium">{facultyLabel}</span>
+                      <Badge className={`${getStatusColor(project)} text-xs font-medium`}>
+                        {getStatusText(project)}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  {/* Project Description */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Description</Label>
+                    <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{project.description}</p>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-gray-600">{project.description}</p>
-                  </div>
-
-                  {project.components_needed && project.components_needed.length > 0 && (
-                    <div>
-                      <Label className="text-sm font-medium">Required Components:</Label>
-                      <div className="flex flex-wrap gap-2 mt-1">
+                  {/* Required Components */}
+                  {project.components_needed.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Required Components</Label>
+                      <div className="flex flex-wrap gap-1.5">
                         {project.components_needed.map((componentId: string) => {
-                          const component = labComponents.find(c => c.id === componentId);
+                          const component = labComponents.find(c => c.id === componentId)
                           return (
-                            <Badge key={componentId} variant="outline" className="text-xs">
+                            <Badge key={componentId} variant="outline" className="text-xs px-2 py-1 bg-gray-50">
                               {component?.component_name}
                             </Badge>
-                          );
+                          )
                         })}
                       </div>
                     </div>
                   )}
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span>Due: {new Date(project.expected_completion_date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <span>{getDaysUntilDue(project.expected_completion_date)} days left</span>
+
+                  {/* Due Date and Time Left */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Timeline</Label>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <div>
+                          <div className="font-medium text-gray-900">Due Date</div>
+                          <div className="text-xs text-gray-600">{new Date(project.expected_completion_date).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <div>
+                          <div className="font-medium text-gray-900">Time Left</div>
+                          <div className="text-xs text-gray-600">{getDaysUntilDue(project.expected_completion_date)} days</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Action Button */}
                   {project.status === "ONGOING" && !project.submission && (
-                    <Button
-                      onClick={() => {
-                        setSelectedProject(project)
-                        setIsSubmitDialogOpen(true)
-                      }}
-                      className="w-full"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Submit Project
-                    </Button>
+                    <div className="pt-2">
+                      <Button
+                        onClick={() => {
+                          setSelectedProject(project)
+                          setIsSubmitDialogOpen(true)
+                        }}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Submit Project
+                      </Button>
+                    </div>
                   )}
 
+                  {/* Submission Status */}
                   {project.submission && (
-                    <div className="text-sm">
-                      <div className="font-medium">Submission Status: {project.submission.status}</div>
-                      {project.submission.marks !== null && (
-                        <div>Marks: {project.submission.marks}/100</div>
-                      )}
-                      {project.submission.feedback && (
-                        <div className="text-gray-600 mt-1">{project.submission.feedback}</div>
-                      )}
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submission Status</Label>
+                      <div className="p-3 bg-blue-50 rounded-md">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-blue-900">{project.submission.status}</span>
+                          {project.submission.marks !== null && (
+                            <Badge variant="secondary" className="text-xs">
+                              {project.submission.marks}/100
+                            </Badge>
+                          )}
+                        </div>
+                        {project.submission.feedback && (
+                          <p className="text-xs text-blue-700 mt-1">{project.submission.feedback}</p>
+                        )}
+                      </div>
                     </div>
                   )}
 
+                  {/* Rejection Notice */}
                   {project.status === "REJECTED" && rejectedRequest && rejectedRequest.faculty && rejectedRequest.faculty.user && rejectedRequest.faculty.user.name && (
-                    <div className="mt-4 text-sm text-red-600 font-medium">
-                      Rejected by {rejectedRequest.faculty.user.name}
+                    <div className="pt-2 border-t border-gray-100">
+                      <div className="p-3 bg-red-50 rounded-md">
+                        <div className="text-sm font-medium text-red-900">
+                          Rejected by {rejectedRequest.faculty.user.name}
+                        </div>
+                      </div>
                     </div>
                   )}
-                </CardContent>
-              </div>
-              <CardFooter className="flex flex-col items-start space-y-2 pt-4">
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  <CalendarDays className="h-4 w-4" />
-                  <span>Created: {new Date(project.created_date).toLocaleDateString()}</span>
+
+                  {/* Creation Date */}
+                  <div className="pt-2 border-t border-gray-100">
+                    <div className="text-xs text-gray-500 text-center">
+                      Created: {new Date(project.created_date).toLocaleDateString()}
+                    </div>
+                  </div>
                 </div>
-              </CardFooter>
+              </CardContent>
             </Card>
           )
         })}

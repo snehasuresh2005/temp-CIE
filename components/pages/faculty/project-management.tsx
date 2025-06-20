@@ -463,32 +463,61 @@ export function ProjectManagement() {
         </TabsList>
 
         <TabsContent value="projects" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <Card key={project.id}>
-                <CardHeader>
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FolderOpen className="h-5 w-5" />
-                      <span>{project.name}</span>
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {courses.find(c => c.id === project.course_id)?.code} - {courses.find(c => c.id === project.course_id)?.name}
-                    </CardDescription>
-                    <Badge className={getStatusColor(project.status)} style={{marginTop: 8}}>
-                      {project.status}
-                    </Badge>
+              <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+                <CardHeader className="pb-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="flex items-center space-x-2 text-lg">
+                        <FolderOpen className="h-5 w-5 text-blue-600" />
+                        <span className="line-clamp-2">{project.name}</span>
+                      </CardTitle>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <CardDescription className="text-sm font-medium text-gray-700">
+                        {courses.find(c => c.id === project.course_id)?.code} - {courses.find(c => c.id === project.course_id)?.name}
+                      </CardDescription>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 mb-3">{project.description}</p>
-                  <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <Calendar className="mr-1 h-4 w-4" />
-                    Due: {new Date(project.expected_completion_date).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Users className="mr-1 h-4 w-4" />
-                    {project.submissions?.length || 0} submissions
+                
+                <CardContent className="pt-0">
+                  <div className="space-y-4">
+                    {/* Project Description */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Description</Label>
+                      <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{project.description}</p>
+                    </div>
+
+                    {/* Timeline and Submissions */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Project Info</Label>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <div>
+                            <div className="font-medium text-gray-900">Due Date</div>
+                            <div className="text-xs text-gray-600">{new Date(project.expected_completion_date).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
+                          <Users className="h-4 w-4 text-gray-500" />
+                          <div>
+                            <div className="font-medium text-gray-900">Submissions</div>
+                            <div className="text-xs text-gray-600">{project.submissions?.length || 0} received</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Creation Date */}
+                    <div className="pt-2 border-t border-gray-100">
+                      <div className="text-xs text-gray-500 text-center">
+                        Created: {new Date(project.created_date).toLocaleDateString()}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -499,58 +528,86 @@ export function ProjectManagement() {
         <TabsContent value="requests" className="space-y-4">
           <div className="space-y-4">
             {projectRequests.map((request) => (
-              <Card key={request.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">{request.project.name}</CardTitle>
-                      <CardDescription>
+              <Card key={request.id} className="hover:shadow-lg transition-shadow duration-200">
+                <CardHeader className="pb-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg line-clamp-2">{request.project.name}</CardTitle>
+                      <Badge className={getRequestStatusColor(request.status)}>
+                        {request.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <CardDescription className="text-sm font-medium text-gray-700">
                         Request from {request.student.user.name} ({request.student.user.email})
                       </CardDescription>
                     </div>
-                    <Badge className={getRequestStatusColor(request.status)}>
-                      {request.status}
-                    </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 mb-3">{request.project.description}</p>
-                  {request.student_notes && (
-                    <div className="mb-3">
-                      <Label className="text-sm font-medium">Student Notes:</Label>
-                      <p className="text-sm text-gray-600">{request.student_notes}</p>
+                
+                <CardContent className="pt-0">
+                  <div className="space-y-4">
+                    {/* Project Description */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Project Description</Label>
+                      <p className="text-sm text-gray-600 leading-relaxed">{request.project.description}</p>
                     </div>
-                  )}
-                  <div className="flex items-center text-sm text-gray-500 mb-3">
-                    <Calendar className="mr-1 h-4 w-4" />
-                    Requested: {new Date(request.request_date).toLocaleDateString()}
+
+                    {/* Student Notes */}
+                    {request.student_notes && (
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Student Notes</Label>
+                        <div className="p-3 bg-blue-50 rounded-md">
+                          <p className="text-sm text-blue-900">{request.student_notes}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Request Date */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Request Details</Label>
+                      <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <div>
+                          <div className="font-medium text-gray-900">Requested Date</div>
+                          <div className="text-xs text-gray-600">{new Date(request.request_date).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    {request.status === "PENDING" && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveRequest(request.id, "APPROVED")}
+                            className="bg-green-600 hover:bg-green-700 flex-1"
+                          >
+                            <CheckCircle className="mr-1 h-4 w-4" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleApproveRequest(request.id, "REJECTED")}
+                            className="flex-1"
+                          >
+                            <XCircle className="mr-1 h-4 w-4" />
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {request.status === "PENDING" && (
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleApproveRequest(request.id, "APPROVED")}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="mr-1 h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleApproveRequest(request.id, "REJECTED")}
-                      >
-                        <XCircle className="mr-1 h-4 w-4" />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             ))}
             {projectRequests.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No project requests found.
+              <div className="text-center py-12 text-gray-500">
+                <div className="text-lg font-medium mb-2">No project requests found</div>
+                <p className="text-sm">Students will appear here when they request project approvals.</p>
               </div>
             )}
           </div>
@@ -559,71 +616,100 @@ export function ProjectManagement() {
         <TabsContent value="submissions" className="space-y-4">
           <div className="space-y-4">
             {submissions.map((submission) => (
-              <Card key={submission.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
+              <Card key={submission.id} className="hover:shadow-lg transition-shadow duration-200">
+                <CardHeader className="pb-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
                       <CardTitle className="text-lg">Submission by {submission.student.user.name}</CardTitle>
-                      <CardDescription>
+                      <Badge className={getSubmissionStatusColor(submission.status)}>
+                        {submission.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <CardDescription className="text-sm font-medium text-gray-700">
                         Submitted on {new Date(submission.submissionDate).toLocaleDateString()}
                       </CardDescription>
                     </div>
-                    <Badge className={getSubmissionStatusColor(submission.status)}>
-                      {submission.status}
-                    </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 mb-3">{submission.content}</p>
-                  {submission.status === "SUBMITTED" && (
+                
+                <CardContent className="pt-0">
+                  <div className="space-y-4">
+                    {/* Submission Content */}
                     <div className="space-y-2">
-                      <Label htmlFor={`marks-${submission.id}`}>Marks</Label>
-                      <Input
-                        id={`marks-${submission.id}`}
-                        type="number"
-                        min="0"
-                        max="100"
-                        placeholder="Enter marks"
-                        defaultValue={submission.marks || 0}
-                        onChange={(e) => {
-                          const marks = parseInt(e.target.value)
-                          const feedback = submission.feedback || ""
-                          handleGradeSubmission(submission.id, marks, feedback)
-                        }}
-                      />
-                      <Label htmlFor={`feedback-${submission.id}`}>Feedback</Label>
-                      <Textarea
-                        id={`feedback-${submission.id}`}
-                        placeholder="Enter feedback"
-                        defaultValue={submission.feedback || ""}
-                        onChange={(e) => {
-                          const marks = submission.marks || 0
-                          const feedback = e.target.value
-                          handleGradeSubmission(submission.id, marks, feedback)
-                        }}
-                      />
-                    </div>
-                  )}
-                  {submission.status === "GRADED" && (
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-sm font-medium">Marks:</Label>
-                        <p className="text-sm">{submission.marks}/100</p>
+                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submission Content</Label>
+                      <div className="p-3 bg-gray-50 rounded-md">
+                        <p className="text-sm text-gray-700 leading-relaxed">{submission.content}</p>
                       </div>
-                      {submission.feedback && (
-                        <div>
-                          <Label className="text-sm font-medium">Feedback:</Label>
-                          <p className="text-sm text-gray-600">{submission.feedback}</p>
-                        </div>
-                      )}
                     </div>
-                  )}
+
+                    {/* Grading Section */}
+                    {submission.status === "SUBMITTED" && (
+                      <div className="space-y-3 pt-2 border-t border-gray-100">
+                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Grade Submission</Label>
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="space-y-2">
+                            <Label htmlFor={`marks-${submission.id}`} className="text-sm font-medium">Marks (0-100)</Label>
+                            <Input
+                              id={`marks-${submission.id}`}
+                              type="number"
+                              min="0"
+                              max="100"
+                              placeholder="Enter marks"
+                              defaultValue={submission.marks || 0}
+                              className="w-full"
+                              onChange={(e) => {
+                                const marks = parseInt(e.target.value)
+                                const feedback = submission.feedback || ""
+                                handleGradeSubmission(submission.id, marks, feedback)
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`feedback-${submission.id}`} className="text-sm font-medium">Feedback</Label>
+                            <Textarea
+                              id={`feedback-${submission.id}`}
+                              placeholder="Enter feedback for the student..."
+                              defaultValue={submission.feedback || ""}
+                              rows={3}
+                              onChange={(e) => {
+                                const marks = submission.marks || 0
+                                const feedback = e.target.value
+                                handleGradeSubmission(submission.id, marks, feedback)
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Graded Results */}
+                    {submission.status === "GRADED" && (
+                      <div className="space-y-3 pt-2 border-t border-gray-100">
+                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Grading Results</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 bg-green-50 rounded-md">
+                            <div className="font-medium text-green-900">Marks</div>
+                            <div className="text-lg font-bold text-green-700">{submission.marks}/100</div>
+                          </div>
+                          {submission.feedback && (
+                            <div className="p-3 bg-blue-50 rounded-md col-span-2">
+                              <div className="font-medium text-blue-900 mb-1">Feedback</div>
+                              <p className="text-sm text-blue-700">{submission.feedback}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
             {submissions.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No submissions found.
+              <div className="text-center py-12 text-gray-500">
+                <div className="text-lg font-medium mb-2">No submissions found</div>
+                <p className="text-sm">Student project submissions will appear here when they submit their work.</p>
               </div>
             )}
           </div>

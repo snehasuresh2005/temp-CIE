@@ -5,8 +5,20 @@ export async function GET() {
   try {
     const projects = await prisma.project.findMany({
       include: {
-        submissions: true,
-        projectRequests: {
+        submissions: {
+          include: {
+            student: {
+              include: {
+                user: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        project_requests: {
           include: {
             student: {
               include: {
@@ -30,7 +42,7 @@ export async function GET() {
         },
       },
       orderBy: {
-        createdDate: "desc",
+        created_date: "desc",
       },
     })
 
@@ -69,16 +81,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    let createdBy = ""
+    let created_by = ""
     let project_data: any = {
       name,
       description: description || "",
-      courseId: course_id,
-      componentsNeeded: components_needed || [],
-      expectedCompletionDate: new Date(expected_completion_date),
+      course_id,
+      components_needed: components_needed || [],
+      expected_completion_date: new Date(expected_completion_date),
       type,
-      createdDate: new Date(),
-      modifiedDate: new Date(),
+      created_date: new Date(),
+      modified_date: new Date(),
     }
 
     if (user.role === "FACULTY") {
@@ -86,9 +98,8 @@ export async function POST(request: NextRequest) {
       if (!user.faculty) {
         return NextResponse.json({ error: "Faculty profile not found" }, { status: 404 })
       }
-      createdBy = user.id
-      project_data.createdBy = createdBy
-      project_data.acceptedBy = user.faculty.id
+      created_by = user.id
+      project_data.created_by = created_by
       project_data.status = "PENDING" // Faculty projects are immediately available
     } else if (user.role === "STUDENT") {
       // Student creating a project proposal
@@ -98,9 +109,9 @@ export async function POST(request: NextRequest) {
       if (!accepted_by) {
         return NextResponse.json({ error: "Faculty must be selected for student projects" }, { status: 400 })
       }
-      createdBy = user.id
-      project_data.createdBy = createdBy
-      project_data.acceptedBy = accepted_by
+      created_by = user.id
+      project_data.created_by = created_by
+      project_data.accepted_by = accepted_by
       project_data.status = "PENDING" // Student projects need approval
       project_data.type = "STUDENT_PROPOSED"
     } else {
@@ -111,7 +122,7 @@ export async function POST(request: NextRequest) {
       data: project_data,
       include: {
         submissions: true,
-        projectRequests: true,
+        project_requests: true,
       },
     })
 
@@ -119,10 +130,10 @@ export async function POST(request: NextRequest) {
     if (user.role === "STUDENT" && accepted_by && user.student) {
       await prisma.projectRequest.create({
         data: {
-          projectId: project.id,
-          studentId: user.student.id,
-          facultyId: accepted_by,
-          requestDate: new Date(),
+          project_id: project.id,
+          student_id: user.student.id,
+          faculty_id: accepted_by,
+          request_date: new Date(),
           status: "PENDING",
         },
       })
