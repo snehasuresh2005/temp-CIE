@@ -34,6 +34,12 @@ interface Project {
   type: string
   submission?: ProjectSubmission
   project_requests?: ProjectRequest[]
+  faculty_creator?: {
+    user: {
+      name: string
+      email: string
+    }
+  }
 }
 
 interface ProjectSubmission {
@@ -478,18 +484,29 @@ export function ViewProjects() {
 
           // Faculty display logic
           let facultyName: string | undefined
-          if (project.project_requests && project.project_requests.length > 0) {
+          if (project.type === "FACULTY_ASSIGNED" && project.faculty_creator) {
+            // Faculty-assigned project - use the faculty creator
+            facultyName = project.faculty_creator.user.name
+          } else if (project.project_requests && project.project_requests.length > 0) {
+            // Student-proposed project - use the faculty from the latest request
             const req = project.project_requests[project.project_requests.length - 1]
             facultyName = req.faculty?.user?.name
-          } else if (project.accepted_by && faculty.length > 0) {
-            const fac = faculty.find(f => f.id === project.accepted_by)
-            facultyName = fac?.user?.name
           }
+          
           if (!facultyName) facultyName = "Unknown"
+          
           let facultyLabel = ""
-          if (project.status === "PENDING") facultyLabel = `Requested to ${facultyName}`
-          else if (project.status === "REJECTED") facultyLabel = `Rejected by ${facultyName}`
-          else facultyLabel = `Accepted by ${facultyName}`
+          if (project.status === "PENDING") {
+            facultyLabel = project.type === "FACULTY_ASSIGNED" 
+              ? `Assigned by ${facultyName}`
+              : `Requested to ${facultyName}`
+          } else if (project.status === "REJECTED") {
+            facultyLabel = `Rejected by ${facultyName}`
+          } else {
+            facultyLabel = project.type === "FACULTY_ASSIGNED"
+              ? `Assigned by ${facultyName}`
+              : `Accepted by ${facultyName}`
+          }
 
           return (
             <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">

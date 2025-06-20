@@ -46,7 +46,39 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ projects })
+    // For faculty-assigned projects, we need to get the faculty information
+    const projectsWithFaculty = await Promise.all(
+      projects.map(async (project) => {
+        if (project.type === "FACULTY_ASSIGNED" && project.created_by) {
+          // Find the faculty who created this project by email
+          const faculty = await prisma.faculty.findFirst({
+            where: {
+              user: {
+                email: project.created_by,
+              },
+            },
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          })
+          
+          if (faculty) {
+            return {
+              ...project,
+              faculty_creator: faculty,
+            }
+          }
+        }
+        return project
+      })
+    )
+
+    return NextResponse.json({ projects: projectsWithFaculty })
   } catch (error) {
     console.error("Error fetching projects:", error)
     return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 })
