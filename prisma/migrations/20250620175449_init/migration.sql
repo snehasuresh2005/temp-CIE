@@ -5,7 +5,7 @@ CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'FACULTY', 'STUDENT');
 CREATE TYPE "CourseStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'COMPLETED');
 
 -- CreateEnum
-CREATE TYPE "ProjectStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'OVERDUE');
+CREATE TYPE "ProjectStatus" AS ENUM ('PENDING', 'ONGOING', 'COMPLETED', 'OVERDUE', 'REJECTED');
 
 -- CreateEnum
 CREATE TYPE "SubmissionStatus" AS ENUM ('SUBMITTED', 'GRADED', 'LATE');
@@ -14,10 +14,16 @@ CREATE TYPE "SubmissionStatus" AS ENUM ('SUBMITTED', 'GRADED', 'LATE');
 CREATE TYPE "AttendanceStatus" AS ENUM ('PRESENT', 'ABSENT', 'LATE');
 
 -- CreateEnum
-CREATE TYPE "RequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'COLLECTED', 'RETURNED', 'OVERDUE');
+CREATE TYPE "RequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'COLLECTED', 'PENDING_RETURN', 'RETURNED', 'OVERDUE');
 
 -- CreateEnum
 CREATE TYPE "LocationType" AS ENUM ('CLASSROOM', 'LABORATORY', 'AUDITORIUM', 'OFFICE', 'LIBRARY');
+
+-- CreateEnum
+CREATE TYPE "ProjectType" AS ENUM ('FACULTY_ASSIGNED', 'STUDENT_PROPOSED');
+
+-- CreateEnum
+CREATE TYPE "ProjectRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -119,16 +125,18 @@ CREATE TABLE "class_schedules" (
 -- CreateTable
 CREATE TABLE "projects" (
     "id" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "courseId" TEXT NOT NULL,
-    "facultyId" TEXT NOT NULL,
-    "section" TEXT NOT NULL,
-    "assignedDate" TIMESTAMP(3) NOT NULL,
-    "dueDate" TIMESTAMP(3) NOT NULL,
-    "maxMarks" INTEGER NOT NULL,
-    "status" "ProjectStatus" NOT NULL DEFAULT 'ACTIVE',
-    "attachments" TEXT[],
+    "project_created_by" TEXT NOT NULL,
+    "project_modified_by" TEXT,
+    "project_created_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "project_modified_date" TIMESTAMP(3) NOT NULL,
+    "project_name" TEXT NOT NULL,
+    "project_components_needed" TEXT[],
+    "project_expected_completion_date" TIMESTAMP(3) NOT NULL,
+    "project_course" TEXT NOT NULL,
+    "project_accepted_by" TEXT,
+    "project_description" TEXT NOT NULL,
+    "project_status" "ProjectStatus" NOT NULL DEFAULT 'PENDING',
+    "project_type" "ProjectType" NOT NULL DEFAULT 'FACULTY_ASSIGNED',
 
     CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
 );
@@ -146,6 +154,22 @@ CREATE TABLE "project_submissions" (
     "status" "SubmissionStatus" NOT NULL DEFAULT 'SUBMITTED',
 
     CONSTRAINT "project_submissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "project_requests" (
+    "id" TEXT NOT NULL,
+    "project_id" TEXT NOT NULL,
+    "student_id" TEXT NOT NULL,
+    "faculty_id" TEXT NOT NULL,
+    "request_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" "ProjectRequestStatus" NOT NULL DEFAULT 'PENDING',
+    "student_notes" TEXT,
+    "faculty_notes" TEXT,
+    "accepted_date" TIMESTAMP(3),
+    "rejected_date" TIMESTAMP(3),
+
+    CONSTRAINT "project_requests_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -173,14 +197,25 @@ CREATE TABLE "student_attendance" (
 -- CreateTable
 CREATE TABLE "lab_components" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "imageUrl" TEXT,
-    "totalQuantity" INTEGER NOT NULL,
-    "availableQuantity" INTEGER NOT NULL,
-    "category" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "component_name" TEXT NOT NULL,
+    "component_description" TEXT NOT NULL,
+    "component_specification" TEXT,
+    "component_quantity" INTEGER NOT NULL,
+    "component_tag_id" TEXT,
+    "component_category" TEXT NOT NULL,
+    "component_location" TEXT NOT NULL,
+    "image_path" TEXT NOT NULL DEFAULT 'lab-images',
+    "front_image_id" TEXT,
+    "back_image_id" TEXT,
+    "invoice_number" TEXT,
+    "purchase_value" DECIMAL(10,2),
+    "purchased_from" TEXT,
+    "purchase_currency" TEXT NOT NULL DEFAULT 'INR',
+    "purchase_date" TIMESTAMP(3),
+    "created_by" TEXT NOT NULL,
+    "created_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modified_date" TIMESTAMP(3) NOT NULL,
+    "modified_by" TEXT,
 
     CONSTRAINT "lab_components_pkey" PRIMARY KEY ("id")
 );
@@ -188,17 +223,17 @@ CREATE TABLE "lab_components" (
 -- CreateTable
 CREATE TABLE "component_requests" (
     "id" TEXT NOT NULL,
-    "studentId" TEXT NOT NULL,
-    "componentId" TEXT NOT NULL,
-    "facultyId" TEXT,
+    "student_id" TEXT NOT NULL,
+    "component_id" TEXT NOT NULL,
+    "faculty_id" TEXT,
     "quantity" INTEGER NOT NULL,
-    "requestDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expectedReturnDate" TIMESTAMP(3) NOT NULL,
-    "collectionDate" TIMESTAMP(3),
-    "returnDate" TIMESTAMP(3),
+    "request_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expected_return_date" TIMESTAMP(3) NOT NULL,
+    "collection_date" TIMESTAMP(3),
+    "return_date" TIMESTAMP(3),
     "status" "RequestStatus" NOT NULL DEFAULT 'PENDING',
     "notes" TEXT,
-    "facultyNotes" TEXT,
+    "faculty_notes" TEXT,
 
     CONSTRAINT "component_requests_pkey" PRIMARY KEY ("id")
 );
@@ -247,7 +282,19 @@ CREATE UNIQUE INDEX "enrollments_studentId_courseId_key" ON "enrollments"("stude
 CREATE UNIQUE INDEX "project_submissions_projectId_studentId_key" ON "project_submissions"("projectId", "studentId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "project_requests_project_id_student_id_key" ON "project_requests"("project_id", "student_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "student_attendance_attendanceRecordId_studentId_key" ON "student_attendance"("attendanceRecordId", "studentId");
+
+-- CreateIndex
+CREATE INDEX "lab_components_component_category_idx" ON "lab_components"("component_category");
+
+-- CreateIndex
+CREATE INDEX "lab_components_component_location_idx" ON "lab_components"("component_location");
+
+-- CreateIndex
+CREATE INDEX "lab_components_created_by_idx" ON "lab_components"("created_by");
 
 -- AddForeignKey
 ALTER TABLE "admins" ADD CONSTRAINT "admins_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -274,16 +321,19 @@ ALTER TABLE "class_schedules" ADD CONSTRAINT "class_schedules_courseId_fkey" FOR
 ALTER TABLE "class_schedules" ADD CONSTRAINT "class_schedules_facultyId_fkey" FOREIGN KEY ("facultyId") REFERENCES "faculty"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "projects" ADD CONSTRAINT "projects_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "courses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "projects" ADD CONSTRAINT "projects_facultyId_fkey" FOREIGN KEY ("facultyId") REFERENCES "faculty"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "project_submissions" ADD CONSTRAINT "project_submissions_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "project_submissions" ADD CONSTRAINT "project_submissions_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "project_requests" ADD CONSTRAINT "project_requests_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "project_requests" ADD CONSTRAINT "project_requests_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "students"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "project_requests" ADD CONSTRAINT "project_requests_faculty_id_fkey" FOREIGN KEY ("faculty_id") REFERENCES "faculty"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "attendance_records" ADD CONSTRAINT "attendance_records_facultyId_fkey" FOREIGN KEY ("facultyId") REFERENCES "faculty"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -295,10 +345,10 @@ ALTER TABLE "student_attendance" ADD CONSTRAINT "student_attendance_attendanceRe
 ALTER TABLE "student_attendance" ADD CONSTRAINT "student_attendance_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "component_requests" ADD CONSTRAINT "component_requests_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "students"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "component_requests" ADD CONSTRAINT "component_requests_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "students"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "component_requests" ADD CONSTRAINT "component_requests_componentId_fkey" FOREIGN KEY ("componentId") REFERENCES "lab_components"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "component_requests" ADD CONSTRAINT "component_requests_component_id_fkey" FOREIGN KEY ("component_id") REFERENCES "lab_components"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "component_requests" ADD CONSTRAINT "component_requests_facultyId_fkey" FOREIGN KEY ("facultyId") REFERENCES "faculty"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "component_requests" ADD CONSTRAINT "component_requests_faculty_id_fkey" FOREIGN KEY ("faculty_id") REFERENCES "faculty"("id") ON DELETE SET NULL ON UPDATE CASCADE;

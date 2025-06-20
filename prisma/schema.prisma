@@ -56,9 +56,9 @@ model Faculty {
   // Relations
   courses            Course[]
   classSchedules     ClassSchedule[]
-  projects           Project[]
   attendanceRecords  AttendanceRecord[]
   componentApprovals ComponentRequest[]
+  project_requests   ProjectRequest[]
 
   @@map("faculty")
 }
@@ -80,6 +80,7 @@ model Student {
   projectSubmissions ProjectSubmission[]
   attendanceRecords  StudentAttendance[]
   componentRequests  ComponentRequest[]
+  project_requests   ProjectRequest[]
 
   @@map("students")
 }
@@ -103,7 +104,6 @@ model Course {
   // Relations
   enrollments    Enrollment[]
   classSchedules ClassSchedule[]
-  projects       Project[]
 
   @@map("courses")
 }
@@ -139,23 +139,23 @@ model ClassSchedule {
 }
 
 model Project {
-  id           String @id @default(cuid())
-  title        String
-  description  String
-  courseId     String
-  facultyId    String
-  section      String
-  assignedDate DateTime
-  dueDate      DateTime
-  maxMarks     Int
-  status       ProjectStatus @default(ACTIVE)
-  attachments  String[]
-
-  course  Course  @relation(fields: [courseId], references: [id])
-  faculty Faculty @relation(fields: [facultyId], references: [id])
+  id                        String   @id @default(cuid())
+  created_by                String
+  modified_by               String?
+  created_date              DateTime @default(now())
+  modified_date             DateTime @updatedAt
+  name                      String
+  components_needed         String[] // Array of component IDs
+  expected_completion_date  DateTime
+  course_id                 String // Course ID
+  accepted_by               String? // Faculty ID (only for student-created projects)
+  description               String
+  status                    ProjectStatus @default(PENDING)
+  type                      ProjectType @default(FACULTY_ASSIGNED) // FACULTY_ASSIGNED or STUDENT_PROPOSED
 
   // Relations
-  submissions ProjectSubmission[]
+  submissions      ProjectSubmission[]
+  project_requests ProjectRequest[]
 
   @@map("projects")
 }
@@ -176,6 +176,26 @@ model ProjectSubmission {
 
   @@unique([projectId, studentId])
   @@map("project_submissions")
+}
+
+model ProjectRequest {
+  id             String   @id @default(cuid())
+  project_id     String
+  student_id     String
+  faculty_id     String
+  request_date   DateTime @default(now())
+  status         ProjectRequestStatus @default(PENDING)
+  student_notes  String?
+  faculty_notes  String?
+  accepted_date  DateTime?
+  rejected_date  DateTime?
+
+  project Project @relation(fields: [project_id], references: [id])
+  student Student @relation(fields: [student_id], references: [id])
+  faculty Faculty @relation(fields: [faculty_id], references: [id])
+
+  @@unique([project_id, student_id])
+  @@map("project_requests")
 }
 
 model AttendanceRecord {
@@ -295,9 +315,11 @@ enum CourseStatus {
 }
 
 enum ProjectStatus {
-  ACTIVE
+  PENDING
+  ONGOING
   COMPLETED
   OVERDUE
+  REJECTED
 }
 
 enum SubmissionStatus {
@@ -328,4 +350,15 @@ enum LocationType {
   AUDITORIUM
   OFFICE
   LIBRARY
+}
+
+enum ProjectType {
+  FACULTY_ASSIGNED
+  STUDENT_PROPOSED
+}
+
+enum ProjectRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
