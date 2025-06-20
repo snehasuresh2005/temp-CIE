@@ -16,26 +16,35 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft } from "lucide-react"
+import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
 
 interface LabComponent {
   id: string
-  name: string
-  description: string
-  category: string
-  totalQuantity: number
-  availableQuantity: number
-  location: string
-  specifications: string
-  imageUrl: string | null
+  component_name: string
+  component_description: string
+  component_specification?: string
+  component_quantity: number
+  component_tag_id?: string
+  component_category: string
+  component_location: string
+  image_path: string
+  front_image_id?: string
+  back_image_id?: string
+  invoice_number?: string
+  purchase_value?: number
+  purchased_from?: string
+  purchase_currency: string
+  purchase_date?: string
+  created_by: string
+  created_date: string
+  modified_date: string
+  modified_by?: string
+  // Computed fields for display
+  imageUrl?: string | null
   backImageUrl?: string | null
-  tagId?: string
-  invoiceNumber?: string
-  purchasedFrom?: string
-  purchasedDate?: string
-  purchasedValue?: number
-  purchasedCurrency?: string
+  availableQuantity?: number
 }
 
 // Utility functions for formatting
@@ -63,21 +72,26 @@ export function ManageLabComponents() {
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [componentToDelete, setComponentToDelete] = useState<LabComponent | null>(null)
+  const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false)
+  const [componentToView, setComponentToView] = useState<LabComponent | null>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const [newComponent, setNewComponent] = useState({
-    name: "",
-    description: "",
-    category: "",
-    totalQuantity: 1,
-    location: "",
-    specifications: "",
-    tagId: "",
-    invoiceNumber: "",
-    purchasedFrom: "",
-    purchasedDate: "",
-    purchasedValue: 0,
-    purchasedCurrency: "INR"
+    component_name: "",
+    component_description: "",
+    component_category: "",
+    component_quantity: 1,
+    component_location: "",
+    component_specification: "",
+    component_tag_id: "",
+    invoice_number: "",
+    purchased_from: "",
+    purchase_date: "",
+    purchase_value: 0,
+    purchase_currency: "INR"
   })
 
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null)
@@ -142,13 +156,13 @@ export function ManageLabComponents() {
 
   const filteredComponents = components.filter(
     (component) =>
-      (component.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (component.category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (component.location?.toLowerCase() || '').includes(searchTerm.toLowerCase()),
+      (component.component_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (component.component_category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (component.component_location?.toLowerCase() || '').includes(searchTerm.toLowerCase()),
   )
 
   const handleAddComponent = async () => {
-    if (!newComponent.name || !newComponent.category || !newComponent.location) {
+    if (!newComponent.component_name || !newComponent.component_category || !newComponent.component_location) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -158,14 +172,14 @@ export function ManageLabComponents() {
     }
 
     // If Tag ID is empty, check for duplicate
-    if (!newComponent.tagId) {
-      const formattedCategory = toTitleCase(newComponent.category)
-      const formattedLocation = formatLocation(newComponent.location)
+    if (!newComponent.component_tag_id) {
+      const formattedCategory = toTitleCase(newComponent.component_category)
+      const formattedLocation = formatLocation(newComponent.component_location)
       const existing = components.find(
         c =>
-          (c.name?.trim().toLowerCase() || '') === (newComponent.name?.trim().toLowerCase() || '') &&
-          (c.category?.trim().toLowerCase() || '') === (formattedCategory?.trim().toLowerCase() || '') &&
-          (c.location?.trim().toLowerCase() || '') === (formattedLocation?.trim().toLowerCase() || '')
+          (c.component_name?.trim().toLowerCase() || '') === (newComponent.component_name?.trim().toLowerCase() || '') &&
+          (c.component_category?.trim().toLowerCase() || '') === (formattedCategory?.trim().toLowerCase() || '') &&
+          (c.component_location?.trim().toLowerCase() || '') === (formattedLocation?.trim().toLowerCase() || '')
       )
       if (existing) {
         if (!window.confirm("This item already exists. The quantity you add will be added to the existing one. Continue?")) {
@@ -175,7 +189,7 @@ export function ManageLabComponents() {
         setComponents(prev =>
           prev.map(c =>
             c.id === existing.id
-              ? { ...c, totalQuantity: c.totalQuantity + newComponent.totalQuantity, availableQuantity: c.availableQuantity + newComponent.totalQuantity }
+              ? { ...c, component_quantity: c.component_quantity + newComponent.component_quantity, availableQuantity: (c.availableQuantity || 0) + newComponent.component_quantity }
               : c
           )
         )
@@ -185,18 +199,18 @@ export function ManageLabComponents() {
         })
         // Reset form
         setNewComponent({
-          name: "",
-          description: "",
-          category: "",
-          totalQuantity: 1,
-          location: "",
-          specifications: "",
-          tagId: "",
-          invoiceNumber: "",
-          purchasedFrom: "",
-          purchasedDate: "",
-          purchasedValue: 0,
-          purchasedCurrency: "INR"
+          component_name: "",
+          component_description: "",
+          component_category: "",
+          component_quantity: 1,
+          component_location: "",
+          component_specification: "",
+          component_tag_id: "",
+          invoice_number: "",
+          purchased_from: "",
+          purchase_date: "",
+          purchase_value: 0,
+          purchase_currency: "INR"
         })
         setFrontImageFile(null)
         setBackImageFile(null)
@@ -220,7 +234,7 @@ export function ManageLabComponents() {
       })
       if (uploadRes.ok) {
         const data = await uploadRes.json()
-        frontImageUrl = data.imageUrl
+        frontImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
       } else {
         toast({
           title: "Error",
@@ -241,7 +255,7 @@ export function ManageLabComponents() {
       })
       if (uploadRes.ok) {
         const data = await uploadRes.json()
-        backImageUrl = data.imageUrl
+        backImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
       } else {
         toast({
           title: "Error",
@@ -253,22 +267,23 @@ export function ManageLabComponents() {
     }
 
     // Format category and location before sending
-    const formattedCategory = toTitleCase(newComponent.category)
-    const formattedLocation = formatLocation(newComponent.location)
+    const formattedCategory = toTitleCase(newComponent.component_category)
+    const formattedLocation = formatLocation(newComponent.component_location)
 
     try {
       const response = await fetch("/api/lab-components", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
         },
         body: JSON.stringify({
           ...newComponent,
-          category: formattedCategory,
-          location: formattedLocation,
-          availableQuantity: newComponent.totalQuantity,
-          imageUrl: frontImageUrl, // For now, use front image as primary
-          backImageUrl: backImageUrl, // Add back image URL
+          component_category: formattedCategory,
+          component_location: formattedLocation,
+          front_image_id: frontImageUrl,
+          back_image_id: backImageUrl,
+          created_by: user?.name || "system-fallback"
         }),
       })
 
@@ -278,18 +293,18 @@ export function ManageLabComponents() {
         
         // Reset form
         setNewComponent({
-          name: "",
-          description: "",
-          category: "",
-          totalQuantity: 1,
-          location: "",
-          specifications: "",
-          tagId: "",
-          invoiceNumber: "",
-          purchasedFrom: "",
-          purchasedDate: "",
-          purchasedValue: 0,
-          purchasedCurrency: "INR"
+          component_name: "",
+          component_description: "",
+          component_category: "",
+          component_quantity: 1,
+          component_location: "",
+          component_specification: "",
+          component_tag_id: "",
+          invoice_number: "",
+          purchased_from: "",
+          purchase_date: "",
+          purchase_value: 0,
+          purchase_currency: "INR"
         })
         setFrontImageFile(null)
         setBackImageFile(null)
@@ -316,8 +331,6 @@ export function ManageLabComponents() {
   }
 
   const handleDeleteComponent = async (componentId: string) => {
-    if (!confirm("Are you sure you want to delete this component?")) return
-
     try {
       const response = await fetch(`/api/lab-components/${componentId}`, {
         method: "DELETE",
@@ -389,7 +402,7 @@ export function ManageLabComponents() {
       })
       if (res.ok) {
         setCategoryOptions((prev) => [...prev, formatted])
-        setNewComponent((prev) => ({ ...prev, category: formatted }))
+        setNewComponent((prev) => ({ ...prev, component_category: formatted }))
         setNewCategory("")
         toast({ title: "Category added!", description: "New category added successfully." })
       } else {
@@ -406,7 +419,7 @@ export function ManageLabComponents() {
     try {
       const formatted = formatLocation(newLocation.trim())
       setLocationOptions((prev) => [...prev, formatted])
-      setNewComponent((prev) => ({ ...prev, location: formatted }))
+      setNewComponent((prev) => ({ ...prev, component_location: formatted }))
       setNewLocation("")
       toast({ title: "Location added!", description: "New location added successfully." })
     } finally {
@@ -415,18 +428,18 @@ export function ManageLabComponents() {
   }
 
   const isFormValid =
-    newComponent.name.trim() &&
-    newComponent.category.trim() &&
-    newComponent.location.trim() &&
-    newComponent.totalQuantity > 0 &&
+    newComponent.component_name.trim() &&
+    newComponent.component_category.trim() &&
+    newComponent.component_location.trim() &&
+    newComponent.component_quantity > 0 &&
     frontImageFile &&
     backImageFile &&
-    newComponent.description.trim()
+    newComponent.component_description.trim()
 
   const handleEditComponent = async () => {
     if (!editingComponent) return
     
-    if (!editingComponent.name || !editingComponent.category || !editingComponent.location) {
+    if (!editingComponent.component_name || !editingComponent.component_category || !editingComponent.component_location) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -435,8 +448,8 @@ export function ManageLabComponents() {
       return
     }
 
-    let frontImageUrl = editingComponent.imageUrl
-    let backImageUrl = editingComponent.backImageUrl
+    let frontImageId = editingComponent.front_image_id
+    let backImageId = editingComponent.back_image_id
 
     // Upload front image if changed
     if (frontImageFile) {
@@ -448,7 +461,7 @@ export function ManageLabComponents() {
       })
       if (uploadRes.ok) {
         const data = await uploadRes.json()
-        frontImageUrl = data.imageUrl
+        frontImageId = data.imageUrl.split('/').pop() // Get file name from URL
       } else {
         toast({
           title: "Error",
@@ -469,7 +482,7 @@ export function ManageLabComponents() {
       })
       if (uploadRes.ok) {
         const data = await uploadRes.json()
-        backImageUrl = data.imageUrl
+        backImageId = data.imageUrl.split('/').pop() // Get file name from URL
       } else {
         toast({
           title: "Error",
@@ -485,12 +498,13 @@ export function ManageLabComponents() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
         },
         body: JSON.stringify({
           ...editingComponent,
-          imageUrl: frontImageUrl,
-          backImageUrl: backImageUrl,
-          modifiedBy: "system", // TODO: Get from auth context
+          front_image_id: frontImageId,
+          back_image_id: backImageId,
+          modified_by: user?.name || "system-fallback",
         }),
       })
 
@@ -565,8 +579,8 @@ export function ManageLabComponents() {
                   <Label htmlFor="name" className="text-sm font-medium">Component Name *</Label>
                   <Input
                     id="name"
-                    value={newComponent.name}
-                    onChange={(e) => setNewComponent((prev) => ({ ...prev, name: e.target.value }))}
+                    value={newComponent.component_name}
+                    onChange={(e) => setNewComponent((prev) => ({ ...prev, component_name: e.target.value }))}
                     placeholder="Arduino Uno R3"
                     className="mt-1"
                   />
@@ -579,8 +593,8 @@ export function ManageLabComponents() {
                     <Input
                       id="quantity"
                       type="number"
-                      value={newComponent.totalQuantity}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, totalQuantity: Number.parseInt(e.target.value) }))}
+                      value={newComponent.component_quantity}
+                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))}
                       min="1"
                       className="mt-1"
                     />
@@ -589,12 +603,12 @@ export function ManageLabComponents() {
                     <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
                     <Select
                       open={showAddLocation || undefined}
-                      value={newComponent.location}
+                      value={newComponent.component_location}
                       onValueChange={(value) => {
                         if (value === '__add_new_location__') {
                           setShowAddLocation(true)
                         } else {
-                          setNewComponent((prev) => ({ ...prev, location: value }))
+                          setNewComponent((prev) => ({ ...prev, component_location: value }))
                           setShowAddLocation(false)
                         }
                       }}
@@ -638,12 +652,12 @@ export function ManageLabComponents() {
                     <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
                     <Select
                       open={showAddCategory || undefined}
-                      value={newComponent.category}
+                      value={newComponent.component_category}
                       onValueChange={(value) => {
                         if (value === '__add_new__') {
                           setShowAddCategory(true)
                         } else {
-                          setNewComponent((prev) => ({ ...prev, category: value }))
+                          setNewComponent((prev) => ({ ...prev, component_category: value }))
                           setShowAddCategory(false)
                         }
                       }}
@@ -687,8 +701,8 @@ export function ManageLabComponents() {
                     <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
                     <Input
                       id="tagId"
-                      value={newComponent.tagId}
-                      onChange={e => setNewComponent((prev) => ({ ...prev, tagId: e.target.value }))}
+                      value={newComponent.component_tag_id}
+                      onChange={e => setNewComponent((prev) => ({ ...prev, component_tag_id: e.target.value }))}
                       placeholder="e.g. 123-XYZ"
                       className="mt-1"
                     />
@@ -761,8 +775,8 @@ export function ManageLabComponents() {
                   </div>
                   <Textarea
                     id="description"
-                    value={newComponent.description}
-                    onChange={(e) => setNewComponent((prev) => ({ ...prev, description: e.target.value }))}
+                    value={newComponent.component_description}
+                    onChange={(e) => setNewComponent((prev) => ({ ...prev, component_description: e.target.value }))}
                     placeholder="Provide a detailed description of the component..."
                     rows={4}
                     className="mt-0"
@@ -774,8 +788,8 @@ export function ManageLabComponents() {
                   <Label htmlFor="specifications" className="text-sm font-medium">Specifications</Label>
                   <Textarea
                     id="specifications"
-                    value={newComponent.specifications}
-                    onChange={(e) => setNewComponent((prev) => ({ ...prev, specifications: e.target.value }))}
+                    value={newComponent.component_specification}
+                    onChange={(e) => setNewComponent((prev) => ({ ...prev, component_specification: e.target.value }))}
                     placeholder="Technical specifications, dimensions, power requirements, etc."
                     rows={3}
                     className="mt-1"
@@ -789,8 +803,8 @@ export function ManageLabComponents() {
                       <Label htmlFor="invoiceNumber" className="text-sm font-medium">Invoice Number</Label>
                       <Input
                         id="invoiceNumber"
-                        value={newComponent.invoiceNumber}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, invoiceNumber: e.target.value }))}
+                        value={newComponent.invoice_number}
+                        onChange={(e) => setNewComponent((prev) => ({ ...prev, invoice_number: e.target.value }))}
                         placeholder="INV-2025-001"
                         className="mt-1"
                       />
@@ -799,8 +813,8 @@ export function ManageLabComponents() {
                       <Label htmlFor="purchasedFrom" className="text-sm font-medium">Purchased From</Label>
                       <Input
                         id="purchasedFrom"
-                        value={newComponent.purchasedFrom}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchasedFrom: e.target.value }))}
+                        value={newComponent.purchased_from}
+                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchased_from: e.target.value }))}
                         placeholder="Vendor/Supplier Name"
                         className="mt-1"
                       />
@@ -813,8 +827,8 @@ export function ManageLabComponents() {
                       <Input
                         id="purchasedDate"
                         type="date"
-                        value={newComponent.purchasedDate}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchasedDate: e.target.value }))}
+                        value={newComponent.purchase_date}
+                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_date: e.target.value }))}
                         className="mt-1"
                       />
                     </div>
@@ -825,8 +839,8 @@ export function ManageLabComponents() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={newComponent.purchasedValue}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchasedValue: Number(e.target.value) }))}
+                        value={newComponent.purchase_value}
+                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_value: Number(e.target.value) }))}
                         placeholder="0.00"
                         className="mt-1"
                       />
@@ -834,8 +848,9 @@ export function ManageLabComponents() {
                     <div>
                       <Label htmlFor="purchasedCurrency" className="text-sm font-medium">Currency</Label>
                       <Select
-                        value={newComponent.purchasedCurrency}
-                        onValueChange={(value) => setNewComponent((prev) => ({ ...prev, purchasedCurrency: value }))}>
+                        value={newComponent.purchase_currency}
+                        onValueChange={(value) => setNewComponent((prev) => ({ ...prev, purchase_currency: value }))}
+                      >
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Select currency" />
                         </SelectTrigger>
@@ -898,11 +913,19 @@ export function ManageLabComponents() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-gray-500" />
-                    <h3 className="text-lg font-semibold">{component.name}</h3>
+                    <h3 className="text-lg font-semibold">{component.component_name}</h3>
                   </div>
-                  <Badge variant={component.availableQuantity > 0 ? "default" : "destructive"}>
-                    {component.availableQuantity > 0 ? "Available" : "Out of Stock"}
-                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setComponentToView(component)
+                      setIsInfoDialogOpen(true)
+                    }}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -918,7 +941,7 @@ export function ManageLabComponents() {
                       >
                         <img
                           src={component.imageUrl || '/placeholder.jpg'}
-                          alt={`Front view of ${component.name}`}
+                          alt={`Front view of ${component.component_name}`}
                           className="w-full h-full object-contain rounded-lg bg-gray-50"
                         />
                       </div>
@@ -932,7 +955,7 @@ export function ManageLabComponents() {
                         >
                           <img
                             src={component.backImageUrl}
-                            alt={`Back view of ${component.name}`}
+                            alt={`Back view of ${component.component_name}`}
                             className="w-full h-full object-contain rounded-lg bg-gray-50"
                           />
                         </div>
@@ -988,31 +1011,31 @@ export function ManageLabComponents() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Total Quantity</p>
-                      <p>{component.totalQuantity}</p>
+                      <p>{component.component_quantity}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Available</p>
-                      <p>{component.availableQuantity}</p>
+                      <p>{component.availableQuantity || 0}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Category</p>
-                      <p>{component.category}</p>
+                      <p>{component.component_category}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Location</p>
-                      <p>{component.location}</p>
+                      <p>{component.component_location}</p>
                     </div>
                   </div>
 
                   <div>
                     <p className="text-sm font-medium text-gray-500">Description</p>
-                    <p className="text-sm text-gray-600 line-clamp-2">{component.description}</p>
+                    <p className="text-sm text-gray-600 line-clamp-2">{component.component_description}</p>
                   </div>
 
-                  {component.specifications && (
+                  {component.component_specification && (
                     <div>
                       <p className="text-sm font-medium text-gray-500">Specifications</p>
-                      <p className="text-sm text-gray-600 line-clamp-2">{component.specifications}</p>
+                      <p className="text-sm text-gray-600 line-clamp-2">{component.component_specification}</p>
                     </div>
                   )}
 
@@ -1038,7 +1061,10 @@ export function ManageLabComponents() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteComponent(component.id)}
+                      onClick={() => {
+                        setComponentToDelete(component)
+                        setIsDeleteDialogOpen(true)
+                      }}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1065,8 +1091,8 @@ export function ManageLabComponents() {
                 <Label htmlFor="edit-name" className="text-sm font-medium">Component Name *</Label>
                 <Input
                   id="edit-name"
-                  value={editingComponent.name}
-                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, name: e.target.value }) : null)}
+                  value={editingComponent.component_name}
+                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_name: e.target.value }) : null)}
                   placeholder="Arduino Uno R3"
                   className="mt-1"
                 />
@@ -1079,8 +1105,8 @@ export function ManageLabComponents() {
                   <Input
                     id="edit-quantity"
                     type="number"
-                    value={editingComponent.totalQuantity}
-                    onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, totalQuantity: Number(e.target.value) }) : null)}
+                    value={editingComponent.component_quantity}
+                    onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_quantity: Number(e.target.value) }) : null)}
                     min="1"
                     className="mt-1"
                   />
@@ -1088,8 +1114,8 @@ export function ManageLabComponents() {
                 <div>
                   <Label htmlFor="edit-location" className="text-sm font-medium">Location *</Label>
                   <Select
-                    value={editingComponent.location}
-                    onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, location: value }) : null)}
+                    value={editingComponent.component_location}
+                    onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, component_location: value }) : null)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select location" />
@@ -1106,8 +1132,8 @@ export function ManageLabComponents() {
                 <div>
                   <Label htmlFor="edit-category" className="text-sm font-medium">Category *</Label>
                   <Select
-                    value={editingComponent.category}
-                    onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, category: value }) : null)}
+                    value={editingComponent.component_category}
+                    onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, component_category: value }) : null)}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select category" />
@@ -1125,8 +1151,8 @@ export function ManageLabComponents() {
                   <Label htmlFor="edit-tagId" className="text-sm font-medium">Tag ID (optional)</Label>
                   <Input
                     id="edit-tagId"
-                    value={editingComponent.tagId || ""}
-                    onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, tagId: e.target.value }) : null)}
+                    value={editingComponent.component_tag_id || ""}
+                    onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_tag_id: e.target.value }) : null)}
                     placeholder="e.g. 123-XYZ"
                     className="mt-1"
                   />
@@ -1189,8 +1215,8 @@ export function ManageLabComponents() {
                 <Label htmlFor="edit-description" className="text-sm font-medium">Description *</Label>
                 <Textarea
                   id="edit-description"
-                  value={editingComponent.description}
-                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, description: e.target.value }) : null)}
+                  value={editingComponent.component_description}
+                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_description: e.target.value }) : null)}
                   placeholder="Provide a detailed description of the component..."
                   rows={4}
                   className="mt-1"
@@ -1199,12 +1225,12 @@ export function ManageLabComponents() {
 
               {/* Specifications */}
               <div>
-                <Label htmlFor="edit-specifications" className="text-sm font-medium">Specifications</Label>
+                <Label htmlFor="edit-specifications" className="text-sm font-medium">Specifications (optional)</Label>
                 <Textarea
                   id="edit-specifications"
-                  value={editingComponent.specifications}
-                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, specifications: e.target.value }) : null)}
-                  placeholder="Technical specifications, dimensions, power requirements, etc."
+                  value={editingComponent.component_specification || ""}
+                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_specification: e.target.value }) : null)}
+                  placeholder="Technical specifications, model number, etc..."
                   rows={3}
                   className="mt-1"
                 />
@@ -1219,8 +1245,8 @@ export function ManageLabComponents() {
                     <Label htmlFor="edit-invoiceNumber" className="text-sm font-medium">Invoice Number</Label>
                     <Input
                       id="edit-invoiceNumber"
-                      value={editingComponent.invoiceNumber || ""}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, invoiceNumber: e.target.value }) : null)}
+                      value={editingComponent.invoice_number || ""}
+                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, invoice_number: e.target.value }) : null)}
                       placeholder="INV-2025-001"
                       className="mt-1"
                     />
@@ -1229,8 +1255,8 @@ export function ManageLabComponents() {
                     <Label htmlFor="edit-purchasedFrom" className="text-sm font-medium">Purchased From</Label>
                     <Input
                       id="edit-purchasedFrom"
-                      value={editingComponent.purchasedFrom || ""}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchasedFrom: e.target.value }) : null)}
+                      value={editingComponent.purchased_from || ""}
+                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchased_from: e.target.value }) : null)}
                       placeholder="Vendor/Supplier Name"
                       className="mt-1"
                     />
@@ -1243,8 +1269,8 @@ export function ManageLabComponents() {
                     <Input
                       id="edit-purchasedDate"
                       type="date"
-                      value={editingComponent.purchasedDate?.split('T')[0] || ""}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchasedDate: e.target.value }) : null)}
+                      value={editingComponent.purchase_date?.split('T')[0] || ""}
+                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_date: e.target.value }) : null)}
                       className="mt-1"
                     />
                   </div>
@@ -1255,8 +1281,8 @@ export function ManageLabComponents() {
                       type="number"
                       min="0"
                       step="0.01"
-                      value={editingComponent.purchasedValue || 0}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchasedValue: Number(e.target.value) }) : null)}
+                      value={editingComponent.purchase_value || 0}
+                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_value: Number(e.target.value) }) : null)}
                       placeholder="0.00"
                       className="mt-1"
                     />
@@ -1264,8 +1290,8 @@ export function ManageLabComponents() {
                   <div>
                     <Label htmlFor="edit-purchasedCurrency" className="text-sm font-medium">Currency</Label>
                     <Select
-                      value={editingComponent.purchasedCurrency || "INR"}
-                      onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, purchasedCurrency: value }) : null)}
+                      value={editingComponent.purchase_currency || "INR"}
+                      onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_currency: value }) : null)}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Select currency" />
@@ -1302,6 +1328,249 @@ export function ManageLabComponents() {
                   className="px-6"
                 >
                   Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete Lab Component
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the lab component and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          {componentToDelete && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium">{componentToDelete.component_name}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Category:</span>
+                    <p className="font-medium">{componentToDelete.component_category}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Location:</span>
+                    <p className="font-medium">{componentToDelete.component_location}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Total Quantity:</span>
+                    <p className="font-medium">{componentToDelete.component_quantity}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Available:</span>
+                    <p className="font-medium">{componentToDelete.availableQuantity || 0}</p>
+                  </div>
+                </div>
+                {componentToDelete.component_description && (
+                  <div>
+                    <span className="text-gray-500 text-sm">Description:</span>
+                    <p className="text-sm mt-1">{componentToDelete.component_description}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteDialogOpen(false)
+                    setComponentToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    await handleDeleteComponent(componentToDelete.id)
+                    setIsDeleteDialogOpen(false)
+                    setComponentToDelete(null)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Component
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Info Dialog */}
+      <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-blue-600" />
+              Component Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed information about the lab component including purchase details and audit trail.
+            </DialogDescription>
+          </DialogHeader>
+          {componentToView && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-medium text-blue-700">Component Name:</span>
+                    <p className="text-blue-900 font-semibold">{componentToView.component_name}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-blue-700">Category:</span>
+                    <p className="text-blue-900">{componentToView.component_category}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-blue-700">Location:</span>
+                    <p className="text-blue-900">{componentToView.component_location}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-blue-700">Tag ID:</span>
+                    <p className="text-blue-900">{componentToView.component_tag_id || "Not assigned"}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-blue-700">Total Quantity:</span>
+                    <p className="text-blue-900 font-semibold">{componentToView.component_quantity}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-blue-700">Available Quantity:</span>
+                    <p className="text-blue-900 font-semibold">{componentToView.availableQuantity || 0}</p>
+                  </div>
+                </div>
+                {componentToView.component_description && (
+                  <div className="mt-4">
+                    <span className="text-sm font-medium text-blue-700">Description:</span>
+                    <p className="text-blue-900 mt-1">{componentToView.component_description}</p>
+                  </div>
+                )}
+                {componentToView.component_specification && (
+                  <div className="mt-4">
+                    <span className="text-sm font-medium text-blue-700">Specifications:</span>
+                    <p className="text-blue-900 mt-1">{componentToView.component_specification}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Purchase Information */}
+              {(componentToView.invoice_number || componentToView.purchased_from || componentToView.purchase_value) && (
+                <div className="bg-green-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center gap-2">
+                    <Receipt className="h-5 w-5" />
+                    Purchase Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {componentToView.invoice_number && (
+                      <div>
+                        <span className="text-sm font-medium text-green-700">Invoice Number:</span>
+                        <p className="text-green-900 font-mono">{componentToView.invoice_number}</p>
+                      </div>
+                    )}
+                    {componentToView.purchased_from && (
+                      <div>
+                        <span className="text-sm font-medium text-green-700">Purchased From:</span>
+                        <p className="text-green-900">{componentToView.purchased_from}</p>
+                      </div>
+                    )}
+                    {componentToView.purchase_date && (
+                      <div>
+                        <span className="text-sm font-medium text-green-700">Purchase Date:</span>
+                        <p className="text-green-900">{new Date(componentToView.purchase_date).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                    {componentToView.purchase_value && (
+                      <div>
+                        <span className="text-sm font-medium text-green-700">Purchase Value:</span>
+                        <p className="text-green-900 font-semibold">
+                          {componentToView.purchase_currency} {componentToView.purchase_value.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Audit Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Audit Trail
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Created By:</span>
+                    <p className="text-gray-900">{componentToView.created_by}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Created Date:</span>
+                    <p className="text-gray-900">{new Date(componentToView.created_date).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Last Modified By:</span>
+                    <p className="text-gray-900">{componentToView.modified_by || "Not modified"}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Last Modified Date:</span>
+                    <p className="text-gray-900">{new Date(componentToView.modified_date).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Images */}
+              {(componentToView.imageUrl || componentToView.backImageUrl) && (
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                    <Image className="h-5 w-5" />
+                    Component Images
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {componentToView.imageUrl && (
+                      <div>
+                        <span className="text-sm font-medium text-purple-700">Front Image:</span>
+                        <img
+                          src={componentToView.imageUrl}
+                          alt="Front view"
+                          className="mt-2 w-full h-48 object-contain rounded-lg bg-white"
+                        />
+                      </div>
+                    )}
+                    {componentToView.backImageUrl && (
+                      <div>
+                        <span className="text-sm font-medium text-purple-700">Back Image:</span>
+                        <img
+                          src={componentToView.backImageUrl}
+                          alt="Back view"
+                          className="mt-2 w-full h-48 object-contain rounded-lg bg-white"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={() => {
+                    setIsInfoDialogOpen(false)
+                    setComponentToView(null)
+                  }}
+                >
+                  Close
                 </Button>
               </div>
             </div>

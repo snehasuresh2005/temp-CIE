@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getUserById } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,17 +23,20 @@ export async function GET(request: NextRequest) {
 
     // Transform the data to match frontend expectations
     const transformedComponents = components.map(component => ({
-      id: component.id,
+      // Add snake_case for the new info dialog
+      ...component,
+
+      // Keep camelCase for existing frontend parts
       name: component.component_name,
       description: component.component_description,
       specifications: component.component_specification,
       totalQuantity: component.component_quantity,
-      availableQuantity: component.component_quantity, // For now, assume all are available
+      availableQuantity: component.component_quantity, // TODO: This needs to be calculated
       category: component.component_category,
       location: component.component_location,
       tagId: component.component_tag_id,
-      imageUrl: component.front_image_id ? `${component.image_path}/${component.front_image_id}` : null,
-      backImageUrl: component.back_image_id ? `${component.image_path}/${component.back_image_id}` : null,
+      imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
+      backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
       invoiceNumber: component.invoice_number,
       purchasedFrom: component.purchased_from,
       purchasedDate: component.purchase_date,
@@ -53,43 +57,42 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     
-    // Extract image IDs from URLs if provided
-    let frontImageId = null
-    let backImageId = null
-    
-    if (data.imageUrl) {
-      const urlParts = data.imageUrl.split('/')
-      frontImageId = urlParts[urlParts.length - 1]
-    }
-    
-    if (data.backImageUrl) {
-      const urlParts = data.backImageUrl.split('/')
-      backImageId = urlParts[urlParts.length - 1]
+    // Get user from header
+    const userId = request.headers.get("x-user-id")
+    let userName = "system"
+    if (userId) {
+      const user = await getUserById(userId)
+      if (user) {
+        userName = user.name
+      }
     }
 
     const component = await prisma.labComponent.create({
       data: {
-        component_name: data.name,
-        component_description: data.description,
-        component_specification: data.specifications,
-        component_quantity: data.totalQuantity || data.quantity,
-        component_tag_id: data.tagId,
-        component_category: data.category,
-        component_location: data.location,
-        front_image_id: frontImageId,
-        back_image_id: backImageId,
-        invoice_number: data.invoiceNumber,
-        purchase_value: data.purchasedValue ? parseFloat(data.purchasedValue) : null,
-        purchased_from: data.purchasedFrom,
-        purchase_currency: data.purchasedCurrency || "INR",
-        purchase_date: data.purchasedDate ? new Date(data.purchasedDate) : null,
-        created_by: data.createdBy || "system", // TODO: Get from auth context
+        component_name: data.component_name,
+        component_description: data.component_description,
+        component_specification: data.component_specification,
+        component_quantity: data.component_quantity,
+        component_tag_id: data.component_tag_id,
+        component_category: data.component_category,
+        component_location: data.component_location,
+        front_image_id: data.front_image_id,
+        back_image_id: data.back_image_id,
+        invoice_number: data.invoice_number,
+        purchase_value: data.purchase_value ? parseFloat(data.purchase_value) : null,
+        purchased_from: data.purchased_from,
+        purchase_currency: data.purchase_currency || "INR",
+        purchase_date: data.purchase_date ? new Date(data.purchase_date) : null,
+        created_by: userName,
       },
     })
 
     // Transform the response to match frontend expectations
     const transformedComponent = {
-      id: component.id,
+      // Add snake_case for the new info dialog
+      ...component,
+
+      // Keep camelCase for existing frontend parts
       name: component.component_name,
       description: component.component_description,
       specifications: component.component_specification,
@@ -98,8 +101,8 @@ export async function POST(request: NextRequest) {
       category: component.component_category,
       location: component.component_location,
       tagId: component.component_tag_id,
-      imageUrl: component.front_image_id ? `${component.image_path}/${component.front_image_id}` : null,
-      backImageUrl: component.back_image_id ? `${component.image_path}/${component.back_image_id}` : null,
+      imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
+      backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
       invoiceNumber: component.invoice_number,
       purchasedFrom: component.purchased_from,
       purchasedDate: component.purchase_date,
