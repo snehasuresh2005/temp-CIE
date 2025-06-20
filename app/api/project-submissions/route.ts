@@ -16,8 +16,9 @@ export async function GET() {
         },
         project: {
           select: {
-            title: true,
-            maxMarks: true,
+            name: true,
+            description: true,
+            expected_completion_date: true,
           },
         },
       },
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
         content,
         attachments,
         status: "SUBMITTED",
-        submissionDate: new Date().toISOString(),
+        submissionDate: new Date(),
       },
       include: {
         student: {
@@ -66,6 +67,12 @@ export async function POST(request: NextRequest) {
                 name: true,
               },
             },
+          },
+        },
+        project: {
+          select: {
+            name: true,
+            description: true,
           },
         },
       },
