@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw } from "lucide-react"
+import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -30,6 +30,7 @@ interface LabComponent {
   location: string
   specifications: string
   imageUrl: string | null
+  backImageUrl?: string | null
 }
 
 interface ComponentRequest {
@@ -65,6 +66,7 @@ export function LabComponentsRequest() {
 
   const [facultyList, setFacultyList] = useState<any[]>([])
   const [selectedFacultyId, setSelectedFacultyId] = useState<string>("")
+  const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
   useEffect(() => {
     fetchData()
@@ -335,17 +337,88 @@ export function LabComponentsRequest() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Component Image */}
-                      <div className="w-full h-48 bg-gray-50 rounded-lg overflow-hidden">
-                        <img
-                          src={component.imageUrl || "/placeholder.jpg"}
-                          alt={component.name}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            e.currentTarget.src = "/placeholder.jpg"
-                          }}
-                        />
-                      </div>
+                      {/* Image Display with Fade Animation */}
+                      {(component.imageUrl || component.backImageUrl) && (
+                        <div className="relative w-full h-48">
+                          {/* Front Image */}
+                          <div 
+                            className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
+                              imageStates[component.id] ? 'opacity-0' : 'opacity-100'
+                            }`}
+                          >
+                            <img
+                              src={component.imageUrl || '/placeholder.jpg'}
+                              alt={`Front view of ${component.name}`}
+                              className="w-full h-full object-contain rounded-lg bg-gray-50"
+                              onError={(e) => {
+                                e.currentTarget.src = "/placeholder.jpg"
+                              }}
+                            />
+                          </div>
+                          
+                          {/* Back Image */}
+                          {component.backImageUrl && (
+                            <div 
+                              className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
+                                imageStates[component.id] ? 'opacity-100' : 'opacity-0'
+                              }`}
+                            >
+                              <img
+                                src={component.backImageUrl}
+                                alt={`Back view of ${component.name}`}
+                                className="w-full h-full object-contain rounded-lg bg-gray-50"
+                                onError={(e) => {
+                                  e.currentTarget.src = "/placeholder.jpg"
+                                }}
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Navigation Buttons */}
+                          {component.backImageUrl && (
+                            <>
+                              {/* Show right arrow when on front image */}
+                              {!imageStates[component.id] && (
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                  onClick={() => setImageStates(prev => ({ ...prev, [component.id]: true }))}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {/* Show left arrow when on back image */}
+                              {imageStates[component.id] && (
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                  onClick={() => setImageStates(prev => ({ ...prev, [component.id]: false }))}
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+
+                          {/* Image Indicator */}
+                          {component.backImageUrl && (
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                              <div 
+                                className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                                  !imageStates[component.id] ? 'bg-white' : 'bg-white/50'
+                                }`}
+                              />
+                              <div 
+                                className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                                  imageStates[component.id] ? 'bg-white' : 'bg-white/50'
+                                }`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
                       <p className="text-sm text-gray-600 line-clamp-2">{component.description}</p>
                       <div className="text-xs text-gray-500">Location: {component.location}</div>

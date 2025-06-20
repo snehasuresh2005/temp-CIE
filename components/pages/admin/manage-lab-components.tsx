@@ -33,7 +33,7 @@ interface LabComponent {
   front_image_id?: string
   back_image_id?: string
   invoice_number?: string
-  purchase_value?: number
+  purchase_value?: number | string
   purchased_from?: string
   purchase_currency: string
   purchase_date?: string
@@ -90,7 +90,7 @@ export function ManageLabComponents() {
     invoice_number: "",
     purchased_from: "",
     purchase_date: "",
-    purchase_value: 0,
+    purchase_value: "",
     purchase_currency: "INR"
   })
 
@@ -209,7 +209,7 @@ export function ManageLabComponents() {
           invoice_number: "",
           purchased_from: "",
           purchase_date: "",
-          purchase_value: 0,
+          purchase_value: "",
           purchase_currency: "INR"
         })
         setFrontImageFile(null)
@@ -303,7 +303,7 @@ export function ManageLabComponents() {
           invoice_number: "",
           purchased_from: "",
           purchase_date: "",
-          purchase_value: 0,
+          purchase_value: "",
           purchase_currency: "INR"
         })
         setFrontImageFile(null)
@@ -840,7 +840,7 @@ export function ManageLabComponents() {
                         min="0"
                         step="0.01"
                         value={newComponent.purchase_value}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_value: Number(e.target.value) }))}
+                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_value: e.target.value }))}
                         placeholder="0.00"
                         className="mt-1"
                       />
@@ -1281,8 +1281,8 @@ export function ManageLabComponents() {
                       type="number"
                       min="0"
                       step="0.01"
-                      value={editingComponent.purchase_value || 0}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_value: Number(e.target.value) }) : null)}
+                      value={editingComponent.purchase_value || ""}
+                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_value: e.target.value }) : null)}
                       placeholder="0.00"
                       className="mt-1"
                     />
@@ -1497,7 +1497,7 @@ export function ManageLabComponents() {
                       <div>
                         <span className="text-sm font-medium text-green-700">Purchase Value:</span>
                         <p className="text-green-900 font-semibold">
-                          {componentToView.purchase_currency} {componentToView.purchase_value.toLocaleString()}
+                          {componentToView.purchase_currency} {typeof componentToView.purchase_value === 'number' ? componentToView.purchase_value.toLocaleString() : componentToView.purchase_value}
                         </p>
                       </div>
                     )}

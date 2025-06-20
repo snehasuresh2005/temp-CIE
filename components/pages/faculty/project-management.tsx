@@ -17,25 +17,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, FolderOpen, Calendar, Users, RefreshCw } from "lucide-react"
+import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
 interface Project {
   id: string
-  title: string
+  name: string
   description: string
-  courseId: string
-  course: {
-    code: string
-    name: string
-  }
-  section: string
-  assignedDate: string
-  dueDate: string
-  maxMarks: number
-  attachments: string[]
+  course_id: string
+  components_needed: string[]
+  expected_completion_date: string
+  created_by: string
+  modified_by?: string
+  created_date: string
+  modified_date: string
+  accepted_by?: string
+  status: string
+  type: string
   submissions?: ProjectSubmission[]
+  project_requests?: ProjectRequest[]
 }
 
 interface ProjectSubmission {
@@ -55,6 +56,35 @@ interface ProjectSubmission {
   submissionDate: string
 }
 
+interface ProjectRequest {
+  id: string
+  project_id: string
+  student_id: string
+  faculty_id: string
+  request_date: string
+  status: string
+  student_notes?: string
+  faculty_notes?: string
+  accepted_date?: string
+  rejected_date?: string
+  student: {
+    user: {
+      name: string
+      email: string
+    }
+  }
+  faculty: {
+    user: {
+      name: string
+      email: string
+    }
+  }
+  project: {
+    name: string
+    description: string
+  }
+}
+
 interface Course {
   id: string
   code: string
@@ -62,22 +92,29 @@ interface Course {
   sections: string[]
 }
 
+interface LabComponent {
+  id: string
+  component_name: string
+  component_description: string
+}
+
 export function ProjectManagement() {
   const { user } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
+  const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([])
   const [courses, setCourses] = useState<Course[]>([])
+  const [labComponents, setLabComponents] = useState<LabComponent[]>([])
   const [submissions, setSubmissions] = useState<ProjectSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const { toast } = useToast()
 
   const [newProject, setNewProject] = useState({
-    title: "",
+    name: "",
     description: "",
-    courseId: "",
-    section: "",
-    dueDate: "",
-    maxMarks: 100,
+    course_id: "",
+    components_needed: [] as string[],
+    expected_completion_date: "",
   })
 
   useEffect(() => {
@@ -93,10 +130,20 @@ export function ProjectManagement() {
       const coursesData = await coursesResponse.json()
       setCourses(coursesData.courses || [])
 
+      // Fetch lab components
+      const componentsResponse = await fetch("/api/lab-components")
+      const componentsData = await componentsResponse.json()
+      setLabComponents(componentsData.components || [])
+
       // Fetch projects
       const projectsResponse = await fetch("/api/projects")
       const projectsData = await projectsResponse.json()
       setProjects(projectsData.projects || [])
+
+      // Fetch project requests
+      const requestsResponse = await fetch("/api/project-requests")
+      const requestsData = await requestsResponse.json()
+      setProjectRequests(requestsData.projectRequests || [])
 
       // Fetch submissions
       const submissionsResponse = await fetch("/api/project-submissions")
@@ -115,7 +162,7 @@ export function ProjectManagement() {
   }
 
   const handleAddProject = async () => {
-    if (!newProject.title || !newProject.courseId || !newProject.section || !newProject.dueDate) {
+    if (!newProject.name || !newProject.course_id || !newProject.expected_completion_date) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -130,25 +177,28 @@ export function ProjectManagement() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newProject),
+        body: JSON.stringify({
+          ...newProject,
+          user_email: user?.email,
+          type: "FACULTY_ASSIGNED",
+        }),
       })
 
       if (response.ok) {
         const data = await response.json()
         setProjects((prev) => [...prev, data.project])
         setNewProject({
-          title: "",
+          name: "",
           description: "",
-          courseId: "",
-          section: "",
-          dueDate: "",
-          maxMarks: 100,
+          course_id: "",
+          components_needed: [],
+          expected_completion_date: "",
         })
         setIsAddDialogOpen(false)
 
         toast({
           title: "Success",
-          description: "Project assigned successfully",
+          description: "Project created successfully",
         })
       } else {
         const errorData = await response.json()
@@ -159,6 +209,42 @@ export function ProjectManagement() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to add project",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleApproveRequest = async (requestId: string, status: "APPROVED" | "REJECTED", notes?: string) => {
+    try {
+      const response = await fetch(`/api/project-requests/${requestId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status,
+          faculty_notes: notes,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProjectRequests((prev) =>
+          prev.map((req) => (req.id === requestId ? data.projectRequest : req))
+        )
+
+        toast({
+          title: "Success",
+          description: `Project request ${status.toLowerCase()} successfully`,
+        })
+      } else {
+        throw new Error("Failed to update request")
+      }
+    } catch (error) {
+      console.error("Error updating request:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update request",
         variant: "destructive",
       })
     }
@@ -201,12 +287,29 @@ export function ProjectManagement() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "active":
-        return "bg-green-100 text-green-800"
-      case "completed":
+    switch (status) {
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800"
+      case "ONGOING":
         return "bg-blue-100 text-blue-800"
-      case "overdue":
+      case "COMPLETED":
+        return "bg-green-100 text-green-800"
+      case "OVERDUE":
+        return "bg-red-100 text-red-800"
+      case "REJECTED":
+        return "bg-gray-100 text-gray-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getRequestStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800"
+      case "APPROVED":
+        return "bg-green-100 text-green-800"
+      case "REJECTED":
         return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
@@ -214,27 +317,22 @@ export function ProjectManagement() {
   }
 
   const getSubmissionStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "submitted":
-        return "bg-yellow-100 text-yellow-800"
-      case "graded":
+    switch (status) {
+      case "SUBMITTED":
+        return "bg-blue-100 text-blue-800"
+      case "GRADED":
         return "bg-green-100 text-green-800"
-      case "late":
+      case "LATE":
         return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
-  const getAvailableSections = (courseId: string) => {
-    const course = courses.find((c) => c.id === courseId)
-    return course ? course.sections : []
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading project data...</div>
+        <RefreshCw className="h-8 w-8 animate-spin" />
       </div>
     )
   }
@@ -242,42 +340,35 @@ export function ProjectManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Project Management</h1>
-          <p className="text-gray-600 mt-2">Assign and manage student projects</p>
-        </div>
-
-        <div className="flex space-x-2">
-          <Button onClick={fetchData} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Assign Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Assign New Project</DialogTitle>
-                <DialogDescription>Create a new project assignment for students</DialogDescription>
-              </DialogHeader>
+        <h2 className="text-3xl font-bold tracking-tight">Project Management</h2>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Project
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Create New Project</DialogTitle>
+              <DialogDescription>
+                Create a new project assignment for your students.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="title">Project Title *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Project Name</Label>
                   <Input
-                    id="title"
-                    value={newProject.title}
-                    onChange={(e) => setNewProject((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder="Database Design Project"
+                    id="name"
+                    value={newProject.name}
+                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                    placeholder="Enter project name"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="courseId">Course *</Label>
-                  <Select onValueChange={(value) => setNewProject((prev) => ({ ...prev, courseId: value }))}>
+                <div className="space-y-2">
+                  <Label htmlFor="course">Course</Label>
+                  <Select value={newProject.course_id} onValueChange={(value) => setNewProject({ ...newProject, course_id: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select course" />
                     </SelectTrigger>
@@ -290,220 +381,250 @@ export function ProjectManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="section">Section *</Label>
-                  <Select
-                    onValueChange={(value) => setNewProject((prev) => ({ ...prev, section: value }))}
-                    disabled={!newProject.courseId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select section" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableSections(newProject.courseId).map((section) => (
-                        <SelectItem key={section} value={section}>
-                          Section {section}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    value={newProject.description}
-                    onChange={(e) => setNewProject((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Detailed project description and requirements..."
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dueDate">Due Date *</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={newProject.dueDate}
-                    onChange={(e) => setNewProject((prev) => ({ ...prev, dueDate: e.target.value }))}
-                    min={new Date().toISOString().split("T")[0]}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="maxMarks">Maximum Marks</Label>
-                  <Input
-                    id="maxMarks"
-                    type="number"
-                    value={newProject.maxMarks}
-                    onChange={(e) => setNewProject((prev) => ({ ...prev, maxMarks: Number.parseInt(e.target.value) }))}
-                    min="1"
-                  />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={newProject.description}
+                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                  placeholder="Enter project description"
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="components">Required Components</Label>
+                <Select onValueChange={(value) => {
+                  if (!newProject.components_needed.includes(value)) {
+                    setNewProject({
+                      ...newProject,
+                      components_needed: [...newProject.components_needed, value]
+                    })
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select components" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {labComponents.map((component) => (
+                      <SelectItem key={component.id} value={component.id}>
+                        {component.component_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {newProject.components_needed.map((componentId) => {
+                    const component = labComponents.find(c => c.id === componentId)
+                    return (
+                      <Badge key={componentId} variant="secondary">
+                        {component?.component_name}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-1 h-auto p-0"
+                          onClick={() => setNewProject({
+                            ...newProject,
+                            components_needed: newProject.components_needed.filter(id => id !== componentId)
+                          })}
+                        >
+                          ×
+                        </Button>
+                      </Badge>
+                    )
+                  })}
                 </div>
               </div>
-              <div className="flex justify-end space-x-2 mt-4">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddProject}>Assign Project</Button>
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Expected Completion Date</Label>
+                <Input
+                  id="dueDate"
+                  type="datetime-local"
+                  value={newProject.expected_completion_date}
+                  onChange={(e) => setNewProject({ ...newProject, expected_completion_date: e.target.value })}
+                />
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddProject}>Create Project</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="projects" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="projects">My Projects ({projects.length})</TabsTrigger>
-          <TabsTrigger value="submissions">Submissions ({submissions.length})</TabsTrigger>
+          <TabsTrigger value="projects">My Projects</TabsTrigger>
+          <TabsTrigger value="requests">Student Requests</TabsTrigger>
+          <TabsTrigger value="submissions">Submissions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="projects" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {projects.length === 0 ? (
-              <Card className="col-span-2">
-                <CardContent className="p-8 text-center">
-                  <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No projects assigned</h3>
-                  <p className="text-gray-600">Create your first project assignment to get started.</p>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <Card key={project.id}>
+                <CardHeader>
+                  <div>
+                    <CardTitle className="flex items-center space-x-2">
+                      <FolderOpen className="h-5 w-5" />
+                      <span>{project.name}</span>
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {courses.find(c => c.id === project.course_id)?.code} - {courses.find(c => c.id === project.course_id)?.name}
+                    </CardDescription>
+                    <Badge className={getStatusColor(project.status)} style={{marginTop: 8}}>
+                      {project.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-3">{project.description}</p>
+                  <div className="flex items-center text-sm text-gray-500 mb-2">
+                    <Calendar className="mr-1 h-4 w-4" />
+                    Due: {new Date(project.expected_completion_date).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <Users className="mr-1 h-4 w-4" />
+                    {project.submissions?.length || 0} submissions
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              projects.map((project) => (
-                <Card key={project.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center space-x-2">
-                          <FolderOpen className="h-5 w-5" />
-                          <span>{project.title}</span>
-                        </CardTitle>
-                        <CardDescription>
-                          {project.course.code} - Section {project.section}
-                        </CardDescription>
-                      </div>
-                      <Badge className={getStatusColor("active")}>Active</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-sm text-gray-600">{project.description}</p>
+            ))}
+          </div>
+        </TabsContent>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>Due: {new Date(project.dueDate).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Users className="h-4 w-4 text-gray-400" />
-                          <span>Max: {project.maxMarks} marks</span>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-gray-500">
-                        Assigned: {new Date(project.assignedDate).toLocaleDateString()}
-                      </div>
+        <TabsContent value="requests" className="space-y-4">
+          <div className="space-y-4">
+            {projectRequests.map((request) => (
+              <Card key={request.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">{request.project.name}</CardTitle>
+                      <CardDescription>
+                        Request from {request.student.user.name} ({request.student.user.email})
+                      </CardDescription>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
+                    <Badge className={getRequestStatusColor(request.status)}>
+                      {request.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-3">{request.project.description}</p>
+                  {request.student_notes && (
+                    <div className="mb-3">
+                      <Label className="text-sm font-medium">Student Notes:</Label>
+                      <p className="text-sm text-gray-600">{request.student_notes}</p>
+                    </div>
+                  )}
+                  <div className="flex items-center text-sm text-gray-500 mb-3">
+                    <Calendar className="mr-1 h-4 w-4" />
+                    Requested: {new Date(request.request_date).toLocaleDateString()}
+                  </div>
+                  {request.status === "PENDING" && (
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleApproveRequest(request.id, "APPROVED")}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="mr-1 h-4 w-4" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleApproveRequest(request.id, "REJECTED")}
+                      >
+                        <XCircle className="mr-1 h-4 w-4" />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+            {projectRequests.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No project requests found.
+              </div>
             )}
           </div>
         </TabsContent>
 
         <TabsContent value="submissions" className="space-y-4">
-          <div className="grid gap-4">
-            {submissions.length === 0 ? (
-              <Card className="col-span-2">
-                <CardContent className="p-8 text-center">
-                  <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No submissions yet</h3>
-                  <p className="text-gray-600">Check back once students have submitted their projects.</p>
+          <div className="space-y-4">
+            {submissions.map((submission) => (
+              <Card key={submission.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">Submission by {submission.student.user.name}</CardTitle>
+                      <CardDescription>
+                        Submitted on {new Date(submission.submissionDate).toLocaleDateString()}
+                      </CardDescription>
+                    </div>
+                    <Badge className={getSubmissionStatusColor(submission.status)}>
+                      {submission.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-3">{submission.content}</p>
+                  {submission.status === "SUBMITTED" && (
+                    <div className="space-y-2">
+                      <Label htmlFor={`marks-${submission.id}`}>Marks</Label>
+                      <Input
+                        id={`marks-${submission.id}`}
+                        type="number"
+                        min="0"
+                        max="100"
+                        placeholder="Enter marks"
+                        defaultValue={submission.marks || 0}
+                        onChange={(e) => {
+                          const marks = parseInt(e.target.value)
+                          const feedback = submission.feedback || ""
+                          handleGradeSubmission(submission.id, marks, feedback)
+                        }}
+                      />
+                      <Label htmlFor={`feedback-${submission.id}`}>Feedback</Label>
+                      <Textarea
+                        id={`feedback-${submission.id}`}
+                        placeholder="Enter feedback"
+                        defaultValue={submission.feedback || ""}
+                        onChange={(e) => {
+                          const marks = submission.marks || 0
+                          const feedback = e.target.value
+                          handleGradeSubmission(submission.id, marks, feedback)
+                        }}
+                      />
+                    </div>
+                  )}
+                  {submission.status === "GRADED" && (
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-sm font-medium">Marks:</Label>
+                        <p className="text-sm">{submission.marks}/100</p>
+                      </div>
+                      {submission.feedback && (
+                        <div>
+                          <Label className="text-sm font-medium">Feedback:</Label>
+                          <p className="text-sm text-gray-600">{submission.feedback}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            ) : (
-              submissions.map((submission) => {
-                const project = projects.find((p) => p.id === submission.projectId)
-                return (
-                  <Card key={submission.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <FolderOpen className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">{project?.title}</h3>
-                            <p className="text-sm text-gray-600">by {submission.student.user.name}</p>
-                            <p className="text-xs text-gray-500">
-                              Submitted: {new Date(submission.submissionDate).toLocaleDateString()}
-                            </p>
-                            <p className="text-sm text-gray-700 mt-1">{submission.content}</p>
-                          </div>
-                        </div>
-                        <div className="text-right space-y-2">
-                          <Badge className={getSubmissionStatusColor(submission.status)}>{submission.status}</Badge>
-                          {submission.status.toLowerCase() === "submitted" && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button size="sm">Grade</Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Grade Submission</DialogTitle>
-                                  <DialogDescription>
-                                    Grade {submission.student.user.name}'s submission for {project?.title}
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="marks">Marks (out of {project?.maxMarks})</Label>
-                                    <Input
-                                      id="marks"
-                                      type="number"
-                                      min="0"
-                                      max={project?.maxMarks}
-                                      placeholder="Enter marks"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="feedback">Feedback</Label>
-                                    <Textarea id="feedback" placeholder="Provide feedback to the student..." rows={3} />
-                                  </div>
-                                  <div className="flex justify-end space-x-2">
-                                    <Button variant="outline">Cancel</Button>
-                                    <Button
-                                      onClick={() => {
-                                        const marksInput = document.getElementById("marks") as HTMLInputElement
-                                        const feedbackInput = document.getElementById("feedback") as HTMLTextAreaElement
-                                        handleGradeSubmission(
-                                          submission.id,
-                                          Number(marksInput.value),
-                                          feedbackInput.value,
-                                        )
-                                      }}
-                                    >
-                                      Submit Grade
-                                    </Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          )}
-                          {submission.marks !== null && (
-                            <div className="text-sm">
-                              <div className="font-medium">
-                                {submission.marks}/{project?.maxMarks}
-                              </div>
-                              {submission.feedback && (
-                                <div className="text-xs text-gray-500 mt-1">{submission.feedback}</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })
+            ))}
+            {submissions.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No submissions found.
+              </div>
             )}
           </div>
         </TabsContent>
