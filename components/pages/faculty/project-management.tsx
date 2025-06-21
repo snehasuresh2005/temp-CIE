@@ -341,20 +341,20 @@ export function ProjectManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Project Management</h2>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
               <Plus className="mr-2 h-4 w-4" />
               Create Project
-            </Button>
-          </DialogTrigger>
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
+              <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>
                 Create a new project assignment for your students.
               </DialogDescription>
-            </DialogHeader>
+              </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -402,17 +402,17 @@ export function ProjectManagement() {
                     })
                   }
                 }}>
-                  <SelectTrigger>
+                    <SelectTrigger>
                     <SelectValue placeholder="Select components" />
-                  </SelectTrigger>
-                  <SelectContent>
+                    </SelectTrigger>
+                    <SelectContent>
                     {labComponents.map((component) => (
                       <SelectItem key={component.id} value={component.id}>
                         {component.component_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {newProject.components_needed.map((componentId) => {
                     const component = labComponents.find(c => c.id === componentId)
@@ -434,25 +434,25 @@ export function ProjectManagement() {
                     )
                   })}
                 </div>
-              </div>
+                </div>
               <div className="space-y-2">
                 <Label htmlFor="dueDate">Expected Completion Date</Label>
-                <Input
-                  id="dueDate"
+                  <Input
+                    id="dueDate"
                   type="datetime-local"
                   value={newProject.expected_completion_date}
                   onChange={(e) => setNewProject({ ...newProject, expected_completion_date: e.target.value })}
-                />
+                  />
+                </div>
               </div>
-            </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
-              </Button>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
               <Button onClick={handleAddProject}>Create Project</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              </div>
+            </DialogContent>
+          </Dialog>
       </div>
 
       <Tabs defaultValue="projects" className="space-y-4">
@@ -541,18 +541,18 @@ export function ProjectManagement() {
                     <div className="space-y-2">
                       <CardDescription className="text-sm font-medium text-gray-700">
                         Request from {request.student.user.name} ({request.student.user.email})
-                      </CardDescription>
+                        </CardDescription>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
                 
                 <CardContent className="pt-0">
-                  <div className="space-y-4">
+                    <div className="space-y-4">
                     {/* Project Description */}
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Project Description</Label>
                       <p className="text-sm text-gray-600 leading-relaxed">{request.project.description}</p>
-                    </div>
+                        </div>
 
                     {/* Student Notes */}
                     {request.student_notes && (
@@ -600,9 +600,9 @@ export function ProjectManagement() {
                         </div>
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                  </CardContent>
+                </Card>
             ))}
             {projectRequests.length === 0 && (
               <div className="text-center py-12 text-gray-500">
@@ -624,18 +624,18 @@ export function ProjectManagement() {
                       <Badge className={getSubmissionStatusColor(submission.status)}>
                         {submission.status}
                       </Badge>
-                    </div>
+                          </div>
                     
                     <div className="space-y-2">
                       <CardDescription className="text-sm font-medium text-gray-700">
                         Submitted on {new Date(submission.submissionDate).toLocaleDateString()}
                       </CardDescription>
-                    </div>
-                  </div>
+                          </div>
+                        </div>
                 </CardHeader>
                 
                 <CardContent className="pt-0">
-                  <div className="space-y-4">
+                                <div className="space-y-4">
                     {/* Submission Content */}
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submission Content</Label>
@@ -651,12 +651,12 @@ export function ProjectManagement() {
                         <div className="grid grid-cols-1 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor={`marks-${submission.id}`} className="text-sm font-medium">Marks (0-100)</Label>
-                            <Input
+                                    <Input
                               id={`marks-${submission.id}`}
-                              type="number"
-                              min="0"
+                                      type="number"
+                                      min="0"
                               max="100"
-                              placeholder="Enter marks"
+                                      placeholder="Enter marks"
                               defaultValue={submission.marks || 0}
                               className="w-full"
                               onChange={(e) => {
@@ -664,8 +664,8 @@ export function ProjectManagement() {
                                 const feedback = submission.feedback || ""
                                 handleGradeSubmission(submission.id, marks, feedback)
                               }}
-                            />
-                          </div>
+                                    />
+                                  </div>
                           <div className="space-y-2">
                             <Label htmlFor={`feedback-${submission.id}`} className="text-sm font-medium">Feedback</Label>
                             <Textarea
@@ -679,9 +679,9 @@ export function ProjectManagement() {
                                 handleGradeSubmission(submission.id, marks, feedback)
                               }}
                             />
-                          </div>
-                        </div>
-                      </div>
+                                  </div>
+                                  </div>
+                                </div>
                     )}
 
                     {/* Graded Results */}
@@ -692,8 +692,8 @@ export function ProjectManagement() {
                           <div className="p-3 bg-green-50 rounded-md">
                             <div className="font-medium text-green-900">Marks</div>
                             <div className="text-lg font-bold text-green-700">{submission.marks}/100</div>
-                          </div>
-                          {submission.feedback && (
+                              </div>
+                              {submission.feedback && (
                             <div className="p-3 bg-blue-50 rounded-md col-span-2">
                               <div className="font-medium text-blue-900 mb-1">Feedback</div>
                               <p className="text-sm text-blue-700">{submission.feedback}</p>
@@ -702,9 +702,9 @@ export function ProjectManagement() {
                         </div>
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
+                      </div>
+                    </CardContent>
+                  </Card>
             ))}
             {submissions.length === 0 && (
               <div className="text-center py-12 text-gray-500">
