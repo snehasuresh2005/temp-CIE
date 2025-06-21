@@ -14,11 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface LabComponent {
   id: string
@@ -427,14 +429,10 @@ export function ManageLabComponents() {
     }
   }
 
-  const isFormValid =
-    newComponent.component_name.trim() &&
-    newComponent.component_category.trim() &&
-    newComponent.component_location.trim() &&
-    newComponent.component_quantity > 0 &&
-    frontImageFile &&
-    backImageFile &&
-    newComponent.component_description.trim()
+  const isAddFormValid =
+    newComponent.component_name.trim() !== "" &&
+    newComponent.component_category.trim() !== "" &&
+    newComponent.component_location.trim() !== ""
 
   const handleEditComponent = async () => {
     if (!editingComponent) return
@@ -539,6 +537,12 @@ export function ManageLabComponents() {
       })
     }
   }
+
+  const isEditFormValid =
+    !!editingComponent &&
+    editingComponent.component_name.trim() !== "" &&
+    editingComponent.component_category.trim() !== "" &&
+    editingComponent.component_location.trim() !== ""
 
   if (loading) {
     return (
@@ -874,13 +878,22 @@ export function ManageLabComponents() {
                   >
                     Cancel
                   </Button>
-                  <Button
-                    onClick={handleAddComponent}
-                    disabled={!isFormValid}
-                    className="px-6"
-                  >
-                    Add Component
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                          <Button onClick={handleAddComponent} disabled={!isAddFormValid}>
+                            Add Component
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!isAddFormValid && (
+                        <TooltipContent>
+                          <p>Please fill in all required fields: Name, Category, and Location.</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             </DialogContent>
@@ -1079,257 +1092,220 @@ export function ManageLabComponents() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Edit Lab Component</DialogTitle>
-            <DialogDescription>Modify the details of the lab component</DialogDescription>
+            <DialogTitle>Edit Component</DialogTitle>
+            <DialogDescription>Update the details of the lab component.</DialogDescription>
           </DialogHeader>
           {editingComponent && (
-            <div className="space-y-4 w-full">
-              {/* Component Name */}
-              <div>
-                <Label htmlFor="edit-name" className="text-sm font-medium">Component Name *</Label>
-                <Input
-                  id="edit-name"
-                  value={editingComponent.component_name}
-                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_name: e.target.value }) : null)}
-                  placeholder="Arduino Uno R3"
-                  className="mt-1"
-                />
-              </div>
-
-              {/* Basic Details Row */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="edit-quantity" className="text-sm font-medium">Total Quantity *</Label>
-                  <Input
-                    id="edit-quantity"
-                    type="number"
-                    value={editingComponent.component_quantity}
-                    onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_quantity: Number(e.target.value) }) : null)}
-                    min="1"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-location" className="text-sm font-medium">Location *</Label>
-                  <Select
-                    value={editingComponent.component_location}
-                    onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, component_location: value }) : null)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationOptions.map((location) => (
-                        <SelectItem key={location} value={location}>
-                          {location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-category" className="text-sm font-medium">Category *</Label>
-                  <Select
-                    value={editingComponent.component_category}
-                    onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, component_category: value }) : null)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-tagId" className="text-sm font-medium">Tag ID (optional)</Label>
-                  <Input
-                    id="edit-tagId"
-                    value={editingComponent.component_tag_id || ""}
-                    onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_tag_id: e.target.value }) : null)}
-                    placeholder="e.g. 123-XYZ"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-
-              {/* Image Upload Section */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Component Images</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="edit-frontImage" className="text-sm font-medium">Front Image</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors">
-                      <Input
-                        id="edit-frontImage"
-                        type="file"
-                        accept="image/*"
-                        onChange={e => setFrontImageFile(e.target.files?.[0] || null)}
-                        className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                    </div>
-                    {frontImagePreview && (
-                      <div className="mt-2">
-                        <Label className="text-xs font-medium text-gray-600">Preview:</Label>
-                        <img
-                          src={frontImagePreview}
-                          alt="Front Preview"
-                          className="mt-1 w-full h-64 object-contain rounded-lg bg-gray-50"
+            <div className="grid gap-8 py-4">
+              {/* Form Fields */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-6">
+                  {/* General Info */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>General Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-name">Component Name *</Label>
+                        <Input
+                          id="edit-name"
+                          value={editingComponent.component_name}
+                          onChange={(e) =>
+                            setEditingComponent({ ...editingComponent, component_name: e.target.value })
+                          }
                         />
                       </div>
-                    )}
-                  </div>
-                  <div className="space-y-3">
-                    <Label htmlFor="edit-backImage" className="text-sm font-medium">Back Image</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors">
-                      <Input
-                        id="edit-backImage"
-                        type="file"
-                        accept="image/*"
-                        onChange={e => setBackImageFile(e.target.files?.[0] || null)}
-                        className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                    </div>
-                    {backImagePreview && (
-                      <div className="mt-2">
-                        <Label className="text-xs font-medium text-gray-600">Preview:</Label>
-                        <img
-                          src={backImagePreview}
-                          alt="Back Preview"
-                          className="mt-1 w-full h-64 object-contain rounded-lg bg-gray-50"
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-description">Description</Label>
+                        <Textarea
+                          id="edit-description"
+                          value={editingComponent.component_description}
+                          onChange={(e) =>
+                            setEditingComponent({ ...editingComponent, component_description: e.target.value })
+                          }
+                          rows={3}
                         />
                       </div>
-                    )}
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-specifications">Specifications</Label>
+                        <Textarea
+                          id="edit-specifications"
+                          value={editingComponent.component_specification || ""}
+                          onChange={(e) =>
+                            setEditingComponent({ ...editingComponent, component_specification: e.target.value })
+                          }
+                          rows={3}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Stock & Location */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Stock & Location</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-quantity">Total Quantity *</Label>
+                          <Input
+                            id="edit-quantity"
+                            type="number"
+                            value={editingComponent.component_quantity}
+                            onChange={(e) =>
+                              setEditingComponent({
+                                ...editingComponent,
+                                component_quantity: Number.parseInt(e.target.value),
+                              })
+                            }
+                            min="0"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-tagId">Tag ID</Label>
+                          <Input
+                            id="edit-tagId"
+                            value={editingComponent.component_tag_id || ""}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, component_tag_id: e.target.value })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-category">Category *</Label>
+                          <Input
+                            id="edit-category"
+                            value={editingComponent.component_category}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, component_category: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-location">Location *</Label>
+                          <Input
+                            id="edit-location"
+                            value={editingComponent.component_location}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, component_location: e.target.value })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                {/* Right Column */}
+                <div className="space-y-6">
+                  {/* Purchase Information */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Purchase Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-invoice">Invoice Number</Label>
+                        <Input
+                          id="edit-invoice"
+                          value={editingComponent.invoice_number || ""}
+                          onChange={(e) =>
+                            setEditingComponent({ ...editingComponent, invoice_number: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-value">Purchase Value</Label>
+                          <Input
+                            id="edit-value"
+                            type="number"
+                            value={editingComponent.purchase_value || ""}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, purchase_value: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-currency">Currency</Label>
+                          <Input
+                            id="edit-currency"
+                            value={editingComponent.purchase_currency}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, purchase_currency: e.target.value })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-purchasedFrom">Purchased From</Label>
+                        <Input
+                          id="edit-purchasedFrom"
+                          value={editingComponent.purchased_from || ""}
+                          onChange={(e) =>
+                            setEditingComponent({ ...editingComponent, purchased_from: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-purchaseDate">Purchase Date</Label>
+                        <Input
+                          id="edit-purchaseDate"
+                          type="date"
+                          value={
+                            editingComponent.purchase_date
+                              ? new Date(editingComponent.purchase_date).toISOString().split("T")[0]
+                              : ""
+                          }
+                          onChange={(e) =>
+                            setEditingComponent({ ...editingComponent, purchase_date: e.target.value })
+                          }
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Images */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Images</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Placeholder for image uploads */}
+                      <div className="text-sm text-gray-500">Image upload is not available during edit.</div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <Label htmlFor="edit-description" className="text-sm font-medium">Description *</Label>
-                <Textarea
-                  id="edit-description"
-                  value={editingComponent.component_description}
-                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_description: e.target.value }) : null)}
-                  placeholder="Provide a detailed description of the component..."
-                  rows={4}
-                  className="mt-1"
-                />
-              </div>
-
-              {/* Specifications */}
-              <div>
-                <Label htmlFor="edit-specifications" className="text-sm font-medium">Specifications (optional)</Label>
-                <Textarea
-                  id="edit-specifications"
-                  value={editingComponent.component_specification || ""}
-                  onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, component_specification: e.target.value }) : null)}
-                  placeholder="Technical specifications, model number, etc..."
-                  rows={3}
-                  className="mt-1"
-                />
-              </div>
-
-              {/* Purchase Details Section */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Purchase Details</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="edit-invoiceNumber" className="text-sm font-medium">Invoice Number</Label>
-                    <Input
-                      id="edit-invoiceNumber"
-                      value={editingComponent.invoice_number || ""}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, invoice_number: e.target.value }) : null)}
-                      placeholder="INV-2025-001"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-purchasedFrom" className="text-sm font-medium">Purchased From</Label>
-                    <Input
-                      id="edit-purchasedFrom"
-                      value={editingComponent.purchased_from || ""}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchased_from: e.target.value }) : null)}
-                      placeholder="Vendor/Supplier Name"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="edit-purchasedDate" className="text-sm font-medium">Purchase Date</Label>
-                    <Input
-                      id="edit-purchasedDate"
-                      type="date"
-                      value={editingComponent.purchase_date?.split('T')[0] || ""}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_date: e.target.value }) : null)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-purchasedValue" className="text-sm font-medium">Purchase Value</Label>
-                    <Input
-                      id="edit-purchasedValue"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={editingComponent.purchase_value || ""}
-                      onChange={(e) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_value: e.target.value }) : null)}
-                      placeholder="0.00"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-purchasedCurrency" className="text-sm font-medium">Currency</Label>
-                    <Select
-                      value={editingComponent.purchase_currency || "INR"}
-                      onValueChange={(value) => setEditingComponent((prev) => prev ? ({ ...prev, purchase_currency: value }) : null)}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                        <SelectItem value="USD">USD - US Dollar</SelectItem>
-                        <SelectItem value="EUR">EUR - Euro</SelectItem>
-                        <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditDialogOpen(false)
-                    setEditingComponent(null)
-                    setFrontImageFile(null)
-                    setBackImageFile(null)
-                    setFrontImagePreview(null)
-                    setBackImagePreview(null)
-                  }}
-                  className="px-6"
-                >
+              {/* Footer */}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleEditComponent}
-                  className="px-6"
-                >
-                  Save Changes
-                </Button>
-              </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button onClick={handleEditComponent} disabled={!isEditFormValid}>
+                          Save Changes
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!isEditFormValid && (
+                      <TooltipContent>
+                        <p>Please fill in all required fields: Name, Category, and Location.</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>
