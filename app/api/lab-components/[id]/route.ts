@@ -8,7 +8,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   try {
     const data = await request.json()
     const { id } = params
-    
+
     // Get user from header
     const userId = request.headers.get("x-user-id")
     let userName = "system"
