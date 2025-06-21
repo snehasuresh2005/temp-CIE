@@ -64,8 +64,8 @@ export async function GET() {
                   email: true,
                 },
               },
-            },
-          })
+      },
+    })
           
           if (faculty) {
             return {
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       include: {
         submissions: true,
         project_requests: true,
-      },
+          },
     })
 
     // If student created project, create a project request
@@ -167,8 +167,8 @@ export async function POST(request: NextRequest) {
           faculty_id: accepted_by,
           request_date: new Date(),
           status: "PENDING",
-        },
-      })
+      },
+    })
     }
 
     return NextResponse.json({ project })
