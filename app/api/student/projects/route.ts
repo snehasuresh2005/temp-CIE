@@ -14,39 +14,32 @@ export async function GET() {
 
     // Get student's enrolled courses
     const enrollments = await prisma.enrollment.findMany({
-      where: { studentId },
-      select: { courseId: true, section: true },
+      where: { student_id: studentId },
+      select: { course_id: true, section: true },
     })
 
-    const courseIds = enrollments.map((e) => e.courseId)
+    const courseIds = enrollments.map((e) => e.course_id)
     const sections = enrollments.reduce(
       (acc, e) => {
-        acc[e.courseId] = e.section
+        acc[e.course_id] = e.section
         return acc
       },
       {} as Record<string, string>,
     )
 
-    // Get projects for enrolled courses and sections
+    // Get projects for enrolled courses
     const projects = await prisma.project.findMany({
       where: {
-        courseId: { in: courseIds },
-        section: { in: Object.values(sections) },
+        course_id: { in: courseIds },
       },
       include: {
-        course: {
-          select: {
-            code: true,
-            name: true,
-          },
-        },
         submissions: {
-          where: { studentId },
+          where: { student_id: studentId },
           take: 1,
         },
       },
       orderBy: {
-        dueDate: "asc",
+        expected_completion_date: "asc",
       },
     })
 
