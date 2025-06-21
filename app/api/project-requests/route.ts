@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { LabComponent } from "@prisma/client"
 
 export async function GET() {
   try {
@@ -32,10 +33,39 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ projectRequests })
+    const labComponents = await prisma.labComponent.findMany()
+    const labComponentsMap = labComponents.reduce(
+      (acc: Record<string, LabComponent>, component) => {
+        acc[component.id] = component
+        return acc
+      },
+      {},
+    )
+
+    const projectRequestsWithComponentDetails = projectRequests.map((request) => {
+      const componentsNeeded = request.project.components_needed || []
+      const componentsNeededDetails = componentsNeeded
+        .map((id: string) => labComponentsMap[id])
+        .filter(Boolean)
+
+      return {
+        ...request,
+        project: {
+          ...request.project,
+          components_needed_details: componentsNeededDetails,
+        },
+      }
+    })
+
+    return NextResponse.json({
+      projectRequests: projectRequestsWithComponentDetails,
+    })
   } catch (error) {
     console.error("Error fetching project requests:", error)
-    return NextResponse.json({ error: "Failed to fetch project requests" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to fetch project requests" },
+      { status: 500 },
+    )
   }
 }
 

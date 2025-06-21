@@ -82,6 +82,7 @@ interface ProjectRequest {
   project: {
     name: string
     description: string
+    components_needed_details?: any[]
   }
 }
 
@@ -526,91 +527,80 @@ export function ProjectManagement() {
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
-          <div className="space-y-4">
-            {projectRequests.map((request) => (
-              <Card key={request.id} className="hover:shadow-lg transition-shadow duration-200">
-                <CardHeader className="pb-4">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg line-clamp-2">{request.project.name}</CardTitle>
-                      <Badge className={getRequestStatusColor(request.status)}>
-                        {request.status}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <CardDescription className="text-sm font-medium text-gray-700">
-                        Request from {request.student.user.name} ({request.student.user.email})
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                
-                <CardContent className="pt-0">
-                    <div className="space-y-4">
-                    {/* Project Description */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Project Description</Label>
-                      <p className="text-sm text-gray-600 leading-relaxed">{request.project.description}</p>
-                        </div>
-
-                    {/* Student Notes */}
-                    {request.student_notes && (
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Student Notes</Label>
-                        <div className="p-3 bg-blue-50 rounded-md">
-                          <p className="text-sm text-blue-900">{request.student_notes}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Request Date */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Request Details</Label>
-                      <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
-                        <Calendar className="h-4 w-4 text-gray-500" />
+          {projectRequests.length > 0 ? (
+            <div className="space-y-4">
+              {projectRequests.map((request) => (
+                <Card key={request.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium text-gray-900">Requested Date</div>
-                          <div className="text-xs text-gray-600">{new Date(request.request_date).toLocaleDateString()}</div>
+                          <CardTitle>{request.project.name}</CardTitle>
+                          <CardDescription>
+                            Request from {request.student.user.name} ({request.student.user.email})
+                          </CardDescription>
+                        </div>
+                        <Badge className={getRequestStatusColor(request.status)}>{request.status}</Badge>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-semibold">PROJECT DESCRIPTION</h4>
+                        <p className="text-sm text-muted-foreground">{request.project.description}</p>
+                      </div>
+
+                      {request.project.components_needed_details &&
+                      request.project.components_needed_details.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold">Required Components</h4>
+                          <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                            {request.project.components_needed_details.map((component) => (
+                              <li key={component.id}>{component.component_name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <div>
+                        <h4 className="text-sm font-semibold">REQUEST DETAILS</h4>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          <p>{new Date(request.request_date).toLocaleDateString()}</p>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Action Buttons */}
-                    {request.status === "PENDING" && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <div className="flex space-x-2">
+                      {request.status === "PENDING" && (
+                        <div className="flex justify-end gap-2">
                           <Button
-                            size="sm"
+                            variant="ghost"
+                            className="bg-green-500 text-white hover:bg-green-600"
                             onClick={() => handleApproveRequest(request.id, "APPROVED")}
-                            className="bg-green-600 hover:bg-green-700 flex-1"
+                            size="sm"
                           >
-                            <CheckCircle className="mr-1 h-4 w-4" />
+                            <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
                           </Button>
                           <Button
-                            size="sm"
-                            variant="destructive"
+                            variant="ghost"
+                            className="bg-red-500 text-white hover:bg-red-600"
                             onClick={() => handleApproveRequest(request.id, "REJECTED")}
-                            className="flex-1"
+                            size="sm"
                           >
-                            <XCircle className="mr-1 h-4 w-4" />
+                            <XCircle className="mr-2 h-4 w-4" />
                             Reject
                           </Button>
                         </div>
-                      </div>
-                    )}
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-            ))}
-            {projectRequests.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <div className="text-lg font-medium mb-2">No project requests found</div>
-                <p className="text-sm">Students will appear here when they request project approvals.</p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <div className="text-lg font-medium mb-2">No project requests found</div>
+              <p className="text-sm">Students will appear here when they request project approvals.</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="submissions" className="space-y-4">
