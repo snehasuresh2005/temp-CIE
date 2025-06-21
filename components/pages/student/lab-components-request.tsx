@@ -19,39 +19,48 @@ import {
 import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface LabComponent {
   id: string
-  name: string
-  description: string
-  category: string
-  totalQuantity: number
-  availableQuantity: number
-  location: string
-  specifications: string
-  imageUrl: string | null
-  backImageUrl?: string | null
+  component_name: string
+  component_description: string
+  component_category: string
+  component_quantity: number
+  available_quantity: number
+  component_location: string
+  component_specification: string
+  image_url: string | null
+  back_image_url?: string | null
+}
+
+interface Project {
+  id: string;
+  name: string;
+  components_needed: string[];
 }
 
 interface ComponentRequest {
   id: string
-  componentId: string
+  component_id: string
   component: LabComponent
   quantity: number
   purpose: string
-  requestDate: string
-  requiredDate: string
+  request_date: string
+  required_date: string
   status: string
-  approvedDate: string | null
-  returnDate: string | null
+  approved_date: string | null
+  return_date: string | null
   notes: string | null
-  facultyId: string | null
+  project_id: string
+  project: Project
 }
 
 export function LabComponentsRequest() {
   const { user } = useAuth()
   const [components, setComponents] = useState<LabComponent[]>([])
   const [requests, setRequests] = useState<ComponentRequest[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
   const [selectedComponent, setSelectedComponent] = useState<LabComponent | null>(null)
@@ -61,19 +70,18 @@ export function LabComponentsRequest() {
   const [newRequest, setNewRequest] = useState({
     quantity: 1,
     purpose: "",
-    requiredDate: "",
+    required_date: "",
+    project_id: ""
   })
 
-  const [facultyList, setFacultyList] = useState<any[]>([])
-  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("")
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
   useEffect(() => {
     fetchData()
-    fetchFaculty()
-  }, [])
+  }, [user])
 
   const fetchData = async () => {
+    if (!user) return
     try {
       setLoading(true)
 
@@ -82,10 +90,16 @@ export function LabComponentsRequest() {
       const componentsData = await componentsResponse.json()
       setComponents(componentsData.components || [])
 
-      // Fetch user's requests
-      const requestsResponse = await fetch("/api/component-requests")
+      // Fetch user's component requests
+      const requestsResponse = await fetch(`/api/component-requests?student_id=${user.id}`)
       const requestsData = await requestsResponse.json()
       setRequests(requestsData.requests || [])
+
+      // Fetch user's projects
+      const projectsResponse = await fetch(`/api/student/projects`)
+      const projectsData = await projectsResponse.json()
+      setProjects(projectsData.projects || [])
+
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({
@@ -98,25 +112,24 @@ export function LabComponentsRequest() {
     }
   }
 
-  const fetchFaculty = async () => {
-    try {
-      const res = await fetch('/api/faculty')
-      const data = await res.json()
-      setFacultyList(data.faculty || [])
-    } catch (e) {
-      // ignore
-    }
-  }
-
   const filteredComponents = components.filter(
     (component) =>
-      component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.description.toLowerCase().includes(searchTerm.toLowerCase()),
+      component.component_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      component.component_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      component.component_description.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const handleRequestComponent = async () => {
-    if (!selectedComponent || !newRequest.purpose || !newRequest.requiredDate || !selectedFacultyId) {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to make a request.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!selectedComponent || !newRequest.purpose || !newRequest.required_date || !newRequest.project_id) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -125,7 +138,7 @@ export function LabComponentsRequest() {
       return
     }
 
-    if (newRequest.quantity > selectedComponent.availableQuantity) {
+    if (newRequest.quantity > selectedComponent.available_quantity) {
       toast({
         title: "Error",
         description: "Requested quantity exceeds available quantity",
@@ -139,13 +152,15 @@ export function LabComponentsRequest() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user.id
         },
         body: JSON.stringify({
-          componentId: selectedComponent.id,
+          component_id: selectedComponent.id,
+          project_id: newRequest.project_id,
           quantity: newRequest.quantity,
           purpose: newRequest.purpose,
-          requiredDate: newRequest.requiredDate,
-          facultyId: selectedFacultyId,
+          required_date: newRequest.required_date,
+          notes: "",
         }),
       })
 
@@ -157,7 +172,7 @@ export function LabComponentsRequest() {
         setComponents((prev) =>
           prev.map((comp) =>
             comp.id === selectedComponent.id
-              ? { ...comp, availableQuantity: comp.availableQuantity - newRequest.quantity }
+              ? { ...comp, available_quantity: comp.available_quantity - newRequest.quantity }
               : comp,
           ),
         )
@@ -165,7 +180,8 @@ export function LabComponentsRequest() {
         setNewRequest({
           quantity: 1,
           purpose: "",
-          requiredDate: "",
+          required_date: "",
+          project_id: ""
         })
         setSelectedComponent(null)
         setIsRequestDialogOpen(false)
@@ -199,7 +215,7 @@ export function LabComponentsRequest() {
         },
         body: JSON.stringify({
           status: "PENDING_RETURN",
-          returnDate: new Date().toISOString(),
+          return_date: new Date().toISOString(),
         }),
       })
 
@@ -301,246 +317,249 @@ export function LabComponentsRequest() {
 
         <TabsContent value="available" className="space-y-4">
           <div className="flex items-center space-x-4">
-            <Input
-              placeholder="Search components..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
+            <div className="flex-1">
+              <Input placeholder="Search components..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredComponents.length === 0 ? (
-              <Card className="col-span-full">
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No components available</h3>
-                  <p className="text-gray-600">Check back later for available components.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredComponents.map((component) => (
-                <Card key={component.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center space-x-2">
-                          <Package className="h-5 w-5" />
-                          <span>{component.name}</span>
-                        </CardTitle>
-                        <CardDescription>{component.category}</CardDescription>
-                      </div>
-                      <Badge className={getAvailabilityColor(component.availableQuantity, component.totalQuantity)}>
-                        {component.availableQuantity > 0 ? "Available" : "Out of Stock"}
-                      </Badge>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredComponents.map((component) => (
+              <Card key={component.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Package className="h-5 w-5" />
+                        <span>{component.component_name}</span>
+                      </CardTitle>
+                      <CardDescription>{component.component_category}</CardDescription>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Image Display with Fade Animation */}
-                      {(component.imageUrl || component.backImageUrl) && (
-                        <div className="relative w-full h-48">
-                          {/* Front Image */}
+                    <Badge className={getAvailabilityColor(component.available_quantity, component.component_quantity)}>
+                      {component.available_quantity > 0 ? "Available" : "Out of Stock"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow flex flex-col">
+                  <div className="space-y-4 flex-grow">
+                    {/* Image Display with Fade Animation */}
+                    {(component.image_url || component.back_image_url) && (
+                      <div className="relative w-full h-48">
+                        {/* Front Image */}
+                        <div 
+                          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
+                            imageStates[component.id] ? 'opacity-0' : 'opacity-100'
+                          }`}
+                        >
+                          <img
+                            src={component.image_url || '/placeholder.jpg'}
+                            alt={`Front view of ${component.component_name}`}
+                            className="w-full h-full object-contain rounded-lg bg-gray-50"
+                            onError={(e) => {
+                              e.currentTarget.src = "/placeholder.jpg"
+                            }}
+                          />
+                        </div>
+                        
+                        {/* Back Image */}
+                        {component.back_image_url && (
                           <div 
                             className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                              imageStates[component.id] ? 'opacity-0' : 'opacity-100'
+                              imageStates[component.id] ? 'opacity-100' : 'opacity-0'
                             }`}
                           >
                             <img
-                              src={component.imageUrl || '/placeholder.jpg'}
-                              alt={`Front view of ${component.name}`}
+                              src={component.back_image_url}
+                              alt={`Back view of ${component.component_name}`}
                               className="w-full h-full object-contain rounded-lg bg-gray-50"
                               onError={(e) => {
                                 e.currentTarget.src = "/placeholder.jpg"
                               }}
                             />
                           </div>
-                          
-                          {/* Back Image */}
-                          {component.backImageUrl && (
-                            <div 
-                              className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                                imageStates[component.id] ? 'opacity-100' : 'opacity-0'
-                              }`}
-                            >
-                              <img
-                                src={component.backImageUrl}
-                                alt={`Back view of ${component.name}`}
-                                className="w-full h-full object-contain rounded-lg bg-gray-50"
-                                onError={(e) => {
-                                  e.currentTarget.src = "/placeholder.jpg"
-                                }}
-                              />
-                            </div>
-                          )}
-                          
-                          {/* Navigation Buttons */}
-                          {component.backImageUrl && (
-                            <>
-                              {/* Show right arrow when on front image */}
-                              {!imageStates[component.id] && (
-                                <Button
-                                  variant="secondary"
-                                  size="icon"
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
-                                  onClick={() => setImageStates(prev => ({ ...prev, [component.id]: true }))}
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                </Button>
-                              )}
-                              {/* Show left arrow when on back image */}
-                              {imageStates[component.id] && (
-                                <Button
-                                  variant="secondary"
-                                  size="icon"
-                                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
-                                  onClick={() => setImageStates(prev => ({ ...prev, [component.id]: false }))}
-                                >
-                                  <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </>
-                          )}
-
-                          {/* Image Indicator */}
-                          {component.backImageUrl && (
-                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
-                              <div 
-                                className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                                  !imageStates[component.id] ? 'bg-white' : 'bg-white/50'
-                                }`}
-                              />
-                              <div 
-                                className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                                  imageStates[component.id] ? 'bg-white' : 'bg-white/50'
-                                }`}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      <p className="text-sm text-gray-600 line-clamp-2">{component.description}</p>
-                      <div className="text-xs text-gray-500">Location: {component.location}</div>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
-                          <p className="font-medium">{component.totalQuantity}</p>
-                        </div>
-                        <div>
-                          <Label className="text-xs font-medium text-gray-500">Available</Label>
-                          <p className="font-medium">{component.availableQuantity}</p>
-                        </div>
-                      </div>
-
-                      {component.specifications && (
-                        <div>
-                          <Label className="text-sm font-medium">Specifications</Label>
-                          <p className="text-sm text-gray-600">{component.specifications}</p>
-                        </div>
-                      )}
-
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{
-                            width: `${(component.availableQuantity / component.totalQuantity) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="text-xs text-gray-500 text-center">
-                        {Math.round((component.availableQuantity / component.totalQuantity) * 100)}% Available
-                      </div>
-
-                      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            className="w-full"
-                            disabled={component.availableQuantity === 0}
-                            onClick={() => setSelectedComponent(component)}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Request Component
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Request Component</DialogTitle>
-                            <DialogDescription>Request {selectedComponent?.name} for your project</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="faculty">Faculty *</Label>
-                              <select
-                                id="faculty"
-                                className="w-full border rounded px-2 py-1"
-                                value={selectedFacultyId}
-                                onChange={e => setSelectedFacultyId(e.target.value)}
+                        )}
+                        
+                        {/* Navigation Buttons */}
+                        {component.back_image_url && (
+                          <>
+                            {/* Show right arrow when on front image */}
+                            {!imageStates[component.id] && (
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                onClick={() => setImageStates(prev => ({ ...prev, [component.id]: true }))}
                               >
-                                <option value="">Select Faculty</option>
-                                {facultyList.map(fac => (
-                                  <option key={fac.id} value={fac.id}>{fac.user?.name || fac.id}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <Label htmlFor="quantity">Quantity *</Label>
-                              <Input
-                                id="quantity"
-                                type="number"
-                                value={newRequest.quantity}
-                                onChange={(e) =>
-                                  setNewRequest((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))
-                                }
-                                min="1"
-                                max={selectedComponent?.availableQuantity || 1}
-                              />
-                              <p className="text-xs text-gray-500 mt-1">
-                                Available: {selectedComponent?.availableQuantity}
-                              </p>
-                            </div>
-                            <div>
-                              <Label htmlFor="purpose">Purpose *</Label>
-                              <Textarea
-                                id="purpose"
-                                value={newRequest.purpose}
-                                onChange={(e) => setNewRequest((prev) => ({ ...prev, purpose: e.target.value }))}
-                                placeholder="Describe how you plan to use this component..."
-                                rows={3}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="requiredDate">Required Date *</Label>
-                              <Input
-                                id="requiredDate"
-                                type="date"
-                                value={newRequest.requiredDate}
-                                onChange={(e) => setNewRequest((prev) => ({ ...prev, requiredDate: e.target.value }))}
-                                min={new Date().toISOString().split("T")[0]}
-                              />
-                            </div>
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {/* Show left arrow when on back image */}
+                            {imageStates[component.id] && (
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                onClick={() => setImageStates(prev => ({ ...prev, [component.id]: false }))}
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+
+                        {/* Image Indicator */}
+                        {component.back_image_url && (
+                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                            <div 
+                              className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                                !imageStates[component.id] ? 'bg-white' : 'bg-white/50'
+                              }`}
+                            />
+                            <div 
+                              className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                                imageStates[component.id] ? 'bg-white' : 'bg-white/50'
+                              }`}
+                            />
                           </div>
-                          <div className="flex justify-end space-x-2 mt-4">
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setIsRequestDialogOpen(false)
-                                setSelectedComponent(null)
-                                setNewRequest({ quantity: 1, purpose: "", requiredDate: "" })
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                            <Button onClick={handleRequestComponent}>Submit Request</Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                        )}
+                      </div>
+                    )}
+                    
+                    <p className="text-sm text-gray-600 line-clamp-2">{component.component_description}</p>
+                    <div className="text-xs text-gray-500">Location: {component.component_location}</div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
+                        <p className="font-medium">{component.component_quantity}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-500">Available</Label>
+                        <p className="font-medium">{component.available_quantity}</p>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+
+                    {component.component_specification && (
+                      <div>
+                        <Label className="text-sm font-medium">Specifications</Label>
+                        <p className="text-sm text-gray-600">{component.component_specification}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-auto pt-4">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{
+                          width: `${(component.available_quantity / component.component_quantity) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 text-center mt-1">
+                      {Math.round((component.available_quantity / component.component_quantity) * 100)}% Available
+                    </div>
+
+                    <Dialog open={isRequestDialogOpen && selectedComponent?.id === component.id} onOpenChange={(isOpen) => {
+                      setIsRequestDialogOpen(isOpen)
+                      if (!isOpen) {
+                        setSelectedComponent(null)
+                      }
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button
+                          className="w-full mt-3"
+                          disabled={component.available_quantity === 0}
+                          onClick={() => setSelectedComponent(component)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Request Component
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Request Component</DialogTitle>
+                          <DialogDescription>Request {selectedComponent?.component_name} for your project</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="project">Project *</Label>
+                            <Select
+                              value={newRequest.project_id}
+                              onValueChange={(value) => setNewRequest(prev => ({ ...prev, project_id: value }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a project" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {projects
+                                  .filter(p => p.components_needed.includes(selectedComponent?.id || ''))
+                                  .map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                  ))
+                                }
+                              </SelectContent>
+                            </Select>
+                            {projects.filter(p => p.components_needed.includes(selectedComponent?.id || '')).length === 0 && (
+                              <p className="text-xs text-red-500 mt-1">
+                                No projects assigned to you require this component. Please create a project first.
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="quantity">Quantity *</Label>
+                            <Input
+                              id="quantity"
+                              type="number"
+                              value={newRequest.quantity}
+                              onChange={(e) =>
+                                setNewRequest((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))
+                              }
+                              min="1"
+                              max={selectedComponent?.available_quantity || 1}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Available: {selectedComponent?.available_quantity}
+                            </p>
+                          </div>
+                          <div>
+                            <Label htmlFor="purpose">Purpose *</Label>
+                            <Textarea
+                              id="purpose"
+                              value={newRequest.purpose}
+                              onChange={(e) => setNewRequest((prev) => ({ ...prev, purpose: e.target.value }))}
+                              placeholder="Describe how you plan to use this component..."
+                              rows={3}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="required_date">Required Date *</Label>
+                            <Input
+                              id="required_date"
+                              type="date"
+                              value={newRequest.required_date}
+                              onChange={(e) => setNewRequest((prev) => ({ ...prev, required_date: e.target.value }))}
+                              min={new Date().toISOString().split("T")[0]}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end space-x-2 mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsRequestDialogOpen(false)
+                              setSelectedComponent(null)
+                              setNewRequest({ quantity: 1, purpose: "", required_date: "", project_id: "" })
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button onClick={handleRequestComponent}>Submit Request</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
 
@@ -564,20 +583,20 @@ export function LabComponentsRequest() {
                           <Package className="h-6 w-6 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="font-medium">{request.component.name}</h3>
+                          <h3 className="font-medium">{request.component.component_name}</h3>
                           <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
                           <p className="text-xs text-gray-500">
-                            Requested: {new Date(request.requestDate).toLocaleDateString()}
+                            Requested: {new Date(request.request_date).toLocaleDateString()}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Return by: {new Date(request.requiredDate).toLocaleDateString()}
+                            Return by: {new Date(request.required_date).toLocaleDateString()}
                           </p>
-                          {request.facultyId && (
+                          {request.project_id && (
                             <p className="text-xs text-blue-600">
-                              Faculty: {facultyList.find(f => f.id === request.facultyId)?.user?.name || 'Unknown'}
+                              Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
                             </p>
                           )}
-                          {request.status === "COLLECTED" && isOverdue(request.requiredDate) && (
+                          {request.status === "COLLECTED" && isOverdue(request.required_date) && (
                             <p className="text-xs text-red-600 font-medium">
                               ⚠️ OVERDUE - Please return immediately
                             </p>
@@ -618,9 +637,9 @@ export function LabComponentsRequest() {
                         <Button
                           variant="outline"
                           onClick={() => handleReturnComponent(request.id)}
-                          className={isOverdue(request.requiredDate) ? "border-red-500 text-red-600 hover:bg-red-50" : ""}
+                          className={isOverdue(request.required_date) ? "border-red-500 text-red-600 hover:bg-red-50" : ""}
                         >
-                          {isOverdue(request.requiredDate) ? "⚠️ Return Overdue Item" : "Return Component"}
+                          {isOverdue(request.required_date) ? "⚠️ Return Overdue Item" : "Return Component"}
                         </Button>
                       )}
                     </div>
