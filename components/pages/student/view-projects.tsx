@@ -498,176 +498,132 @@ export function ViewProjects() {
           let facultyLabel = ""
           if (project.status === "PENDING") {
             facultyLabel = project.type === "FACULTY_ASSIGNED" 
-              ? `Assigned by ${facultyName}`
-              : `Requested to ${facultyName}`
-          } else if (project.status === "REJECTED") {
-            facultyLabel = `Rejected by ${facultyName}`
+              ? "Assigned by: " 
+              : "Proposed to: "
           } else {
-            facultyLabel = project.type === "FACULTY_ASSIGNED"
-              ? `Assigned by ${facultyName}`
-              : `Accepted by ${facultyName}`
+            facultyLabel = "Faculty: "
           }
 
+          const course = courses.find((c) => c.id === project.course_id)
+
           return (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
-              <CardHeader className="pb-4">
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="flex items-center space-x-2 text-lg">
-                      <FolderOpen className="h-5 w-5 text-blue-600" />
-                      <span className="line-clamp-2">{project.name}</span>
+            <Card key={project.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                      <FolderOpen className="h-6 w-6 mr-3 text-blue-500" />
+                      {project.name}
                     </CardTitle>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <CardDescription className="text-sm font-medium text-gray-700">
-                      {courses.find(c => c.id === project.course_id)?.code} - {courses.find(c => c.id === project.course_id)?.name}
+                    <CardDescription className="mt-2 text-sm text-gray-600">
+                      {course ? `${course.code} - ${course.name}` : "Unknown Course"}
                     </CardDescription>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600 font-medium">{facultyLabel}</span>
-                      <Badge className={`${getStatusColor(project)} text-xs font-medium`}>
-                        {getStatusText(project)}
-                      </Badge>
-                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {facultyLabel}
+                      <span className="font-semibold">{facultyName}</span>
+                    </p>
                   </div>
                 </div>
               </CardHeader>
-              
-              <CardContent className="pt-0">
-                <div className="space-y-4">
-                  {/* Project Description */}
+              <CardContent className="flex-grow flex flex-col">
+                <div className="mb-4">
+                  <Badge className={`${getStatusColor(project)}`}>{getStatusText(project)}</Badge>
+                </div>
+                <div className="flex-grow">
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Description</Label>
-                    <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{project.description}</p>
-                  </div>
-
-                  {/* Required Components */}
-                  {project.components_needed.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Required Components</Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {project.components_needed.map((componentId: string) => {
-                          const component = labComponents.find(c => c.id === componentId)
-                          return (
-                            <Badge key={componentId} variant="outline" className="text-xs px-2 py-1 bg-gray-50">
-                              {component?.component_name}
-                            </Badge>
-                          )
-                        })}
-                      </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700">DESCRIPTION</h3>
+                      <p className="text-sm text-gray-600 mt-1">{project.description}</p>
                     </div>
-                  )}
-
-                  {/* Due Date and Time Left */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Timeline</Label>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
-                        <Calendar className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <div className="font-medium text-gray-900">Due Date</div>
-                          <div className="text-xs text-gray-600">{new Date(project.expected_completion_date).toLocaleDateString()}</div>
+                    {project.components_needed && project.components_needed.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-700">REQUIRED COMPONENTS</h3>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {project.components_needed.map((componentId) => {
+                            const component = labComponents.find((c) => c.id === componentId)
+                            return (
+                              <Badge key={componentId} variant="secondary" className="font-normal">
+                                {component ? component.component_name : "Unknown Component"}
+                              </Badge>
+                            )
+                          })}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
-                        <Clock className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <div className="font-medium text-gray-900">Time Left</div>
-                          <div className="text-xs text-gray-600">{getDaysUntilDue(project.expected_completion_date)} days</div>
-                        </div>
+                    )}
+                    {rejectedRequest && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <h3 className="text-sm font-semibold text-red-700">REJECTION REASON</h3>
+                        <p className="text-sm text-red-600 mt-1">{rejectedRequest.faculty_notes}</p>
                       </div>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-2 mt-auto">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                    <div>
+                      <p className="font-semibold">Due Date</p>
+                      <p>{new Date(project.expected_completion_date).toLocaleDateString()}</p>
                     </div>
                   </div>
-
-                  {/* Action Button */}
-                  {project.status === "ONGOING" && !project.submission && (
-                    <div className="pt-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                    <div>
+                      <p className="font-semibold">Time Left</p>
+                      <p>{getDaysUntilDue(project.expected_completion_date)} days</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <div className="p-6 pt-0">
+                {project.status === "ONGOING" && !project.submission && (
+                  <Dialog open={isSubmitDialogOpen && selectedProject?.id === project.id} onOpenChange={(isOpen) => {
+                    setIsSubmitDialogOpen(isOpen)
+                    if (!isOpen) {
+                      setSelectedProject(null)
+                    }
+                  }}>
+                    <DialogTrigger asChild>
                       <Button
-                        onClick={() => {
-                          setSelectedProject(project)
-                          setIsSubmitDialogOpen(true)
-                        }}
                         className="w-full bg-blue-600 hover:bg-blue-700"
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Submit Project
                       </Button>
-                    </div>
-                  )}
-
-                  {/* Submission Status */}
-                  {project.submission && (
-                    <div className="space-y-2 pt-2 border-t border-gray-100">
-                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submission Status</Label>
-                      <div className="p-3 bg-blue-50 rounded-md">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-blue-900">{project.submission.status}</span>
-                          {project.submission.marks !== null && (
-                            <Badge variant="secondary" className="text-xs">
-                              {project.submission.marks}/100
-                            </Badge>
-                          )}
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Submit Project</DialogTitle>
+                        <DialogDescription>
+                          Submit your work for {project.name}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="content">Project Content</Label>
+                          <Textarea
+                            id="content"
+                            value={submissionContent}
+                            onChange={(e) => setSubmissionContent(e.target.value)}
+                            placeholder="Describe your project work, findings, and any additional notes..."
+                            rows={6}
+                          />
                         </div>
-                        {project.submission.feedback && (
-                          <p className="text-xs text-blue-700 mt-1">{project.submission.feedback}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Rejection Notice */}
-                  {project.status === "REJECTED" && rejectedRequest && rejectedRequest.faculty && rejectedRequest.faculty.user && rejectedRequest.faculty.user.name && (
-                    <div className="pt-2 border-t border-gray-100">
-                      <div className="p-3 bg-red-50 rounded-md">
-                        <div className="text-sm font-medium text-red-900">
-                          Rejected by {rejectedRequest.faculty.user.name}
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleSubmitProject}>Submit Project</Button>
                         </div>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Creation Date */}
-                  <div className="pt-2 border-t border-gray-100">
-                    <div className="text-xs text-gray-500 text-center">
-                      Created: {new Date(project.created_date).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
             </Card>
           )
         })}
       </div>
-
-      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Submit Project</DialogTitle>
-            <DialogDescription>
-              Submit your work for {selectedProject?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="content">Project Content</Label>
-              <Textarea
-                id="content"
-                value={submissionContent}
-                onChange={(e) => setSubmissionContent(e.target.value)}
-                placeholder="Describe your project work, findings, and any additional notes..."
-                rows={6}
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmitProject}>Submit Project</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
