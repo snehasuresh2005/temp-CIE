@@ -36,7 +36,7 @@ async function main() {
         create: {
           department: 'Information Technology',
           office: 'Admin Block - 201',
-          workingHours: '9:00 AM - 5:00 PM',
+          working_hours: '9:00 AM - 5:00 PM',
           permissions: ['MANAGE_USERS', 'MANAGE_COURSES', 'MANAGE_COMPONENTS', 'ASSIGN_FACULTY'],
         },
       },
@@ -48,7 +48,7 @@ async function main() {
     {
       name: 'Dr. Rajesh Kumar',
       email: 'rajesh.kumar@college.edu',
-      employeeId: 'FAC001',
+      employee_id: 'FAC001',
       department: 'Computer Science',
       office: 'CS Block - 301',
       specialization: 'Data Structures and Algorithms',
@@ -57,7 +57,7 @@ async function main() {
     {
       name: 'Prof. Priya Sharma',
       email: 'priya.sharma@college.edu',
-      employeeId: 'FAC002',
+      employee_id: 'FAC002',
       department: 'Information Technology',
       office: 'IT Block - 205',
       specialization: 'Web Development and Databases',
@@ -66,7 +66,7 @@ async function main() {
     {
       name: 'Dr. Amit Patel',
       email: 'amit.patel@college.edu',
-      employeeId: 'FAC003',
+      employee_id: 'FAC003',
       department: 'Electronics',
       office: 'ECE Block - 401',
       specialization: 'Digital Electronics and Microprocessors',
@@ -85,11 +85,11 @@ async function main() {
         phone: fac.phone,
         faculty: {
           create: {
-            employeeId: fac.employeeId,
+            employee_id: fac.employee_id,
             department: fac.department,
             office: fac.office,
             specialization: fac.specialization,
-            officeHours: '10:00 AM - 4:00 PM',
+            office_hours: '10:00 AM - 4:00 PM',
           },
         },
       },
@@ -120,7 +120,7 @@ async function main() {
           phone: `+91-98765432${studentNumber.slice(-2)}`,
           student: {
             create: {
-              studentId: `STU${studentNumber}`,
+              student_id: `STU${studentNumber}`,
               program: program,
               year: '2024',
               section: section,
@@ -232,9 +232,9 @@ async function main() {
       credits: 4,
       department: "Computer Science",
       semester: "Fall 2024",
-      maxStudents: 60,
+      max_students: 60,
       sections: ["A", "B"],
-      facultyId: createdFaculty[0].faculty.id, // Dr. Rajesh Kumar
+      faculty_id: createdFaculty[0].faculty.id, // Dr. Rajesh Kumar
     },
     {
       code: "IT401",
@@ -243,21 +243,21 @@ async function main() {
       credits: 3,
       department: "Information Technology",
       semester: "Fall 2024",
-      maxStudents: 45,
+      max_students: 45,
       sections: ["A", "B"],
-      facultyId: createdFaculty[1].faculty.id, // Prof. Priya Sharma
+      faculty_id: createdFaculty[1].faculty.id, // Prof. Priya Sharma
     },
     {
-      code: "EC301",
+      code: "EC305",
       name: "Digital Electronics",
-      description: "Digital circuit design and implementation",
-      credits: 4,
+      description: "Fundamentals of digital logic and circuit design",
+      credits: 3,
       department: "Electronics",
       semester: "Fall 2024",
-      maxStudents: 50,
-      sections: ["A", "B"],
-      facultyId: createdFaculty[2].faculty.id, // Dr. Amit Patel
-    }
+      max_students: 50,
+      sections: ["C"],
+      faculty_id: createdFaculty[2].faculty.id, // Dr. Amit Patel
+    },
   ];
 
   const createdCourses = [];
@@ -268,171 +268,71 @@ async function main() {
     createdCourses.push(createdCourse);
   }
 
-  // Create faculty-assigned projects
-  const facultyProjects = [
+  // Create projects
+  const projects = [
     {
       name: "Smart Home Automation System",
-      description: "Design and implement a smart home automation system using Arduino and various sensors. The system should control lighting, temperature, and security features.",
-      course_id: createdCourses[0].id, // CS301
-      components_needed: [createdComponents[0].id, createdComponents[2].id, createdComponents[3].id], // Arduino, Breadboard, LED Strip
+      description: "Design and implement a smart home automation system using Arduino and various sensors. The system should control lighting, temperature, and security.",
+      course_id: createdCourses[0].id,
+      components_needed: [createdComponents[0].id, createdComponents[2].id, createdComponents[3].id],
       expected_completion_date: new Date("2025-03-15"),
-      created_by: createdFaculty[0].email,
-      type: "FACULTY_ASSIGNED" as const,
-      status: "ONGOING" as const,
+      created_by: createdFaculty[0].faculty.id,
+      type: 'FACULTY_ASSIGNED',
     },
     {
       name: "E-commerce Website Development",
-      description: "Build a full-stack e-commerce website using React for frontend and Node.js for backend. Include user authentication, product catalog, and payment integration.",
-      course_id: createdCourses[1].id, // IT401
-      components_needed: [createdComponents[1].id], // Raspberry Pi
+      description: "Build a full-stack e-commerce website using React for frontend and Node.js for backend. Include user authentication, product catalog, and payment gateway integration.",
+      course_id: createdCourses[1].id,
+      components_needed: [createdComponents[1].id],
       expected_completion_date: new Date("2025-03-20"),
-      created_by: createdFaculty[1].email,
-      type: "FACULTY_ASSIGNED" as const,
-      status: "ONGOING" as const,
+      created_by: createdFaculty[1].faculty.id,
+      type: 'FACULTY_ASSIGNED',
     },
-    {
-      name: "Digital Clock with 7-Segment Display",
-      description: "Create a digital clock using 7-segment displays and digital logic circuits. Implement time setting and alarm functionality.",
-      course_id: createdCourses[2].id, // EC301
-      components_needed: [createdComponents[2].id], // Breadboard
-      expected_completion_date: new Date("2025-03-25"),
-      created_by: createdFaculty[2].email,
-      type: "FACULTY_ASSIGNED" as const,
-      status: "ONGOING" as const,
-    }
   ];
 
-  const createdFacultyProjects = [];
-  for (const project of facultyProjects) {
-    const createdProject = await prisma.project.create({
+  for (const project of projects) {
+    await prisma.project.create({
       data: project,
     });
-    createdFacultyProjects.push(createdProject);
   }
 
-  // Create student-proposed projects
-  const studentProjects = [
-    {
-      name: "IoT Weather Station",
-      description: "Build a weather station that collects temperature, humidity, and pressure data and displays it on a web dashboard.",
-      course_id: createdCourses[0].id, // CS301
-      components_needed: [createdComponents[0].id, createdComponents[1].id], // Arduino, Raspberry Pi
-      expected_completion_date: new Date("2025-04-01"),
-      created_by: createdStudents[0].email, // student001
-      type: "STUDENT_PROPOSED" as const,
-      status: "PENDING" as const,
-    },
-    {
-      name: "Gesture-Controlled Robot",
-      description: "Develop a robot that can be controlled using hand gestures captured by a camera and processed using computer vision.",
-      course_id: createdCourses[1].id, // IT401
-      components_needed: [createdComponents[1].id, createdComponents[4].id], // Raspberry Pi, Servo Motor
-      expected_completion_date: new Date("2025-04-05"),
-      created_by: createdStudents[10].email, // student011
-      type: "STUDENT_PROPOSED" as const,
-      status: "PENDING" as const,
+  // Enroll students in courses
+  // Enroll all students from section A and B in the first two courses
+  for (const student of createdStudents) {
+    if (student.student.section === 'A' || student.student.section === 'B') {
+      await prisma.enrollment.create({
+        data: {
+          student_id: student.student.id,
+          course_id: createdCourses[0].id,
+          section: student.student.section,
+        },
+      });
+      await prisma.enrollment.create({
+        data: {
+          student_id: student.student.id,
+          course_id: createdCourses[1].id,
+          section: student.student.section,
+        },
+      });
     }
-  ];
-
-  const createdStudentProjects = [];
-  for (const project of studentProjects) {
-    const createdProject = await prisma.project.create({
-      data: project,
-    });
-    createdStudentProjects.push(createdProject);
-  }
-
-  // Create project requests for student-proposed projects
-  const projectRequests = [
-    {
-      project_id: createdStudentProjects[0].id,
-      student_id: createdStudents[0].student!.id,
-      faculty_id: createdFaculty[0].faculty!.id, // Dr. Rajesh Kumar
-      student_notes: "I have experience with Arduino programming and would like to explore IoT applications. This project will help me learn about sensor integration and web development.",
-      status: "PENDING" as const,
-    },
-    {
-      project_id: createdStudentProjects[1].id,
-      student_id: createdStudents[10].student!.id,
-      faculty_id: createdFaculty[1].faculty!.id, // Prof. Priya Sharma
-      student_notes: "I'm interested in computer vision and robotics. This project combines both areas and will be a great learning experience.",
-      status: "APPROVED" as const,
-      accepted_date: new Date("2025-01-28"),
+    // Enroll students from section C in the third course
+    if (student.student.section === 'C') {
+      await prisma.enrollment.create({
+        data: {
+          student_id: student.student.id,
+          course_id: createdCourses[2].id,
+          section: 'C',
+        },
+      });
     }
-  ];
-
-  for (const request of projectRequests) {
-    await prisma.projectRequest.create({
-      data: request,
-    });
   }
 
-  // Update the approved project status
-  await prisma.project.update({
-    where: { id: createdStudentProjects[1].id },
-    data: { 
-      status: "ONGOING",
-      accepted_by: createdFaculty[1].faculty!.id
-    },
-  });
-
-  // Create project submissions
-  const projectSubmissions = [
-    {
-      projectId: createdFacultyProjects[0].id,
-      studentId: createdStudents[5].student!.id,
-      content: "I have successfully implemented the smart home automation system. The system includes:\n\n1. Temperature and humidity sensors for climate control\n2. Motion sensors for security\n3. LED strip control for lighting\n4. Web interface for remote control\n\nAll components are working as expected and the system responds to both manual and automated triggers.",
-      status: "SUBMITTED" as const,
-      submissionDate: new Date("2025-03-10"),
-    },
-    {
-      projectId: createdFacultyProjects[1].id,
-      studentId: createdStudents[15].student!.id,
-      content: "E-commerce website completed with the following features:\n\n- User registration and authentication\n- Product catalog with search and filtering\n- Shopping cart functionality\n- Payment integration with Stripe\n- Admin panel for product management\n- Responsive design for mobile devices\n\nThe website is fully functional and ready for deployment.",
-      status: "GRADED" as const,
-      submissionDate: new Date("2025-03-15"),
-      marks: 85,
-      feedback: "Excellent work! The website is well-designed and functional. Good use of modern web technologies. Consider adding more security features for production deployment.",
-    }
-  ];
-
-  for (const submission of projectSubmissions) {
-    await prisma.projectSubmission.create({
-      data: submission,
-    });
-  }
-
-  console.log('✅ Database seeded successfully!');
-  console.log('==================================================');
-  console.log('LOGIN CREDENTIALS:');
-  console.log('==================================================');
-  console.log('Admin:');
-  console.log('  Email: admin@college.edu');
-  console.log('  Password: password123');
-  console.log('\nFaculty:');
-  console.log('  Dr. Rajesh Kumar - rajesh.kumar@college.edu');
-  console.log('  Prof. Priya Sharma - priya.sharma@college.edu');
-  console.log('  Dr. Amit Patel - amit.patel@college.edu');
-  console.log('  Password: password123 (for all)');
-  console.log('\nStudents:');
-  console.log('  student001@college.edu to student030@college.edu');
-  console.log('  Password: password123 (for all)');
-  console.log('==================================================');
-  console.log('SUMMARY:');
-  console.log('- 1 Admin');
-  console.log('- 3 Faculty members');
-  console.log('- 30 Students');
-  console.log('- 5 Lab Components');
-  console.log('- 3 Courses');
-  console.log('- 5 Projects (3 faculty-assigned, 2 student-proposed)');
-  console.log('- 2 Project Requests (1 pending, 1 approved)');
-  console.log('- 2 Project Submissions (1 submitted, 1 graded)');
-  console.log('==================================================');
+  console.log('Database seeded successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding database:', e);
+    console.error('Error seeding database:', e);
     process.exit(1);
   })
   .finally(async () => {
