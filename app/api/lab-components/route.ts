@@ -5,17 +5,6 @@ import { getUserById } from "@/lib/auth"
 export async function GET(request: NextRequest) {
   try {
     const components = await prisma.labComponent.findMany({
-      include: {
-        requests: {
-          include: {
-            student: {
-              include: {
-                user: true,
-              },
-            },
-          },
-        },
-      },
       orderBy: {
         created_date: "desc",
       },
