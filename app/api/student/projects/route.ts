@@ -27,10 +27,11 @@ export async function GET() {
       {} as Record<string, string>,
     )
 
-    // Get projects for enrolled courses
+    // Get projects for enrolled courses (only faculty-assigned projects)
     const projects = await prisma.project.findMany({
       where: {
         course_id: { in: courseIds },
+        type: "FACULTY_ASSIGNED", // Only show faculty-assigned projects
       },
       include: {
         submissions: {

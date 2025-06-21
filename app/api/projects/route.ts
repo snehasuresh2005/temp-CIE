@@ -46,16 +46,22 @@ export async function GET() {
       },
     })
 
+    // Fetch all lab components
+    const allComponents = await prisma.labComponent.findMany()
+
     // For faculty-assigned projects, we need to get the faculty information
     const projectsWithFaculty = await Promise.all(
       projects.map(async (project) => {
+        // Map components_needed to full component objects
+        const components_needed_details = (project.components_needed || [])
+          .map((id) => allComponents.find((c) => c.id === id))
+          .filter(Boolean)
+
         if (project.type === "FACULTY_ASSIGNED" && project.created_by) {
-          // Find the faculty who created this project by email
+          // Find the faculty who created this project by user ID
           const faculty = await prisma.faculty.findFirst({
             where: {
-              user: {
-                email: project.created_by,
-              },
+              userId: project.created_by,
             },
             include: {
               user: {
@@ -64,17 +70,20 @@ export async function GET() {
                   email: true,
                 },
               },
-      },
-    })
-          
+            },
+          })
           if (faculty) {
             return {
               ...project,
               faculty_creator: faculty,
+              components_needed_details,
             }
           }
         }
-        return project
+        return {
+          ...project,
+          components_needed_details,
+        }
       })
     )
 
@@ -154,8 +163,29 @@ export async function POST(request: NextRequest) {
       data: project_data,
       include: {
         submissions: true,
-        project_requests: true,
+        project_requests: {
+          include: {
+            student: {
+              include: {
+                user: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+            faculty: {
+              include: {
+                user: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
           },
+        },
+      },
     })
 
     // If student created project, create a project request
@@ -167,8 +197,40 @@ export async function POST(request: NextRequest) {
           faculty_id: accepted_by,
           request_date: new Date(),
           status: "PENDING",
-      },
-    })
+        },
+      })
+      
+      // Fetch the updated project with the new project request
+      const updatedProject = await prisma.project.findUnique({
+        where: { id: project.id },
+        include: {
+          submissions: true,
+          project_requests: {
+            include: {
+              student: {
+                include: {
+                  user: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+              faculty: {
+                include: {
+                  user: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+      
+      return NextResponse.json({ project: updatedProject })
     }
 
     return NextResponse.json({ project })
@@ -177,3 +239,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 })
   }
 }
+

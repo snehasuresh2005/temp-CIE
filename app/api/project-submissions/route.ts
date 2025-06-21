@@ -23,7 +23,7 @@ export async function GET() {
         },
       },
       orderBy: {
-        submissionDate: "desc",
+        submission_date: "desc",
       },
     })
 
