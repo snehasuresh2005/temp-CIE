@@ -11,15 +11,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      UserRole
-  phone     String?
-  joinDate  DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String
+  password   String
+  role       UserRole
+  phone      String?
+  join_date  DateTime @default(now())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   // Role-specific relations
   admin    Admin?
@@ -30,165 +30,166 @@ model User {
 }
 
 model Admin {
-  id           String @id @default(cuid())
-  userId       String @unique
-  department   String
-  office       String
-  workingHours String
-  permissions  String[]
+  id            String   @id @default(cuid())
+  user_id       String   @unique
+  department    String
+  office        String
+  working_hours String
+  permissions   String[]
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("admins")
 }
 
 model Faculty {
-  id             String @id @default(cuid())
-  userId         String @unique
-  employeeId     String @unique
-  department     String
-  office         String
-  specialization String
-  officeHours    String
+  id              String @id @default(cuid())
+  user_id         String @unique
+  employee_id     String @unique
+  department      String
+  office          String
+  specialization  String
+  office_hours    String
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   // Relations
-  courses            Course[]
-  classSchedules     ClassSchedule[]
-  attendanceRecords  AttendanceRecord[]
-  componentApprovals ComponentRequest[]
-  project_requests   ProjectRequest[]
+  courses             Course[]
+  class_schedules     ClassSchedule[]
+  attendance_records  AttendanceRecord[]
+  component_approvals ComponentRequest[] @relation("ComponentApprovals")
+  project_requests    ProjectRequest[]
 
   @@map("faculty")
 }
 
 model Student {
-  id        String @id @default(cuid())
-  userId    String @unique
-  studentId String @unique
-  program   String
-  year      String
-  section   String
-  gpa       Float?
-  advisorId String?
+  id         String @id @default(cuid())
+  user_id    String @unique
+  student_id String @unique
+  program    String
+  year       String
+  section    String
+  gpa        Float?
+  advisor_id String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   // Relations
-  enrollments        Enrollment[]
-  projectSubmissions ProjectSubmission[]
-  attendanceRecords  StudentAttendance[]
-  componentRequests  ComponentRequest[]
-  project_requests   ProjectRequest[]
+  enrollments         Enrollment[]
+  project_submissions ProjectSubmission[]
+  attendance_records  StudentAttendance[]
+  component_requests  ComponentRequest[]
+  project_requests    ProjectRequest[]
 
   @@map("students")
 }
 
 model Course {
-  id              String @id @default(cuid())
-  code            String @unique
-  name            String
-  description     String
-  credits         Int
-  department      String
-  semester        String
-  maxStudents     Int
-  enrolledStudents Int   @default(0)
-  status          CourseStatus @default(ACTIVE)
-  sections        String[]
-  facultyId       String
+  id                String       @id @default(cuid())
+  code              String       @unique
+  name              String
+  description       String
+  credits           Int
+  department        String
+  semester          String
+  max_students      Int
+  enrolled_students Int          @default(0)
+  status            CourseStatus @default(ACTIVE)
+  sections          String[]
+  faculty_id        String
 
-  faculty Faculty @relation(fields: [facultyId], references: [id])
+  faculty Faculty @relation(fields: [faculty_id], references: [id])
 
   // Relations
-  enrollments    Enrollment[]
-  classSchedules ClassSchedule[]
+  enrollments     Enrollment[]
+  class_schedules ClassSchedule[]
 
   @@map("courses")
 }
 
 model Enrollment {
-  id        String @id @default(cuid())
-  studentId String
-  courseId  String
-  section   String
-  enrolledAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  student_id  String
+  course_id   String
+  section     String
+  enrolled_at DateTime @default(now())
 
-  student Student @relation(fields: [studentId], references: [id])
-  course  Course  @relation(fields: [courseId], references: [id])
+  student Student @relation(fields: [student_id], references: [id])
+  course  Course  @relation(fields: [course_id], references: [id])
 
-  @@unique([studentId, courseId])
+  @@unique([student_id, course_id])
   @@map("enrollments")
 }
 
 model ClassSchedule {
-  id        String @id @default(cuid())
-  courseId  String
-  facultyId String
-  room      String
-  dayOfWeek String
-  startTime String
-  endTime   String
-  section   String
+  id          String @id @default(cuid())
+  course_id   String
+  faculty_id  String
+  room        String
+  day_of_week String
+  start_time  String
+  end_time    String
+  section     String
 
-  course  Course  @relation(fields: [courseId], references: [id])
-  faculty Faculty @relation(fields: [facultyId], references: [id])
+  course  Course  @relation(fields: [course_id], references: [id])
+  faculty Faculty @relation(fields: [faculty_id], references: [id])
 
   @@map("class_schedules")
 }
 
 model Project {
-  id                        String   @id @default(cuid())
-  created_by                String
-  modified_by               String?
-  created_date              DateTime @default(now())
-  modified_date             DateTime @updatedAt
-  name                      String
-  components_needed         String[] // Array of component IDs
-  expected_completion_date  DateTime
-  course_id                 String // Course ID
-  accepted_by               String? // Faculty ID (only for student-created projects)
-  description               String
-  status                    ProjectStatus @default(PENDING)
-  type                      ProjectType @default(FACULTY_ASSIGNED) // FACULTY_ASSIGNED or STUDENT_PROPOSED
+  id                         String   @id @default(cuid())
+  created_by                 String
+  modified_by                String?
+  created_date               DateTime @default(now())
+  modified_date              DateTime @updatedAt
+  name                       String
+  components_needed          String[] // Array of component IDs
+  expected_completion_date   DateTime
+  course_id                  String // Course ID
+  accepted_by                String? // Faculty ID (only for student-created projects)
+  description                String
+  status                     ProjectStatus @default(PENDING)
+  type                       ProjectType   @default(FACULTY_ASSIGNED) // FACULTY_ASSIGNED or STUDENT_PROPOSED
 
   // Relations
-  submissions      ProjectSubmission[]
-  project_requests ProjectRequest[]
+  submissions       ProjectSubmission[]
+  project_requests  ProjectRequest[]
+  component_requests ComponentRequest[]
 
   @@map("projects")
 }
 
 model ProjectSubmission {
-  id             String @id @default(cuid())
-  projectId      String
-  studentId      String
-  submissionDate DateTime @default(now())
-  content        String
-  attachments    String[]
-  marks          Int?
-  feedback       String?
-  status         SubmissionStatus @default(SUBMITTED)
+  id              String   @id @default(cuid())
+  project_id      String
+  student_id      String
+  submission_date DateTime @default(now())
+  content         String
+  attachments     String[]
+  marks           Int?
+  feedback        String?
+  status          SubmissionStatus @default(SUBMITTED)
 
-  project Project @relation(fields: [projectId], references: [id])
-  student Student @relation(fields: [studentId], references: [id])
+  project Project @relation(fields: [project_id], references: [id])
+  student Student @relation(fields: [student_id], references: [id])
 
-  @@unique([projectId, studentId])
+  @@unique([project_id, student_id])
   @@map("project_submissions")
 }
 
 model ProjectRequest {
-  id             String   @id @default(cuid())
-  project_id     String
-  student_id     String
-  faculty_id     String
-  request_date   DateTime @default(now())
-  status         ProjectRequestStatus @default(PENDING)
-  student_notes  String?
-  faculty_notes  String?
-  accepted_date  DateTime?
-  rejected_date  DateTime?
+  id            String               @id @default(cuid())
+  project_id    String
+  student_id    String
+  faculty_id    String
+  request_date  DateTime             @default(now())
+  status        ProjectRequestStatus @default(PENDING)
+  student_notes String?
+  faculty_notes String?
+  accepted_date DateTime?
+  rejected_date DateTime?
 
   project Project @relation(fields: [project_id], references: [id])
   student Student @relation(fields: [student_id], references: [id])
@@ -199,104 +200,97 @@ model ProjectRequest {
 }
 
 model AttendanceRecord {
-  id        String @id @default(cuid())
-  courseId  String
-  facultyId String
-  section   String
-  date      DateTime
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  course_id  String
+  faculty_id String
+  section    String
+  date       DateTime
+  created_at DateTime @default(now())
 
-  faculty Faculty @relation(fields: [facultyId], references: [id])
+  faculty Faculty @relation(fields: [faculty_id], references: [id])
 
   // Relations
-  studentAttendance StudentAttendance[]
+  student_attendance StudentAttendance[]
 
   @@map("attendance_records")
 }
 
 model StudentAttendance {
-  id                 String @id @default(cuid())
-  attendanceRecordId String
-  studentId          String
-  status             AttendanceStatus
+  id                   String           @id @default(cuid())
+  attendance_record_id String
+  student_id           String
+  status               AttendanceStatus
 
-  attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id])
-  student          Student          @relation(fields: [studentId], references: [id])
+  attendance_record AttendanceRecord @relation(fields: [attendance_record_id], references: [id])
+  student           Student          @relation(fields: [student_id], references: [id])
 
-  @@unique([attendanceRecordId, studentId])
+  @@unique([attendance_record_id, student_id])
   @@map("student_attendance")
 }
 
 model LabComponent {
-  id                    String   @id @default(uuid())
-  component_name        String
-  component_description String
+  id                      String   @id @default(uuid())
+  component_name          String
+  component_description   String
   component_specification String?
-  component_quantity    Int
-  component_tag_id      String?
-  component_category    String
-  component_location    String
+  component_quantity      Int
+  component_tag_id        String?
+  component_category      String
+  component_location      String
+  image_path              String   @default("lab-images")
+  front_image_id          String?
+  back_image_id           String?
+  invoice_number          String?
+  purchase_value          Decimal? @db.Decimal(10, 2)
+  purchased_from          String?
+  purchase_currency       String   @default("INR")
+  purchase_date           DateTime?
+  created_by              String
+  created_at              DateTime @default(now())
+  modified_by             String?
+  modified_at             DateTime @updatedAt
   
-  // Image handling - separate path and ID for flexibility
-  image_path            String   @default("lab-images")
-  front_image_id        String?
-  back_image_id         String?
-  
-  // Purchase details
-  invoice_number        String?
-  purchase_value        Decimal? @db.Decimal(10, 2)
-  purchased_from        String?
-  purchase_currency     String   @default("INR")
-  purchase_date         DateTime?
-  
-  // Audit fields
-  created_by            String
-  created_date          DateTime @default(now())
-  modified_date         DateTime @updatedAt
-  modified_by           String?
-  
-  // Relations
-  requests              ComponentRequest[]
-  
-  // Indexes for better performance
-  @@index([component_category])
-  @@index([component_location])
-  @@index([created_by])
+  component_requests ComponentRequest[]
+
   @@map("lab_components")
 }
 
 model ComponentRequest {
-  id                 String @id @default(cuid())
-  student_id         String
-  component_id       String
-  faculty_id         String?
-  quantity           Int
-  request_date       DateTime @default(now())
-  expected_return_date DateTime
-  collection_date    DateTime?
-  return_date        DateTime?
-  status             RequestStatus @default(PENDING)
-  notes              String?
-  faculty_notes      String?
+  id             String        @id @default(cuid())
+  student_id     String
+  component_id   String
+  project_id     String
+  quantity       Int
+  purpose        String
+  request_date   DateTime      @default(now())
+  required_date  DateTime
+  status         RequestStatus @default(PENDING)
+  approved_date  DateTime?
+  return_date    DateTime?
+  notes          String?
+  approved_by    String? // Faculty ID
 
   student   Student      @relation(fields: [student_id], references: [id])
   component LabComponent @relation(fields: [component_id], references: [id])
-  faculty   Faculty?     @relation(fields: [faculty_id], references: [id])
+  project   Project      @relation(fields: [project_id], references: [id])
+  faculty   Faculty?     @relation(name: "ComponentApprovals", fields: [approved_by], references: [id])
 
   @@map("component_requests")
 }
 
 model Location {
-  id          String @id @default(cuid())
-  name        String
-  building    String
-  floor       String?
-  capacity    Int?
-  type        LocationType
-  facilities  String[]
-  isAvailable Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String       @id @default(cuid())
+  name            String       @unique
+  description     String?
+  type            LocationType
+  capacity        Int?
+  in_charge_id    String? // Could be a faculty or admin ID
+  contact_person  String?
+  contact_email   String?
+  contact_phone   String?
+  is_available    Boolean      @default(true)
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
 
   @@map("locations")
 }
@@ -311,7 +305,7 @@ enum UserRole {
 enum CourseStatus {
   ACTIVE
   INACTIVE
-  COMPLETED
+  ARCHIVED
 }
 
 enum ProjectStatus {
@@ -325,13 +319,14 @@ enum ProjectStatus {
 enum SubmissionStatus {
   SUBMITTED
   GRADED
-  LATE
+  REVISION_REQUESTED
 }
 
 enum AttendanceStatus {
   PRESENT
   ABSENT
   LATE
+  EXCUSED
 }
 
 enum RequestStatus {
@@ -339,17 +334,16 @@ enum RequestStatus {
   APPROVED
   REJECTED
   COLLECTED
-  PENDING_RETURN
   RETURNED
-  OVERDUE
+  PENDING_RETURN
 }
 
 enum LocationType {
+  LAB
   CLASSROOM
-  LABORATORY
-  AUDITORIUM
   OFFICE
-  LIBRARY
+  WAREHOUSE
+  OTHER
 }
 
 enum ProjectType {
