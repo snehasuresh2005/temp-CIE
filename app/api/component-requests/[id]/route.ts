@@ -1,8 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getAuth } from "@clerk/nextjs/server"
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const { userId: facultyId } = getAuth(request);
+    if (!facultyId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const data = await request.json()
     const { id } = params
 
@@ -21,9 +27,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       where: { id },
       data: {
         status: data.status,
-        facultyNotes: data.facultyNotes,
-        collectionDate: data.collectionDate ? new Date(data.collectionDate) : undefined,
-        returnDate: data.returnDate ? new Date(data.returnDate) : undefined,
+        faculty_notes: data.faculty_notes,
+        collection_date: data.collection_date ? new Date(data.collection_date) : undefined,
+        return_date: data.return_date ? new Date(data.return_date) : undefined,
+        approved_by: data.status === "APPROVED" ? facultyId : undefined,
       },
       include: {
         student: {
@@ -32,6 +39,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           },
         },
         component: true,
+        project: true,
       },
     })
 
@@ -39,9 +47,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (data.status === "COLLECTED" && currentRequest.status !== "COLLECTED") {
       // Decrease available quantity when collected
       await prisma.labComponent.update({
-        where: { id: currentRequest.componentId },
+        where: { id: currentRequest.component_id },
         data: {
-          availableQuantity: {
+          available_quantity: {
             decrement: currentRequest.quantity,
           },
         },
@@ -49,9 +57,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     } else if (data.status === "RETURNED" && currentRequest.status === "PENDING_RETURN") {
       // Increase available quantity when faculty confirms return
       await prisma.labComponent.update({
-        where: { id: currentRequest.componentId },
+        where: { id: currentRequest.component_id },
         data: {
-          availableQuantity: {
+          available_quantity: {
             increment: currentRequest.quantity,
           },
         },
