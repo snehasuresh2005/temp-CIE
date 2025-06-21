@@ -6,34 +6,93 @@ export async function GET(request: NextRequest) {
   try {
     const components = await prisma.labComponent.findMany({
       orderBy: {
-        created_date: "desc",
+        created_at: "desc",
       },
     })
 
-    // Transform the data to match frontend expectations
-    const transformedComponents = components.map(component => ({
-      // Add snake_case for the new info dialog
-      ...component,
+    // Get all projects to link them to components
+    const projects = await prisma.project.findMany({
+      where: {
+        components_needed: {
+          isEmpty: false,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        components_needed: true,
+      },
+    })
 
-      // Keep camelCase for existing frontend parts
-      name: component.component_name,
-      description: component.component_description,
-      specifications: component.component_specification,
-      totalQuantity: component.component_quantity,
-      availableQuantity: component.component_quantity, // TODO: This needs to be calculated
-      category: component.component_category,
-      location: component.component_location,
-      tagId: component.component_tag_id,
-      imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
-      backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
-      invoiceNumber: component.invoice_number,
-      purchasedFrom: component.purchased_from,
-      purchasedDate: component.purchase_date,
-      purchasedValue: component.purchase_value,
-      purchasedCurrency: component.purchase_currency,
-      createdAt: component.created_date,
-      updatedAt: component.modified_date,
-    }))
+    // Create a map of componentId -> projects
+    const componentProjectsMap: Record<string, { id: string; name: string }[]> = {}
+    projects.forEach((project) => {
+      project.components_needed.forEach((componentId) => {
+        if (!componentProjectsMap[componentId]) {
+          componentProjectsMap[componentId] = []
+        }
+        componentProjectsMap[componentId].push({ id: project.id, name: project.name })
+      })
+    })
+
+    // Get all approved component requests to calculate available quantity
+    const approvedRequests = await prisma.componentRequest.findMany({
+      where: {
+        status: {
+          in: ["APPROVED", "COLLECTED"],
+        },
+      },
+      select: {
+        component_id: true,
+        quantity: true,
+      },
+    })
+
+    // Calculate available quantity for each component
+    const componentUsage = approvedRequests.reduce(
+      (acc, request) => {
+        acc[request.component_id] = (acc[request.component_id] || 0) + request.quantity
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+    // Transform the data to match frontend expectations
+    const transformedComponents = components.map((component) => {
+      const usedQuantity = componentUsage[component.id] || 0
+      const availableQuantity = component.component_quantity - usedQuantity
+      const associatedProjects = componentProjectsMap[component.id] || []
+
+      return {
+        // Add snake_case for the new info dialog
+        ...component,
+
+        // Add associated projects
+        projects: associatedProjects,
+
+        // Keep camelCase for existing frontend parts
+        name: component.component_name,
+        description: component.component_description,
+        specifications: component.component_specification,
+        totalQuantity: component.component_quantity,
+        availableQuantity: availableQuantity,
+        available_quantity: availableQuantity, // Add snake_case version for frontend
+        category: component.component_category,
+        location: component.component_location,
+        tagId: component.component_tag_id,
+        imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
+        backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
+        image_url: component.front_image_id ? `/lab-images/${component.front_image_id}` : null, // Add snake_case version
+        back_image_url: component.back_image_id ? `/lab-images/${component.back_image_id}` : null, // Add snake_case version
+        invoiceNumber: component.invoice_number,
+        purchasedFrom: component.purchased_from,
+        purchasedDate: component.purchase_date,
+        purchasedValue: component.purchase_value,
+        purchasedCurrency: component.purchase_currency,
+        createdAt: component.created_at,
+        updatedAt: component.modified_at,
+      }
+    })
 
     return NextResponse.json({ components: transformedComponents })
   } catch (error) {
@@ -45,7 +104,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    
+
     // Get user from header
     const userId = request.headers.get("x-user-id")
     let userName = "system"
@@ -87,18 +146,21 @@ export async function POST(request: NextRequest) {
       specifications: component.component_specification,
       totalQuantity: component.component_quantity,
       availableQuantity: component.component_quantity,
+      available_quantity: component.component_quantity, // Add snake_case version for frontend
       category: component.component_category,
       location: component.component_location,
       tagId: component.component_tag_id,
       imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
       backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
+      image_url: component.front_image_id ? `/lab-images/${component.front_image_id}` : null, // Add snake_case version
+      back_image_url: component.back_image_id ? `/lab-images/${component.back_image_id}` : null, // Add snake_case version
       invoiceNumber: component.invoice_number,
       purchasedFrom: component.purchased_from,
       purchasedDate: component.purchase_date,
       purchasedValue: component.purchase_value,
       purchasedCurrency: component.purchase_currency,
-      createdAt: component.created_date,
-      updatedAt: component.modified_date,
+      createdAt: component.created_at,
+      updatedAt: component.modified_at,
     }
 
     return NextResponse.json({ component: transformedComponent })
@@ -106,4 +168,4 @@ export async function POST(request: NextRequest) {
     console.error("Create lab component error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
+} 

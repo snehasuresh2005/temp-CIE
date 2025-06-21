@@ -20,6 +20,7 @@ import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, Ch
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface LabComponent {
   id: string
@@ -32,6 +33,7 @@ interface LabComponent {
   component_specification: string
   image_url: string | null
   back_image_url?: string | null
+  projects: { id: string; name: string }[]
 }
 
 interface Project {
@@ -474,86 +476,119 @@ export function LabComponentsRequest() {
                           Request Component
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Request Component</DialogTitle>
-                          <DialogDescription>Request {selectedComponent?.component_name} for your project</DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="project">Project *</Label>
-                            <Select
-                              value={newRequest.project_id}
-                              onValueChange={(value) => setNewRequest(prev => ({ ...prev, project_id: value }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a project" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {projects
-                                  .filter(p => p.components_needed.includes(selectedComponent?.id || ''))
-                                  .map(p => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                  ))
-                                }
-                              </SelectContent>
-                            </Select>
-                            {projects.filter(p => p.components_needed.includes(selectedComponent?.id || '')).length === 0 && (
-                              <p className="text-xs text-red-500 mt-1">
-                                No projects assigned to you require this component. Please create a project first.
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            <Label htmlFor="quantity">Quantity *</Label>
-                            <Input
-                              id="quantity"
-                              type="number"
-                              value={newRequest.quantity}
-                              onChange={(e) =>
-                                setNewRequest((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))
-                              }
-                              min="1"
-                              max={selectedComponent?.available_quantity || 1}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Available: {selectedComponent?.available_quantity}
-                            </p>
-                          </div>
-                          <div>
-                            <Label htmlFor="purpose">Purpose *</Label>
-                            <Textarea
-                              id="purpose"
-                              value={newRequest.purpose}
-                              onChange={(e) => setNewRequest((prev) => ({ ...prev, purpose: e.target.value }))}
-                              placeholder="Describe how you plan to use this component..."
-                              rows={3}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="required_date">Required Date *</Label>
-                            <Input
-                              id="required_date"
-                              type="date"
-                              value={newRequest.required_date}
-                              onChange={(e) => setNewRequest((prev) => ({ ...prev, required_date: e.target.value }))}
-                              min={new Date().toISOString().split("T")[0]}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end space-x-2 mt-4">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setIsRequestDialogOpen(false)
-                              setSelectedComponent(null)
-                              setNewRequest({ quantity: 1, purpose: "", required_date: "", project_id: "" })
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button onClick={handleRequestComponent}>Submit Request</Button>
-                        </div>
+                      <DialogContent className="sm:max-w-2xl">
+                        {selectedComponent && (
+                          <>
+                            <DialogHeader>
+                              <DialogTitle>Request Component</DialogTitle>
+                              <DialogDescription>
+                                Select the quantity and specify the purpose for your request.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-6 py-4">
+                              <div>
+                                <h3 className="text-lg font-semibold mb-2">{selectedComponent.component_name}</h3>
+                                <p className="text-sm text-muted-foreground">{selectedComponent.component_description}</p>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4 items-end">
+                                <div className="space-y-2">
+                                  <Label htmlFor="quantity">Quantity *</Label>
+                                  <Input
+                                    id="quantity"
+                                    type="number"
+                                    value={newRequest.quantity}
+                                    onChange={(e) =>
+                                      setNewRequest((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))
+                                    }
+                                    min="1"
+                                    max={selectedComponent.available_quantity || 1}
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Available: {selectedComponent.available_quantity}
+                                  </p>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="purpose">Purpose *</Label>
+                                  <Textarea
+                                    id="purpose"
+                                    value={newRequest.purpose}
+                                    onChange={(e) => setNewRequest((prev) => ({ ...prev, purpose: e.target.value }))}
+                                    placeholder="Describe how you plan to use this component..."
+                                    rows={3}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4 items-end">
+                                <div className="space-y-2">
+                                  <Label htmlFor="required_date">Required Date *</Label>
+                                  <Input
+                                    id="required_date"
+                                    type="date"
+                                    value={newRequest.required_date}
+                                    onChange={(e) => setNewRequest((prev) => ({ ...prev, required_date: e.target.value }))}
+                                    min={new Date().toISOString().split("T")[0]}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="project">Project *</Label>
+                                  <Select
+                                    value={newRequest.project_id}
+                                    onValueChange={(value) => setNewRequest((prev) => ({ ...prev, project_id: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a project" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {selectedComponent.projects.length > 0 ? (
+                                        selectedComponent.projects.map((project) => (
+                                          <SelectItem key={project.id} value={project.id}>
+                                            {project.name}
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        <div className="p-4 text-sm text-center text-gray-500">
+                                          No projects associated with this component.
+                                        </div>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setIsRequestDialogOpen(false)
+                                  setSelectedComponent(null)
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0}>
+                                      <Button
+                                        onClick={handleRequestComponent}
+                                        disabled={selectedComponent.projects.length === 0}
+                                      >
+                                        Submit Request
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  {selectedComponent.projects.length === 0 && (
+                                    <TooltipContent>
+                                      <p>No projects are associated with this component.</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          </>
+                        )}
                       </DialogContent>
                     </Dialog>
                   </div>
