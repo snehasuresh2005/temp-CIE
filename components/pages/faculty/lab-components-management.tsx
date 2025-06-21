@@ -18,31 +18,38 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { CheckCircle, Clock, AlertTriangle, Package, X, Check, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
 
 interface LabComponent {
   id: string
-  name: string
-  description: string
-  imageUrl: string | null
-  totalQuantity: number
-  availableQuantity: number
-  category: string
+  component_name: string
+  component_description: string
+  image_url: string | null
+  component_quantity: number
+  available_quantity: number
+  component_category: string
   requests: ComponentRequest[]
+}
+
+interface Project {
+  id: string;
+  name: string;
 }
 
 interface ComponentRequest {
   id: string
-  studentId: string
-  componentId: string
+  student_id: string
+  component_id: string
   quantity: number
-  requestDate: string
-  expectedReturnDate: string
-  collectionDate: string | null
-  returnDate: string | null
+  request_date: string
+  required_date: string
+  collection_date: string | null
+  return_date: string | null
   status: string
   notes: string | null
-  facultyNotes: string | null
+  faculty_notes: string | null
   component?: LabComponent
+  project: Project
   student: {
     user: {
       name: string
@@ -52,28 +59,26 @@ interface ComponentRequest {
 }
 
 export function LabComponentsManagement() {
+  const { user } = useAuth()
   const [components, setComponents] = useState<LabComponent[]>([])
   const [requests, setRequests] = useState<ComponentRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [facultyNotes, setFacultyNotes] = useState("")
   const { toast } = useToast()
 
-  // Fetch components and requests from backend
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [user])
 
   const fetchData = async () => {
+    if (!user) return;
     try {
       setLoading(true)
-
-      // Fetch components
-      const componentsResponse = await fetch("/api/lab-components")
+      const componentsResponse = await fetch(`/api/lab-components?faculty_id=${user.id}`)
       const componentsData = await componentsResponse.json()
       setComponents(componentsData.components || [])
 
-      // Fetch requests
-      const requestsResponse = await fetch("/api/component-requests")
+      const requestsResponse = await fetch(`/api/component-requests?faculty_id=${user.id}`)
       const requestsData = await requestsResponse.json()
       setRequests(requestsData.requests || [])
     } catch (error) {
@@ -89,21 +94,23 @@ export function LabComponentsManagement() {
   }
 
   const handleApproveRequest = async (requestId: string, notes?: string) => {
+    if (!user) return;
     try {
       const response = await fetch(`/api/component-requests/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user.id
         },
         body: JSON.stringify({
           status: "APPROVED",
-          facultyNotes: notes || null,
+          faculty_notes: notes || null,
         }),
       })
 
       if (response.ok) {
         setRequests((prev) =>
-          prev.map((req) => (req.id === requestId ? { ...req, status: "APPROVED", facultyNotes: notes || null } : req)),
+          prev.map((req) => (req.id === requestId ? { ...req, status: "APPROVED", faculty_notes: notes || null } : req)),
         )
         toast({
           title: "Request Approved",
@@ -123,21 +130,23 @@ export function LabComponentsManagement() {
   }
 
   const handleRejectRequest = async (requestId: string, notes?: string) => {
+    if (!user) return;
     try {
       const response = await fetch(`/api/component-requests/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user.id
         },
         body: JSON.stringify({
           status: "REJECTED",
-          facultyNotes: notes || null,
+          faculty_notes: notes || null,
         }),
       })
 
       if (response.ok) {
         setRequests((prev) =>
-          prev.map((req) => (req.id === requestId ? { ...req, status: "REJECTED", facultyNotes: notes || null } : req)),
+          prev.map((req) => (req.id === requestId ? { ...req, status: "REJECTED", faculty_notes: notes || null } : req)),
         )
         toast({
           title: "Request Rejected",
@@ -166,18 +175,17 @@ export function LabComponentsManagement() {
         },
         body: JSON.stringify({
           status: "COLLECTED",
-          collectionDate: new Date().toISOString(),
+          collection_date: new Date().toISOString(),
         }),
       })
 
       if (response.ok) {
         setRequests((prev) =>
           prev.map((req) =>
-            req.id === requestId ? { ...req, status: "COLLECTED", collectionDate: new Date().toISOString() } : req,
+            req.id === requestId ? { ...req, status: "COLLECTED", collection_date: new Date().toISOString() } : req,
           ),
         )
 
-        // Refresh components to update available quantity
         fetchData()
 
         toast({
@@ -206,18 +214,17 @@ export function LabComponentsManagement() {
         },
         body: JSON.stringify({
           status: "RETURNED",
-          returnDate: new Date().toISOString(),
+          return_date: new Date().toISOString(),
         }),
       })
 
       if (response.ok) {
         setRequests((prev) =>
           prev.map((req) =>
-            req.id === requestId ? { ...req, status: "RETURNED", returnDate: new Date().toISOString() } : req,
+            req.id === requestId ? { ...req, status: "RETURNED", return_date: new Date().toISOString() } : req,
           ),
         )
 
-        // Refresh components to update available quantity
         fetchData()
 
         toast({
@@ -291,7 +298,7 @@ export function LabComponentsManagement() {
   const pendingRequests = requests.filter((req) => req.status === "PENDING")
   const activeRequests = requests.filter((req) => ["APPROVED", "COLLECTED"].includes(req.status))
   const pendingReturnRequests = requests.filter((req) => req.status === "PENDING_RETURN")
-  const overdueRequests = requests.filter((req) => req.status === "COLLECTED" && isOverdue(req.expectedReturnDate))
+  const overdueRequests = requests.filter((req) => req.status === "COLLECTED" && isOverdue(req.required_date))
   const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED"].includes(req.status))
 
   if (loading) {
@@ -366,7 +373,7 @@ export function LabComponentsManagement() {
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {components.reduce((sum, comp) => sum + comp.availableQuantity, 0)}
+                  {components.reduce((sum, comp) => sum + comp.available_quantity, 0)}
                 </p>
                 <p className="text-sm text-gray-600">Available Items</p>
               </div>
@@ -412,11 +419,16 @@ export function LabComponentsManagement() {
                           <h3 className="font-medium">{request.student.user.name}</h3>
                           <p className="text-sm text-gray-600">{request.student.user.email}</p>
                           <p className="text-sm font-medium text-blue-600">
-                            Component: {request.component?.name || `ID: ${request.componentId}`} × {request.quantity}
+                            Project: <span className="font-medium">{request.project.name}</span>
+                          </p>
+                          <p className="text-sm font-medium text-blue-600">
+                            Component: <span className="font-medium">{request.component?.component_name}</span>
                           </p>
                           <p className="text-xs text-gray-500">
-                            Requested: {new Date(request.requestDate).toLocaleDateString()} | Expected Return:{" "}
-                            {new Date(request.expectedReturnDate).toLocaleDateString()}
+                            Requested on: {new Date(request.request_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Required by: {new Date(request.required_date).toLocaleDateString()}
                           </p>
                           {request.notes && (
                             <p className="text-xs text-gray-600 italic mt-1 bg-gray-50 p-2 rounded">
@@ -529,78 +541,81 @@ export function LabComponentsManagement() {
               </Card>
             ) : (
               activeRequests.map((request) => (
-                <Card key={request.id} className={isOverdue(request.expectedReturnDate) ? "border-red-200 bg-red-50" : ""}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {request.student.user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-medium">{request.student.user.name}</h3>
+                <Card key={request.id} className={isOverdue(request.required_date) ? "border-red-200 bg-red-50" : ""}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <Avatar>
+                          <AvatarFallback>
+                            {request.student.user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-medium">{request.student.user.name}</h3>
                           <p className="text-sm text-gray-600">{request.student.user.email}</p>
                           <p className="text-sm font-medium text-blue-600">
-                            Component: {request.component?.name || `ID: ${request.componentId}`} × {request.quantity}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Expected Return: {new Date(request.expectedReturnDate).toLocaleDateString()}
-                        </p>
-                        {request.collectionDate && (
-                          <p className="text-xs text-green-600">
-                            Collected: {new Date(request.collectionDate).toLocaleDateString()}
+                            Project: <span className="font-medium">{request.project.name}</span>
                           </p>
-                        )}
-                          {isOverdue(request.expectedReturnDate) && (
-                            <p className="text-xs text-red-600 font-medium">
-                              ⚠️ OVERDUE - {getOverdueDays(request.expectedReturnDate)} days late
+                          <p className="text-sm font-medium text-blue-600">
+                            Component: <span className="font-medium">{request.component?.component_name}</span>
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Required by: {new Date(request.required_date).toLocaleDateString()}
+                          </p>
+                          {request.collection_date && (
+                            <p className="text-xs text-green-600">
+                              Collected: {new Date(request.collection_date).toLocaleDateString()}
                             </p>
                           )}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(request.status)}>
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(request.status)}
-                          <span className="capitalize">{request.status.toLowerCase()}</span>
+                          {isOverdue(request.required_date) && (
+                            <p className="text-xs text-red-600 font-medium">
+                              ⚠️ OVERDUE - {getOverdueDays(request.required_date)} days late
+                            </p>
+                          )}
                         </div>
-                      </Badge>
-                      {request.status === "APPROVED" && (
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className={getStatusColor(request.status)}>
+                          <div className="flex items-center space-x-1">
+                            {getStatusIcon(request.status)}
+                            <span className="capitalize">{request.status.toLowerCase()}</span>
+                          </div>
+                        </Badge>
+                        {request.status === "APPROVED" && (
                           <div className="text-right">
                             <p className="text-xs text-blue-600 mb-1">✓ Approved - Ready for collection</p>
-                        <Button size="sm" onClick={() => handleMarkCollected(request.id)}>
-                          Mark Collected
-                        </Button>
+                            <Button size="sm" onClick={() => handleMarkCollected(request.id)}>
+                              Mark Collected
+                            </Button>
                           </div>
-                      )}
-                      {request.status === "COLLECTED" && (
+                        )}
+                        {request.status === "COLLECTED" && (
                           <div className="text-right">
                             <p className="text-xs text-green-600 mb-1">
                               📦 Collected - Student has the component
                             </p>
                             <p className="text-xs text-gray-500 mb-1">
-                              {isOverdue(request.expectedReturnDate) ? "⚠️ Overdue" : "On time"}
+                              {isOverdue(request.required_date) ? "⚠️ Overdue" : "On time"}
                             </p>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={() => handleMarkReturned(request.id)}
-                              variant={isOverdue(request.expectedReturnDate) ? "destructive" : "default"}
+                              variant={isOverdue(request.required_date) ? "destructive" : "default"}
                             >
-                              {isOverdue(request.expectedReturnDate) ? "Mark Returned (Overdue)" : "Mark Returned"}
-                        </Button>
+                              {isOverdue(request.required_date) ? "Mark Returned (Overdue)" : "Mark Returned"}
+                            </Button>
                           </div>
-                      )}
+                        )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))
             )}
-                  </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="pending-returns" className="space-y-4">
@@ -631,14 +646,17 @@ export function LabComponentsManagement() {
                           <h3 className="font-medium">{request.student.user.name}</h3>
                           <p className="text-sm text-gray-600">{request.student.user.email}</p>
                           <p className="text-sm font-medium text-blue-600">
-                            Component: {request.component?.name || `ID: ${request.componentId}`} × {request.quantity}
+                            Project: <span className="font-medium">{request.project.name}</span>
+                          </p>
+                          <p className="text-sm font-medium text-blue-600">
+                            Component: <span className="font-medium">{request.component?.component_name}</span>
                           </p>
                           <p className="text-xs text-gray-500">
-                            Expected Return: {new Date(request.expectedReturnDate).toLocaleDateString()}
+                            Required by: {new Date(request.required_date).toLocaleDateString()}
                           </p>
-                          {request.returnDate && (
+                          {request.return_date && (
                             <p className="text-xs text-green-600">
-                              Student marked returned: {new Date(request.returnDate).toLocaleDateString()}
+                              Student marked returned: {new Date(request.return_date).toLocaleDateString()}
                             </p>
                           )}
                         </div>
@@ -679,55 +697,58 @@ export function LabComponentsManagement() {
               </Card>
             ) : (
               completedRequests.map((request) => (
-              <Card key={request.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {request.student.user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-medium">{request.student.user.name}</h3>
+                <Card key={request.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <Avatar>
+                          <AvatarFallback>
+                            {request.student.user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-medium">{request.student.user.name}</h3>
                           <p className="text-sm text-gray-600">{request.student.user.email}</p>
                           <p className="text-sm font-medium text-blue-600">
-                            Component: {request.component?.name || `ID: ${request.componentId}`} × {request.quantity}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            Requested: {new Date(request.requestDate).toLocaleDateString()} | Expected Return: {new Date(request.expectedReturnDate).toLocaleDateString()}
-                        </p>
-                          {request.status === "RETURNED" && request.returnDate && (
+                            Project: <span className="font-medium">{request.project.name}</span>
+                          </p>
+                          <p className="text-sm font-medium text-blue-600">
+                            Component: <span className="font-medium">{request.component?.component_name}</span>
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Requested on: {new Date(request.request_date).toLocaleDateString()} | Required by: {new Date(request.required_date).toLocaleDateString()}
+                          </p>
+                          {request.status === "RETURNED" && request.return_date && (
                             <p className="text-xs text-green-600">
-                              Returned: {new Date(request.returnDate).toLocaleDateString()}
-                              {isOverdue(request.expectedReturnDate) && (
+                              Returned: {new Date(request.return_date).toLocaleDateString()}
+                              {isOverdue(request.required_date) && (
                                 <span className="text-red-600 ml-2">
-                                  ({getOverdueDays(request.expectedReturnDate)} days late)
+                                  ({getOverdueDays(request.required_date)} days late)
                                 </span>
                               )}
                             </p>
                           )}
                           {request.status === "REJECTED" && (
                             <p className="text-xs text-red-600">
-                              Rejected: {new Date(request.requestDate).toLocaleDateString()}
-                          </p>
-                        )}
+                              Rejected: {new Date(request.request_date).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                      <Badge className={getStatusColor(request.status)}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(request.status)}
+                          <span className="capitalize">{request.status.toLowerCase()}</span>
+                        </div>
+                      </Badge>
                     </div>
-                    <Badge className={getStatusColor(request.status)}>
-                      <div className="flex items-center space-x-1">
-                        {getStatusIcon(request.status)}
-                        <span className="capitalize">{request.status.toLowerCase()}</span>
-                      </div>
-                    </Badge>
-                  </div>
-                    {request.facultyNotes && (
+                    {request.faculty_notes && (
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                         <Label className="text-sm font-medium text-gray-700">Faculty Notes:</Label>
-                        <p className="text-sm text-gray-600 mt-1">"{request.facultyNotes}"</p>
+                        <p className="text-sm text-gray-600 mt-1">"{request.faculty_notes}"</p>
                       </div>
                     )}
                     {request.notes && (
@@ -736,8 +757,8 @@ export function LabComponentsManagement() {
                         <p className="text-sm text-blue-600 mt-1">"{request.notes}"</p>
                       </div>
                     )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               ))
             )}
           </div>
@@ -750,17 +771,17 @@ export function LabComponentsManagement() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Package className="h-5 w-5" />
-                    <span>{component.name}</span>
+                    <span>{component.component_name}</span>
                   </CardTitle>
-                  <CardDescription>{component.category}</CardDescription>
+                  <CardDescription>{component.component_category}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {/* Component Image */}
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
                       <img
-                        src={component.imageUrl || "/placeholder.jpg"}
-                        alt={component.name}
+                        src={component.image_url || "/placeholder.jpg"}
+                        alt={component.component_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.currentTarget.src = "/placeholder.jpg"
@@ -768,35 +789,35 @@ export function LabComponentsManagement() {
                       />
                     </div>
                     
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Available:</span>
-                      <span className="font-medium">{component.availableQuantity}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Total:</span>
-                      <span className="font-medium">{component.totalQuantity}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${
-                          component.availableQuantity === 0
-                            ? "bg-red-500"
-                            : component.availableQuantity < component.totalQuantity * 0.2
-                              ? "bg-yellow-500"
-                              : "bg-green-500"
-                        }`}
-                        style={{
-                          width: `${(component.availableQuantity / component.totalQuantity) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <Badge
-                      variant={component.availableQuantity > 0 ? "default" : "destructive"}
-                      className="w-full justify-center"
-                    >
-                      {component.availableQuantity > 0 ? "Available" : "Out of Stock"}
-                    </Badge>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Available:</span>
+                        <span className="font-medium">{component.available_quantity}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Total:</span>
+                        <span className="font-medium">{component.component_quantity}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            component.available_quantity === 0
+                              ? "bg-red-500"
+                              : component.available_quantity < component.component_quantity * 0.2
+                                ? "bg-yellow-500"
+                                : "bg-green-500"
+                          }`}
+                          style={{
+                            width: `${(component.available_quantity / component.component_quantity) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <Badge
+                        variant={component.available_quantity > 0 ? "default" : "destructive"}
+                        className="w-full justify-center"
+                      >
+                        {component.available_quantity > 0 ? "Available" : "Out of Stock"}
+                      </Badge>
                     </div>
                   </div>
                 </CardContent>
