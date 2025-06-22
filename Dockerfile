@@ -38,7 +38,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'pnpm prisma migrate deploy' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "Seeding database..."' >> /app/start.sh && \
-    echo 'node --loader ts-node/esm prisma/seed.ts' >> /app/start.sh && \
+    echo 'pnpm prisma db seed' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "Starting application..."' >> /app/start.sh && \
     echo 'pnpm start' >> /app/start.sh
