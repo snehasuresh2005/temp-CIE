@@ -62,7 +62,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: sh -c "echo 'Waiting for database to be ready...' && while ! nc -z postgres 5432; do sleep 1; done && echo 'Database is ready!' && echo 'Running database migrations...' && pnpm prisma migrate deploy && echo 'Seeding database...' && node --loader ts-node/esm prisma/seed.ts && echo 'Starting development server...' && pnpm dev"
+    command: sh -c "echo 'Waiting for database to be ready...' && while ! nc -z postgres 5432; do sleep 1; done && echo 'Database is ready!' && echo 'Running database migrations...' && pnpm prisma migrate deploy && echo 'Seeding database...' && pnpm prisma db seed && echo 'Starting development server...' && pnpm dev"
     restart: unless-stopped
 
 volumes:
