@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
         credits: data.credits,
         department: data.department,
         semester: data.semester,
-        maxStudents: data.maxStudents,
+        max_students: data.maxStudents || data.max_students,
         sections: data.sections,
-        facultyId: data.facultyId,
+        faculty_id: data.facultyId || data.faculty_id,
       },
       include: {
         faculty: {
