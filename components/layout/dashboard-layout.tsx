@@ -49,7 +49,7 @@ interface BaseProfileData {
   id: string
   role: string
   phone: string
-  joinDate: string
+  join_date: string
 }
 
 interface AdminProfileData extends BaseProfileData {
@@ -57,21 +57,21 @@ interface AdminProfileData extends BaseProfileData {
   department: string
   office: string
   permissions: string[]
-  workingHours: string
+  working_hours: string
 }
 
 interface FacultyProfileData extends BaseProfileData {
   role: "faculty"
   department: string
   office: string
-  assignedClasses: string[]
+  assigned_classes: string[]
   specialization: string
-  officeHours: string
+  office_hours: string
 }
 
 interface StudentProfileData extends BaseProfileData {
   role: "student"
-  studentId: string
+  student_id: string
   program: string
   year: string
   section: string
@@ -124,7 +124,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       email: user.email,
       id: user.id,
       phone: "+1 (555) 123-4567",
-      joinDate: "January 2024",
+      join_date: "January 2024",
     }
 
     switch (user.role.toLowerCase()) {
@@ -135,7 +135,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           department: "Administration",
           office: "Admin Building, Room 101",
           permissions: ["Full System Access", "User Management", "System Configuration"],
-          workingHours: "9:00 AM - 5:00 PM",
+          working_hours: "9:00 AM - 5:00 PM",
         }
       case "faculty":
         return {
@@ -143,15 +143,15 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           role: "faculty" as const,
           department: "Computer Science",
           office: "Engineering Building, Room 205",
-          assignedClasses: ["CS101 - Intro to Programming", "CS201 - Data Structures", "CS301 - Algorithms"],
+          assigned_classes: ["CS101 - Intro to Programming", "CS201 - Data Structures", "CS301 - Algorithms"],
           specialization: "Software Engineering",
-          officeHours: "Mon-Wed-Fri: 2:00 PM - 4:00 PM",
+          office_hours: "Mon-Wed-Fri: 2:00 PM - 4:00 PM",
         }
       case "student":
         return {
           ...baseData,
           role: "student" as const,
-          studentId: "STU2024001",
+          student_id: "STU2024001",
           program: "Bachelor of Computer Science",
           year: "3rd Year",
           section: "Section A",
@@ -162,7 +162,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
         return {
           ...baseData,
           role: "student" as const,
-          studentId: "STU2024001",
+          student_id: "STU2024001",
           program: "Bachelor of Computer Science",
           year: "3rd Year",
           section: "Section A",
@@ -258,7 +258,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                         {profileData?.role === "student" ? "Student ID" : "User ID"}
                       </p>
                       <p className="text-sm text-gray-900">
-                        {isStudentProfile(profileData!) ? profileData.studentId : profileData?.id}
+                        {isStudentProfile(profileData!) ? profileData.student_id : profileData?.id}
                       </p>
                     </div>
                   </div>
@@ -310,7 +310,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                         <div>
                           <p className="text-xs font-medium text-gray-700">Assigned Classes</p>
                           <div className="space-y-1 mt-1">
-                            {profileData.assignedClasses.map((className: string) => (
+                            {profileData.assigned_classes.map((className: string) => (
                               <Badge key={className} variant="outline" className="text-xs block w-fit">
                                 {className}
                               </Badge>
@@ -322,7 +322,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                         <Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />
                         <div>
                           <p className="text-xs font-medium text-gray-700">Office Hours</p>
-                          <p className="text-sm text-gray-900">{profileData.officeHours}</p>
+                          <p className="text-sm text-gray-900">{profileData.office_hours}</p>
                         </div>
                       </div>
                     </>
