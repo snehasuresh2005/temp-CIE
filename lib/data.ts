@@ -11,31 +11,31 @@ export interface LabComponent {
 
 export interface ComponentRequest {
   id: string
-  studentId: string
-  studentName: string
-  studentEmail: string
-  componentId: string
-  componentName: string
+  student_id: string
+  student_name: string
+  student_email: string
+  component_id: string
+  component_name: string
   quantity: number
-  requestDate: string
-  expectedReturnDate: string
-  collectionDate?: string
-  returnDate?: string
+  request_date: string
+  expected_return_date: string
+  collection_date?: string
+  return_date?: string
   status: "pending" | "approved" | "rejected" | "collected" | "returned" | "overdue"
   notes?: string
-  facultyNotes?: string
+  faculty_notes?: string
 }
 
 export interface ClassSchedule {
   id: string
-  courseCode: string
-  courseName: string
-  facultyId: string
-  facultyName: string
+  course_code: string
+  course_name: string
+  faculty_id: string
+  faculty_name: string
   room: string
-  dayOfWeek: string
-  startTime: string
-  endTime: string
+  day_of_week: string
+  start_time: string
+  end_time: string
   semester: string
   section: string
 }
@@ -44,7 +44,7 @@ export interface Student {
   id: string
   name: string
   email: string
-  studentId: string
+  student_id: string
   class: string
   section: string
   department: string
@@ -55,7 +55,7 @@ export interface Faculty {
   name: string
   email: string
   department: string
-  assignedClasses: string[]
+  assigned_classes: string[]
 }
 
 export interface Course {
@@ -67,8 +67,8 @@ export interface Course {
   department: string
   semester: string
   instructor: string
-  maxStudents: number
-  enrolledStudents: number
+  max_students: number
+  enrolled_students: number
   status: "active" | "inactive"
   sections: string[]
 }
@@ -77,23 +77,23 @@ export interface Project {
   id: string
   title: string
   description: string
-  courseCode: string
+  course_code: string
   section: string
-  facultyId: string
-  facultyName: string
-  assignedDate: string
-  dueDate: string
-  maxMarks: number
+  faculty_id: string
+  faculty_name: string
+  assigned_date: string
+  due_date: string
+  max_marks: number
   status: "active" | "completed" | "overdue"
   attachments?: string[]
 }
 
 export interface ProjectSubmission {
   id: string
-  projectId: string
-  studentId: string
-  studentName: string
-  submissionDate: string
+  project_id: string
+  student_id: string
+  student_name: string
+  submission_date: string
   content: string
   attachments?: string[]
   marks?: number
@@ -103,13 +103,13 @@ export interface ProjectSubmission {
 
 export interface AttendanceRecord {
   id: string
-  courseCode: string
+  course_code: string
   section: string
   date: string
-  facultyId: string
+  faculty_id: string
   students: {
-    studentId: string
-    studentName: string
+    student_id: string
+    student_name: string
     status: "present" | "absent" | "late"
   }[]
 }
@@ -175,27 +175,27 @@ export const labComponents: LabComponent[] = [
 export const componentRequests: ComponentRequest[] = [
   {
     id: "1",
-    studentId: "3",
-    studentName: "Jane Doe",
-    studentEmail: "student@cie.edu",
-    componentId: "1",
-    componentName: "Arduino Uno R3",
+    student_id: "3",
+    student_name: "Jane Doe",
+    student_email: "student@cie.edu",
+    component_id: "1",
+    component_name: "Arduino Uno R3",
     quantity: 2,
-    requestDate: "2024-01-15",
-    expectedReturnDate: "2024-01-29",
+    request_date: "2024-01-15",
+    expected_return_date: "2024-01-29",
     status: "pending",
     notes: "Need for final project - IoT weather station",
   },
   {
     id: "2",
-    studentId: "4",
-    studentName: "Mike Johnson",
-    studentEmail: "mike.johnson@cie.edu",
-    componentId: "2",
-    componentName: "Breadboard (Half Size)",
+    student_id: "4",
+    student_name: "Mike Johnson",
+    student_email: "mike.johnson@cie.edu",
+    component_id: "2",
+    component_name: "Breadboard (Half Size)",
     quantity: 1,
-    requestDate: "2024-01-14",
-    expectedReturnDate: "2024-01-30",
+    request_date: "2024-01-14",
+    expected_return_date: "2024-01-30",
     status: "approved",
     notes: "Circuit prototyping assignment",
   },
@@ -211,8 +211,8 @@ export const courses: Course[] = [
     department: "Computer Science",
     semester: "Fall 2024",
     instructor: "Dr. John Smith",
-    maxStudents: 90,
-    enrolledStudents: 75,
+    max_students: 90,
+    enrolled_students: 75,
     status: "active",
     sections: ["A", "B", "C"],
   },
@@ -225,8 +225,8 @@ export const courses: Course[] = [
     department: "Computer Science",
     semester: "Spring 2024",
     instructor: "Dr. John Smith",
-    maxStudents: 75,
-    enrolledStudents: 66,
+    max_students: 75,
+    enrolled_students: 66,
     status: "active",
     sections: ["A", "B", "C"],
   },
@@ -239,8 +239,8 @@ export const courses: Course[] = [
     department: "Mathematics",
     semester: "Fall 2024",
     instructor: "Dr. Sarah Johnson",
-    maxStudents: 105,
-    enrolledStudents: 90,
+    max_students: 105,
+    enrolled_students: 90,
     status: "active",
     sections: ["A", "B", "C"],
   },
@@ -250,81 +250,81 @@ export const classSchedules: ClassSchedule[] = [
   // CS101 - Section A
   {
     id: "1",
-    courseCode: "CS101",
-    courseName: "Introduction to Computer Science",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
+    course_code: "CS101",
+    course_name: "Introduction to Computer Science",
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
     room: "A101",
-    dayOfWeek: "Monday",
-    startTime: "09:00",
-    endTime: "10:30",
+    day_of_week: "Monday",
+    start_time: "09:00",
+    end_time: "10:30",
     semester: "Fall 2024",
     section: "A",
   },
   {
     id: "2",
-    courseCode: "CS101",
-    courseName: "Introduction to Computer Science",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
+    course_code: "CS101",
+    course_name: "Introduction to Computer Science",
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
     room: "A101",
-    dayOfWeek: "Wednesday",
-    startTime: "09:00",
-    endTime: "10:30",
+    day_of_week: "Wednesday",
+    start_time: "09:00",
+    end_time: "10:30",
     semester: "Fall 2024",
     section: "A",
   },
   // CS101 - Section B
   {
     id: "3",
-    courseCode: "CS101",
-    courseName: "Introduction to Computer Science",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
+    course_code: "CS101",
+    course_name: "Introduction to Computer Science",
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
     room: "A102",
-    dayOfWeek: "Monday",
-    startTime: "11:00",
-    endTime: "12:30",
+    day_of_week: "Monday",
+    start_time: "11:00",
+    end_time: "12:30",
     semester: "Fall 2024",
     section: "B",
   },
   {
     id: "4",
-    courseCode: "CS101",
-    courseName: "Introduction to Computer Science",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
+    course_code: "CS101",
+    course_name: "Introduction to Computer Science",
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
     room: "A102",
-    dayOfWeek: "Wednesday",
-    startTime: "11:00",
-    endTime: "12:30",
+    day_of_week: "Wednesday",
+    start_time: "11:00",
+    end_time: "12:30",
     semester: "Fall 2024",
     section: "B",
   },
   // CS101 - Section C
   {
     id: "5",
-    courseCode: "CS101",
-    courseName: "Introduction to Computer Science",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
+    course_code: "CS101",
+    course_name: "Introduction to Computer Science",
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
     room: "A103",
-    dayOfWeek: "Monday",
-    startTime: "14:00",
-    endTime: "15:30",
+    day_of_week: "Monday",
+    start_time: "14:00",
+    end_time: "15:30",
     semester: "Fall 2024",
     section: "C",
   },
   {
     id: "6",
-    courseCode: "CS101",
-    courseName: "Introduction to Computer Science",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
+    course_code: "CS101",
+    course_name: "Introduction to Computer Science",
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
     room: "A103",
-    dayOfWeek: "Wednesday",
-    startTime: "14:00",
-    endTime: "15:30",
+    day_of_week: "Wednesday",
+    start_time: "14:00",
+    end_time: "15:30",
     semester: "Fall 2024",
     section: "C",
   },
@@ -336,7 +336,7 @@ export const students: Student[] = [
     id: "3",
     name: "Jane Doe",
     email: "student@cie.edu",
-    studentId: "STU001",
+    student_id: "STU001",
     class: "CS101",
     section: "A",
     department: "Computer Science",
@@ -345,7 +345,7 @@ export const students: Student[] = [
     id: "4",
     name: "Mike Johnson",
     email: "mike.johnson@cie.edu",
-    studentId: "STU002",
+    student_id: "STU002",
     class: "CS101",
     section: "A",
     department: "Computer Science",
@@ -354,7 +354,7 @@ export const students: Student[] = [
     id: "5",
     name: "Sarah Wilson",
     email: "sarah.wilson@cie.edu",
-    studentId: "STU003",
+    student_id: "STU003",
     class: "CS101",
     section: "A",
     department: "Computer Science",
@@ -364,7 +364,7 @@ export const students: Student[] = [
     id: "6",
     name: "Tom Brown",
     email: "tom.brown@cie.edu",
-    studentId: "STU004",
+    student_id: "STU004",
     class: "CS101",
     section: "B",
     department: "Computer Science",
@@ -373,7 +373,7 @@ export const students: Student[] = [
     id: "7",
     name: "Lisa Davis",
     email: "lisa.davis@cie.edu",
-    studentId: "STU005",
+    student_id: "STU005",
     class: "CS101",
     section: "B",
     department: "Computer Science",
@@ -382,7 +382,7 @@ export const students: Student[] = [
     id: "8",
     name: "Alex Chen",
     email: "alex.chen@cie.edu",
-    studentId: "STU006",
+    student_id: "STU006",
     class: "CS101",
     section: "B",
     department: "Computer Science",
@@ -392,7 +392,7 @@ export const students: Student[] = [
     id: "9",
     name: "Emma Taylor",
     email: "emma.taylor@cie.edu",
-    studentId: "STU007",
+    student_id: "STU007",
     class: "CS101",
     section: "C",
     department: "Computer Science",
@@ -401,7 +401,7 @@ export const students: Student[] = [
     id: "10",
     name: "Ryan Miller",
     email: "ryan.miller@cie.edu",
-    studentId: "STU008",
+    student_id: "STU008",
     class: "CS101",
     section: "C",
     department: "Computer Science",
@@ -410,7 +410,7 @@ export const students: Student[] = [
     id: "11",
     name: "Sophia Garcia",
     email: "sophia.garcia@cie.edu",
-    studentId: "STU009",
+    student_id: "STU009",
     class: "CS101",
     section: "C",
     department: "Computer Science",
@@ -422,26 +422,26 @@ export const projects: Project[] = [
     id: "1",
     title: "Database Design Project",
     description: "Design and implement a relational database for a library management system",
-    courseCode: "CS101",
+    course_code: "CS101",
     section: "A",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
-    assignedDate: "2024-01-10",
-    dueDate: "2024-02-15",
-    maxMarks: 100,
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
+    assigned_date: "2024-01-10",
+    due_date: "2024-02-15",
+    max_marks: 100,
     status: "active",
   },
   {
     id: "2",
     title: "Web Development Portfolio",
     description: "Create a personal portfolio website using HTML, CSS, and JavaScript",
-    courseCode: "CS101",
+    course_code: "CS101",
     section: "B",
-    facultyId: "2",
-    facultyName: "Dr. John Smith",
-    assignedDate: "2024-01-12",
-    dueDate: "2024-02-20",
-    maxMarks: 100,
+    faculty_id: "2",
+    faculty_name: "Dr. John Smith",
+    assigned_date: "2024-01-12",
+    due_date: "2024-02-20",
+    max_marks: 100,
     status: "active",
   },
 ]
@@ -449,10 +449,10 @@ export const projects: Project[] = [
 export const projectSubmissions: ProjectSubmission[] = [
   {
     id: "1",
-    projectId: "1",
-    studentId: "3",
-    studentName: "Jane Doe",
-    submissionDate: "2024-02-10",
+    project_id: "1",
+    student_id: "3",
+    student_name: "Jane Doe",
+    submission_date: "2024-02-10",
     content: "Submitted database design with ER diagrams and SQL scripts",
     status: "submitted",
   },
@@ -461,38 +461,38 @@ export const projectSubmissions: ProjectSubmission[] = [
 export const attendanceRecords: AttendanceRecord[] = [
   {
     id: "1",
-    courseCode: "CS101",
+    course_code: "CS101",
     section: "A",
     date: "2024-01-15",
-    facultyId: "2",
+    faculty_id: "2",
     students: [
-      { studentId: "3", studentName: "Jane Doe", status: "present" },
-      { studentId: "4", studentName: "Mike Johnson", status: "present" },
-      { studentId: "5", studentName: "Sarah Wilson", status: "absent" },
+      { student_id: "3", student_name: "Jane Doe", status: "present" },
+      { student_id: "4", student_name: "Mike Johnson", status: "present" },
+      { student_id: "5", student_name: "Sarah Wilson", status: "absent" },
     ],
   },
   {
     id: "2",
-    courseCode: "CS101",
+    course_code: "CS101",
     section: "A",
     date: "2024-01-17",
-    facultyId: "2",
+    faculty_id: "2",
     students: [
-      { studentId: "3", studentName: "Jane Doe", status: "present" },
-      { studentId: "4", studentName: "Mike Johnson", status: "late" },
-      { studentId: "5", studentName: "Sarah Wilson", status: "present" },
+      { student_id: "3", student_name: "Jane Doe", status: "present" },
+      { student_id: "4", student_name: "Mike Johnson", status: "late" },
+      { student_id: "5", student_name: "Sarah Wilson", status: "present" },
     ],
   },
   {
     id: "3",
-    courseCode: "CS101",
+    course_code: "CS101",
     section: "B",
     date: "2024-01-15",
-    facultyId: "2",
+    faculty_id: "2",
     students: [
-      { studentId: "6", studentName: "Tom Brown", status: "present" },
-      { studentId: "7", studentName: "Lisa Davis", status: "present" },
-      { studentId: "8", studentName: "Alex Chen", status: "present" },
+      { student_id: "6", student_name: "Tom Brown", status: "present" },
+      { student_id: "7", student_name: "Lisa Davis", status: "present" },
+      { student_id: "8", student_name: "Alex Chen", status: "present" },
     ],
   },
 ]
