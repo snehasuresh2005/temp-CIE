@@ -11,10 +11,10 @@ export function ViewAttendance() {
 
   // Filter attendance records for current student
   const myAttendance = attendanceRecords
-    .filter((record) => record.courseCode === user?.studentClass && record.section === user?.section)
+    .filter((record) => record.course_code === user?.studentClass && record.section === user?.section)
     .map((record) => ({
       ...record,
-      myStatus: record.students.find((s) => s.studentId === user?.id)?.status || "absent",
+      myStatus: record.students.find((s) => s.student_id === user?.id)?.status || "absent",
     }))
 
   const calculateAttendancePercentage = () => {
@@ -175,7 +175,7 @@ export function ViewAttendance() {
                   <div key={record.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <h4 className="font-medium">
-                        {record.courseCode} - Section {record.section}
+                        {record.course_code} - Section {record.section}
                       </h4>
                       <p className="text-sm text-gray-600">{record.date}</p>
                     </div>
