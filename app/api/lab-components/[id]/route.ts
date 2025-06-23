@@ -11,13 +11,21 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Get user from header
     const userId = request.headers.get("x-user-id")
+    console.log("PATCH /api/lab-components/[id] - Received userId from header:", userId)
+    
     let userName = "system"
     if (userId) {
       const user = await getUserById(userId)
+      console.log("PATCH /api/lab-components/[id] - Retrieved user from getUserById:", user)
       if (user) {
         userName = user.name
+        console.log("PATCH /api/lab-components/[id] - Using userName:", userName)
       }
+    } else {
+      console.log("PATCH /api/lab-components/[id] - No userId in header, using default 'system'")
     }
+
+    console.log("PATCH /api/lab-components/[id] - Final userName being used:", userName)
 
     const component = await prisma.labComponent.update({
       where: { id },
@@ -40,6 +48,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       },
     })
 
+    console.log("PATCH /api/lab-components/[id] - Updated component with modified_by:", component.modified_by)
+
     // Transform the response to match frontend expectations
     const transformedComponent = {
       ...component,
@@ -58,8 +68,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       purchasedDate: component.purchase_date,
       purchasedValue: component.purchase_value,
       purchasedCurrency: component.purchase_currency,
-      createdAt: component.created_date,
-      updatedAt: component.modified_date,
+      createdAt: component.created_at,
+      updatedAt: component.modified_at,
     }
 
     return NextResponse.json({ component: transformedComponent })
