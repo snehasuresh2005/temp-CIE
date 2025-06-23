@@ -10,7 +10,10 @@ export interface User {
   name: string
   role: UserRole
   phone?: string
-  joinDate: Date
+  join_date: Date
+  student_id?: string
+  studentClass?: string
+  section?: string
   profileData?: any
 }
 
