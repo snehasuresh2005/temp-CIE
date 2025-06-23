@@ -190,7 +190,7 @@ export function ManageCourses() {
     "Physics",
     "Chemistry",
   ]
-  const semesters = ["Fall 2024", "Spring 2025", "Summer 2024"]
+  const semesters = ["Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6", "Sem 7", "Sem 8"]
   const availableSections = ["A", "B", "C", "D"]
 
   if (loading) {

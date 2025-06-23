@@ -40,6 +40,7 @@ interface Project {
   id: string;
   name: string;
   components_needed: string[];
+  status: string;
 }
 
 interface ComponentRequest {
@@ -78,9 +79,70 @@ export function LabComponentsRequest() {
 
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
+  const [returnDialogOpen, setReturnDialogOpen] = useState<string | null>(null)
+
   useEffect(() => {
     fetchData()
   }, [user])
+
+  // Validation functions
+  const isFormValid = () => {
+    return (
+      newRequest.quantity > 0 &&
+      newRequest.purpose.trim() !== "" &&
+      newRequest.required_date !== "" &&
+      newRequest.project_id !== ""
+    )
+  }
+
+  const isProjectApproved = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId)
+    return project && project.status === "ONGOING"
+  }
+
+  const canSubmitRequest = () => {
+    return isFormValid() && isProjectApproved(newRequest.project_id)
+  }
+
+  const getProjectStatusText = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return "Project not found"
+    
+    switch (project.status) {
+      case "PENDING":
+        return "Project pending faculty approval"
+      case "ONGOING":
+        return "Project approved and active"
+      case "COMPLETED":
+        return "Project completed"
+      case "OVERDUE":
+        return "Project overdue"
+      case "REJECTED":
+        return "Project rejected"
+      default:
+        return "Unknown project status"
+    }
+  }
+
+  const getProjectStatusColor = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return "text-gray-500"
+    
+    switch (project.status) {
+      case "PENDING":
+        return "text-yellow-600"
+      case "ONGOING":
+        return "text-green-600"
+      case "COMPLETED":
+        return "text-blue-600"
+      case "OVERDUE":
+        return "text-red-600"
+      case "REJECTED":
+        return "text-red-600"
+      default:
+        return "text-gray-500"
+    }
+  }
 
   const fetchData = async () => {
     if (!user) return
@@ -98,7 +160,11 @@ export function LabComponentsRequest() {
       setRequests(requestsData.requests || [])
 
       // Fetch user's projects
-      const projectsResponse = await fetch(`/api/student/projects`)
+      const projectsResponse = await fetch(`/api/student/projects`, {
+        headers: {
+          "x-user-id": user.id,
+        },
+      })
       const projectsData = await projectsResponse.json()
       setProjects(projectsData.projects || [])
 
@@ -135,6 +201,15 @@ export function LabComponentsRequest() {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!isProjectApproved(newRequest.project_id)) {
+      toast({
+        title: "Error",
+        description: "You can only request components for approved projects",
         variant: "destructive",
       })
       return
@@ -207,13 +282,13 @@ export function LabComponentsRequest() {
   }
 
   const handleReturnComponent = async (requestId: string) => {
-    if (!confirm("Are you sure you want to mark this component as returned? This will be reviewed by faculty.")) return
-
+    if (!user) return;
     try {
       const response = await fetch(`/api/component-requests/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user.id
         },
         body: JSON.stringify({
           status: "PENDING_RETURN",
@@ -222,7 +297,6 @@ export function LabComponentsRequest() {
       })
 
       if (response.ok) {
-        // Refresh data to update the UI
         fetchData()
         toast({
           title: "Return Request Submitted",
@@ -290,6 +364,19 @@ export function LabComponentsRequest() {
     return "bg-green-100 text-green-800"
   }
 
+  const getAvailabilityText = (available: number, total: number) => {
+    if (available === 0) return "Out of Stock"
+    if (available < total * 0.3) return "Low Stock"
+    return "Available"
+  }
+
+  const hasApprovedProject = (component: LabComponent) => {
+    return component.projects.some(compProject => {
+      const fullProject = projects.find(p => p.id === compProject.id)
+      return fullProject?.status === "ONGOING"
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -336,7 +423,7 @@ export function LabComponentsRequest() {
                       <CardDescription>{component.component_category}</CardDescription>
                     </div>
                     <Badge className={getAvailabilityColor(component.available_quantity, component.component_quantity)}>
-                      {component.available_quantity > 0 ? "Available" : "Out of Stock"}
+                      {getAvailabilityText(component.available_quantity, component.component_quantity)}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -460,6 +547,21 @@ export function LabComponentsRequest() {
                       {Math.round((component.available_quantity / component.component_quantity) * 100)}% Available
                     </div>
 
+                    {/* Project Availability Indicator */}
+                    {component.projects.length > 0 && (
+                      <div className="mb-2">
+                        {hasApprovedProject(component) ? (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                            ✓ Projects available for requests
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-600">
+                            ⚠️ Projects pending approval
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
                     <Dialog open={isRequestDialogOpen && selectedComponent?.id === component.id} onOpenChange={(isOpen) => {
                       setIsRequestDialogOpen(isOpen)
                       if (!isOpen) {
@@ -469,11 +571,18 @@ export function LabComponentsRequest() {
                       <DialogTrigger asChild>
                         <Button
                           className="w-full mt-3"
-                          disabled={component.available_quantity === 0}
+                          disabled={
+                            component.available_quantity === 0 || !hasApprovedProject(component)
+                          }
                           onClick={() => setSelectedComponent(component)}
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          Request Component
+                          {component.available_quantity === 0
+                            ? "Out of Stock"
+                            : !hasApprovedProject(component)
+                              ? "No Approved Projects"
+                              : "Request Component"
+                          }
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-2xl">
@@ -542,11 +651,30 @@ export function LabComponentsRequest() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       {selectedComponent.projects.length > 0 ? (
-                                        selectedComponent.projects.map((project) => (
-                                          <SelectItem key={project.id} value={project.id}>
-                                            {project.name}
-                                          </SelectItem>
-                                        ))
+                                        selectedComponent.projects.map((componentProject) => {
+                                          const fullProject = projects.find(p => p.id === componentProject.id)
+                                          return (
+                                            <SelectItem
+                                              key={componentProject.id}
+                                              value={componentProject.id}
+                                              className={fullProject?.status !== "ONGOING" ? "opacity-50" : ""}
+                                            >
+                                              <div className="flex flex-col">
+                                                <div className="flex items-center gap-2">
+                                                  <span>{componentProject.name}</span>
+                                                  {fullProject?.status === "ONGOING" && (
+                                                    <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                                      Available
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                                <span className={`text-xs ${getProjectStatusColor(componentProject.id)}`}>
+                                                  {getProjectStatusText(componentProject.id)}
+                                                </span>
+                                              </div>
+                                            </SelectItem>
+                                          )
+                                        })
                                       ) : (
                                         <div className="p-4 text-sm text-center text-gray-500">
                                           No projects associated with this component.
@@ -557,6 +685,7 @@ export function LabComponentsRequest() {
                                 </div>
                               </div>
                             </div>
+                            
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
@@ -573,15 +702,26 @@ export function LabComponentsRequest() {
                                     <span tabIndex={0}>
                                       <Button
                                         onClick={handleRequestComponent}
-                                        disabled={selectedComponent.projects.length === 0}
+                                        disabled={!canSubmitRequest()}
+                                        className={!canSubmitRequest() ? "opacity-50 cursor-not-allowed" : ""}
                                       >
                                         Submit Request
                                       </Button>
                                     </span>
                                   </TooltipTrigger>
-                                  {selectedComponent.projects.length === 0 && (
+                                  {!canSubmitRequest() && (
                                     <TooltipContent>
-                                      <p>No projects are associated with this component.</p>
+                                      <div className="max-w-xs">
+                                        {!isFormValid() && (
+                                          <p>Please fill in all required fields (quantity, purpose, required date, and project)</p>
+                                        )}
+                                        {isFormValid() && !isProjectApproved(newRequest.project_id) && (
+                                          <p>You can only request components for projects with "ONGOING" status (approved by faculty)</p>
+                                        )}
+                                        {selectedComponent.projects.length === 0 && (
+                                          <p>No projects are associated with this component.</p>
+                                        )}
+                                      </div>
                                     </TooltipContent>
                                   )}
                                 </Tooltip>
@@ -627,9 +767,14 @@ export function LabComponentsRequest() {
                             Return by: {new Date(request.required_date).toLocaleDateString()}
                           </p>
                           {request.project_id && (
-                            <p className="text-xs text-blue-600">
-                              Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
-                            </p>
+                            <div className="space-y-1">
+                              <p className="text-xs text-blue-600">
+                                Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
+                              </p>
+                              <p className={`text-xs ${getProjectStatusColor(request.project_id)}`}>
+                                Status: {getProjectStatusText(request.project_id)}
+                              </p>
+                            </div>
                           )}
                           {request.status === "COLLECTED" && isOverdue(request.required_date) && (
                             <p className="text-xs text-red-600 font-medium">
@@ -669,13 +814,38 @@ export function LabComponentsRequest() {
                     </div>
                     <div className="mt-4 flex justify-end space-x-2">
                       {request.status === "COLLECTED" && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleReturnComponent(request.id)}
-                          className={isOverdue(request.required_date) ? "border-red-500 text-red-600 hover:bg-red-50" : ""}
-                        >
-                          {isOverdue(request.required_date) ? "⚠️ Return Overdue Item" : "Return Component"}
-                        </Button>
+                        <Dialog open={returnDialogOpen === request.id} onOpenChange={(open) => setReturnDialogOpen(open ? request.id : null)}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={isOverdue(request.required_date) ? "border-red-500 text-red-600 hover:bg-red-50" : ""}
+                            >
+                              {isOverdue(request.required_date) ? "⚠️ Return Overdue Item" : "Return Component"}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Confirm Return</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to mark this component as returned? This will notify the faculty for confirmation.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex justify-end space-x-2 mt-4">
+                              <Button variant="outline" onClick={() => setReturnDialogOpen(null)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={async () => {
+                                  await handleReturnComponent(request.id)
+                                  setReturnDialogOpen(null)
+                                }}
+                              >
+                                Confirm Return
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       )}
                     </div>
                   </CardContent>

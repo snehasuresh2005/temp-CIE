@@ -107,13 +107,21 @@ export async function POST(request: NextRequest) {
 
     // Get user from header
     const userId = request.headers.get("x-user-id")
+    console.log("POST /api/lab-components - Received userId from header:", userId)
+    
     let userName = "system"
     if (userId) {
       const user = await getUserById(userId)
+      console.log("POST /api/lab-components - Retrieved user from getUserById:", user)
       if (user) {
         userName = user.name
+        console.log("POST /api/lab-components - Using userName:", userName)
       }
+    } else {
+      console.log("POST /api/lab-components - No userId in header, using default 'system'")
     }
+
+    console.log("POST /api/lab-components - Final userName being used:", userName)
 
     const component = await prisma.labComponent.create({
       data: {
@@ -134,6 +142,8 @@ export async function POST(request: NextRequest) {
         created_by: userName,
       },
     })
+
+    console.log("POST /api/lab-components - Created component with created_by:", component.created_by)
 
     // Transform the response to match frontend expectations
     const transformedComponent = {

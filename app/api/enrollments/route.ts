@@ -22,7 +22,7 @@ export async function GET() {
         },
       },
       orderBy: {
-        enrollmentDate: "desc",
+        enrolled_at: "desc",
       },
     })
 
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
     // Check if already enrolled
     const existingEnrollment = await prisma.enrollment.findFirst({
       where: {
-        courseId,
-        studentId: students[0].id,
+        course_id: courseId,
+        student_id: students[0].id,
       },
     })
 
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
 
     const enrollment = await prisma.enrollment.create({
       data: {
-        courseId,
-        studentId: students[0].id,
+        course_id: courseId,
+        student_id: students[0].id,
         section,
-        enrollmentDate: new Date().toISOString(),
+        enrolled_at: new Date(),
       },
       include: {
         course: {

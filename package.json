@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "prisma": {
-  "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts"
   },
   "scripts": {
     "dev": "next dev",
@@ -42,6 +42,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@types/formidable": "^3.4.5",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "latest",
     "class-variance-authority": "^0.7.1",
@@ -49,6 +50,7 @@
     "cmdk": "latest",
     "date-fns": "4.1.0",
     "embla-carousel-react": "latest",
+    "formidable": "^3.5.4",
     "input-otp": "latest",
     "lucide-react": "^0.454.0",
     "next": "14.2.16",

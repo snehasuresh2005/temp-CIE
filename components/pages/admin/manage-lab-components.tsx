@@ -40,8 +40,8 @@ interface LabComponent {
   purchase_currency: string
   purchase_date?: string
   created_by: string
-  created_date: string
-  modified_date: string
+  created_at: string
+  modified_at: string
   modified_by?: string
   // Computed fields for display
   imageUrl?: string | null
@@ -112,10 +112,21 @@ export function ManageLabComponents() {
   const [editingComponent, setEditingComponent] = useState<LabComponent | null>(null)
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
+  // Add form validation state
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
   useEffect(() => {
     fetchComponents()
     fetchCategories()
   }, [])
+
+  // Debug user information
+  useEffect(() => {
+    console.log("ManageLabComponents - Current user:", user)
+    console.log("ManageLabComponents - User ID:", user?.id)
+    console.log("ManageLabComponents - User name:", user?.name)
+    console.log("ManageLabComponents - User role:", user?.role)
+  }, [user])
 
   const fetchComponents = async () => {
     try {
@@ -164,10 +175,11 @@ export function ManageLabComponents() {
   )
 
   const handleAddComponent = async () => {
-    if (!newComponent.component_name || !newComponent.component_category || !newComponent.component_location) {
+    // Validate form before proceeding
+    if (!validateForm()) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly",
         variant: "destructive",
       })
       return
@@ -200,24 +212,7 @@ export function ManageLabComponents() {
           description: "The quantity has been added to the existing component.",
         })
         // Reset form
-        setNewComponent({
-          component_name: "",
-          component_description: "",
-          component_category: "",
-          component_quantity: 1,
-          component_location: "",
-          component_specification: "",
-          component_tag_id: "",
-          invoice_number: "",
-          purchased_from: "",
-          purchase_date: "",
-          purchase_value: "",
-          purchase_currency: "INR"
-        })
-        setFrontImageFile(null)
-        setBackImageFile(null)
-        setFrontImagePreview(null)
-        setBackImagePreview(null)
+        resetForm()
         setIsAddDialogOpen(false)
         return
       }
@@ -272,6 +267,10 @@ export function ManageLabComponents() {
     const formattedCategory = toTitleCase(newComponent.component_category)
     const formattedLocation = formatLocation(newComponent.component_location)
 
+    console.log("Frontend - handleAddComponent - user object:", user)
+    console.log("Frontend - handleAddComponent - user.id:", user?.id)
+    console.log("Frontend - handleAddComponent - user.name:", user?.name)
+
     try {
       const response = await fetch("/api/lab-components", {
         method: "POST",
@@ -294,24 +293,7 @@ export function ManageLabComponents() {
         setComponents((prev) => [...prev, data.component])
         
         // Reset form
-        setNewComponent({
-          component_name: "",
-          component_description: "",
-          component_category: "",
-          component_quantity: 1,
-          component_location: "",
-          component_specification: "",
-          component_tag_id: "",
-          invoice_number: "",
-          purchased_from: "",
-          purchase_date: "",
-          purchase_value: "",
-          purchase_currency: "INR"
-        })
-        setFrontImageFile(null)
-        setBackImageFile(null)
-        setFrontImagePreview(null)
-        setBackImagePreview(null)
+        resetForm()
         setIsAddDialogOpen(false)
 
         toast({
@@ -429,10 +411,73 @@ export function ManageLabComponents() {
     }
   }
 
-  const isAddFormValid =
-    newComponent.component_name.trim() !== "" &&
-    newComponent.component_category.trim() !== "" &&
-    newComponent.component_location.trim() !== ""
+  // Validation function
+  const validateForm = () => {
+    const errors: Record<string, string> = {}
+
+    // Required fields validation
+    if (!newComponent.component_name?.trim()) {
+      errors.component_name = "Component name is required"
+    }
+
+    if (!newComponent.component_description?.trim()) {
+      errors.component_description = "Description is required"
+    }
+
+    if (!newComponent.component_category?.trim()) {
+      errors.component_category = "Category is required"
+    }
+
+    if (!newComponent.component_location?.trim()) {
+      errors.component_location = "Location is required"
+    }
+
+    if (newComponent.component_quantity <= 0) {
+      errors.component_quantity = "Quantity must be greater than 0"
+    }
+
+    if (!frontImageFile) {
+      errors.frontImage = "Front image is required"
+    }
+
+    if (!backImageFile) {
+      errors.backImage = "Back image is required"
+    }
+
+    // Purchase details validation (optional but if one is filled, others should be too)
+    const hasPurchaseDetails = newComponent.invoice_number || newComponent.purchased_from || newComponent.purchase_date || newComponent.purchase_value
+    
+    if (hasPurchaseDetails) {
+      if (!newComponent.invoice_number?.trim()) {
+        errors.invoice_number = "Invoice number is required when purchase details are provided"
+      }
+      if (!newComponent.purchased_from?.trim()) {
+        errors.purchased_from = "Vendor/supplier is required when purchase details are provided"
+      }
+      if (!newComponent.purchase_date) {
+        errors.purchase_date = "Purchase date is required when purchase details are provided"
+      }
+      if (!newComponent.purchase_value || Number(newComponent.purchase_value) <= 0) {
+        errors.purchase_value = "Valid purchase value is required when purchase details are provided"
+      }
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Check if form is valid for button state
+  const isAddFormValid = () => {
+    return (
+      newComponent.component_name?.trim() &&
+      newComponent.component_description?.trim() &&
+      newComponent.component_category?.trim() &&
+      newComponent.component_location?.trim() &&
+      newComponent.component_quantity > 0 &&
+      frontImageFile &&
+      backImageFile
+    )
+  }
 
   const handleEditComponent = async () => {
     if (!editingComponent) return
@@ -491,6 +536,10 @@ export function ManageLabComponents() {
       }
     }
 
+    console.log("Frontend - handleEditComponent - user object:", user)
+    console.log("Frontend - handleEditComponent - user.id:", user?.id)
+    console.log("Frontend - handleEditComponent - user.name:", user?.name)
+
     try {
       const response = await fetch(`/api/lab-components/${editingComponent.id}`, {
         method: "PATCH",
@@ -544,6 +593,33 @@ export function ManageLabComponents() {
     editingComponent.component_category.trim() !== "" &&
     editingComponent.component_location.trim() !== ""
 
+  // Reset form and errors
+  const resetForm = () => {
+    setNewComponent({
+      component_name: "",
+      component_description: "",
+      component_category: "",
+      component_quantity: 1,
+      component_location: "",
+      component_specification: "",
+      component_tag_id: "",
+      invoice_number: "",
+      purchased_from: "",
+      purchase_date: "",
+      purchase_value: "",
+      purchase_currency: "INR"
+    })
+    setFrontImageFile(null)
+    setBackImageFile(null)
+    setFrontImagePreview(null)
+    setBackImagePreview(null)
+    setFormErrors({})
+    setShowAddCategory(false)
+    setShowAddLocation(false)
+    setNewCategory("")
+    setNewLocation("")
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -556,8 +632,7 @@ export function ManageLabComponents() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Lab Components Management</h1>
-          <p className="text-gray-600 mt-2">Manage laboratory equipment and components inventory</p>
+          <h3 className="text-3xl font-bold text-gray-900">Lab Components Management</h3>
         </div>
 
         <div className="flex space-x-2">
@@ -566,7 +641,12 @@ export function ManageLabComponents() {
             Refresh
           </Button>
 
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+            setIsAddDialogOpen(open)
+            if (!open) {
+              resetForm()
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -586,8 +666,11 @@ export function ManageLabComponents() {
                     value={newComponent.component_name}
                     onChange={(e) => setNewComponent((prev) => ({ ...prev, component_name: e.target.value }))}
                     placeholder="Arduino Uno R3"
-                    className="mt-1"
+                    className={`mt-1 ${formErrors.component_name ? 'border-red-500' : ''}`}
                   />
+                  {formErrors.component_name && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>
+                  )}
                 </div>
 
                 {/* Basic Details Row */}
@@ -600,8 +683,11 @@ export function ManageLabComponents() {
                       value={newComponent.component_quantity}
                       onChange={(e) => setNewComponent((prev) => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))}
                       min="1"
-                      className="mt-1"
+                      className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`}
                     />
+                    {formErrors.component_quantity && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
@@ -617,7 +703,7 @@ export function ManageLabComponents() {
                         }
                       }}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}>
                         <SelectValue placeholder="Select location" />
                       </SelectTrigger>
                       <SelectContent>
@@ -651,6 +737,9 @@ export function ManageLabComponents() {
                         )}
                       </SelectContent>
                     </Select>
+                    {formErrors.component_location && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
@@ -666,7 +755,7 @@ export function ManageLabComponents() {
                         }
                       }}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -700,6 +789,9 @@ export function ManageLabComponents() {
                         )}
                       </SelectContent>
                     </Select>
+                    {formErrors.component_category && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
@@ -719,7 +811,7 @@ export function ManageLabComponents() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <Label htmlFor="frontImage" className="text-sm font-medium">Front Image *</Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors">
+                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.frontImage ? 'border-red-500' : 'border-gray-300'}`}>
                         <Input
                           id="frontImage"
                           type="file"
@@ -728,6 +820,9 @@ export function ManageLabComponents() {
                           className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
                       </div>
+                      {formErrors.frontImage && (
+                        <p className="text-red-500 text-xs">{formErrors.frontImage}</p>
+                      )}
                       {frontImagePreview && (
                         <div className="mt-2">
                           <Label className="text-xs font-medium text-gray-600">Preview:</Label>
@@ -741,7 +836,7 @@ export function ManageLabComponents() {
                     </div>
                     <div className="space-y-3">
                       <Label htmlFor="backImage" className="text-sm font-medium">Back Image *</Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors">
+                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.backImage ? 'border-red-500' : 'border-gray-300'}`}>
                         <Input
                           id="backImage"
                           type="file"
@@ -750,6 +845,9 @@ export function ManageLabComponents() {
                           className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
                       </div>
+                      {formErrors.backImage && (
+                        <p className="text-red-500 text-xs">{formErrors.backImage}</p>
+                      )}
                       {backImagePreview && (
                         <div className="mt-2">
                           <Label className="text-xs font-medium text-gray-600">Preview:</Label>
@@ -783,8 +881,11 @@ export function ManageLabComponents() {
                     onChange={(e) => setNewComponent((prev) => ({ ...prev, component_description: e.target.value }))}
                     placeholder="Provide a detailed description of the component..."
                     rows={4}
-                    className="mt-0"
+                    className={`mt-0 ${formErrors.component_description ? 'border-red-500' : ''}`}
                   />
+                  {formErrors.component_description && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>
+                  )}
                 </div>
 
                 {/* Specifications */}
@@ -802,6 +903,7 @@ export function ManageLabComponents() {
 
                 {/* Purchase Details Section */}
                 <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-900">Purchase Details (Optional)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="invoiceNumber" className="text-sm font-medium">Invoice Number</Label>
@@ -810,8 +912,11 @@ export function ManageLabComponents() {
                         value={newComponent.invoice_number}
                         onChange={(e) => setNewComponent((prev) => ({ ...prev, invoice_number: e.target.value }))}
                         placeholder="INV-2025-001"
-                        className="mt-1"
+                        className={`mt-1 ${formErrors.invoice_number ? 'border-red-500' : ''}`}
                       />
+                      {formErrors.invoice_number && (
+                        <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="purchasedFrom" className="text-sm font-medium">Purchased From</Label>
@@ -820,8 +925,11 @@ export function ManageLabComponents() {
                         value={newComponent.purchased_from}
                         onChange={(e) => setNewComponent((prev) => ({ ...prev, purchased_from: e.target.value }))}
                         placeholder="Vendor/Supplier Name"
-                        className="mt-1"
+                        className={`mt-1 ${formErrors.purchased_from ? 'border-red-500' : ''}`}
                       />
+                      {formErrors.purchased_from && (
+                        <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>
+                      )}
                     </div>
                   </div>
 
@@ -833,8 +941,11 @@ export function ManageLabComponents() {
                         type="date"
                         value={newComponent.purchase_date}
                         onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_date: e.target.value }))}
-                        className="mt-1"
+                        className={`mt-1 ${formErrors.purchase_date ? 'border-red-500' : ''}`}
                       />
+                      {formErrors.purchase_date && (
+                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="purchasedValue" className="text-sm font-medium">Purchase Value</Label>
@@ -846,8 +957,11 @@ export function ManageLabComponents() {
                         value={newComponent.purchase_value}
                         onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_value: e.target.value }))}
                         placeholder="0.00"
-                        className="mt-1"
+                        className={`mt-1 ${formErrors.purchase_value ? 'border-red-500' : ''}`}
                       />
+                      {formErrors.purchase_value && (
+                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="purchasedCurrency" className="text-sm font-medium">Currency</Label>
@@ -855,7 +969,7 @@ export function ManageLabComponents() {
                         value={newComponent.purchase_currency}
                         onValueChange={(value) => setNewComponent((prev) => ({ ...prev, purchase_currency: value }))}
                       >
-                        <SelectTrigger className="mt-1">
+                        <SelectTrigger className={`mt-1 ${formErrors.purchase_currency ? 'border-red-500' : ''}`}>
                           <SelectValue placeholder="Select currency" />
                         </SelectTrigger>
                         <SelectContent>
@@ -865,6 +979,9 @@ export function ManageLabComponents() {
                           <SelectItem value="GBP">GBP - British Pound</SelectItem>
                         </SelectContent>
                       </Select>
+                      {formErrors.purchase_currency && (
+                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -882,14 +999,14 @@ export function ManageLabComponents() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span tabIndex={0}>
-                          <Button onClick={handleAddComponent} disabled={!isAddFormValid}>
+                          <Button onClick={handleAddComponent} disabled={!isAddFormValid()}>
                             Add Component
                           </Button>
                         </span>
                       </TooltipTrigger>
-                      {!isAddFormValid && (
+                      {!isAddFormValid() && (
                         <TooltipContent>
-                          <p>Please fill in all required fields: Name, Category, and Location.</p>
+                          <p>Please fill in all required fields: Component Name, Description, Category, Location, Quantity, Front Image, and Back Image.</p>
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -1092,220 +1209,222 @@ export function ManageLabComponents() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Edit Component</DialogTitle>
             <DialogDescription>Update the details of the lab component.</DialogDescription>
           </DialogHeader>
           {editingComponent && (
-            <div className="grid gap-8 py-4">
-              {/* Form Fields */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-6">
-                  {/* General Info */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>General Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-name">Component Name *</Label>
-                        <Input
-                          id="edit-name"
-                          value={editingComponent.component_name}
-                          onChange={(e) =>
-                            setEditingComponent({ ...editingComponent, component_name: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-description">Description</Label>
-                        <Textarea
-                          id="edit-description"
-                          value={editingComponent.component_description}
-                          onChange={(e) =>
-                            setEditingComponent({ ...editingComponent, component_description: e.target.value })
-                          }
-                          rows={3}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-specifications">Specifications</Label>
-                        <Textarea
-                          id="edit-specifications"
-                          value={editingComponent.component_specification || ""}
-                          onChange={(e) =>
-                            setEditingComponent({ ...editingComponent, component_specification: e.target.value })
-                          }
-                          rows={3}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+            <div className="overflow-y-auto max-h-[calc(90vh-120px)] pr-2">
+              <div className="grid gap-8 py-4">
+                {/* Form Fields */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-6">
+                    {/* General Info */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>General Information</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-name">Component Name *</Label>
+                          <Input
+                            id="edit-name"
+                            value={editingComponent.component_name}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, component_name: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-description">Description</Label>
+                          <Textarea
+                            id="edit-description"
+                            value={editingComponent.component_description}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, component_description: e.target.value })
+                            }
+                            rows={3}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-specifications">Specifications</Label>
+                          <Textarea
+                            id="edit-specifications"
+                            value={editingComponent.component_specification || ""}
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, component_specification: e.target.value })
+                            }
+                            rows={3}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                  {/* Stock & Location */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Stock & Location</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-quantity">Total Quantity *</Label>
-                          <Input
-                            id="edit-quantity"
-                            type="number"
-                            value={editingComponent.component_quantity}
-                            onChange={(e) =>
-                              setEditingComponent({
-                                ...editingComponent,
-                                component_quantity: Number.parseInt(e.target.value),
-                              })
-                            }
-                            min="0"
-                          />
+                    {/* Stock & Location */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Stock & Location</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-quantity">Total Quantity *</Label>
+                            <Input
+                              id="edit-quantity"
+                              type="number"
+                              value={editingComponent.component_quantity}
+                              onChange={(e) =>
+                                setEditingComponent({
+                                  ...editingComponent,
+                                  component_quantity: Number.parseInt(e.target.value),
+                                })
+                              }
+                              min="0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-tagId">Tag ID</Label>
+                            <Input
+                              id="edit-tagId"
+                              value={editingComponent.component_tag_id || ""}
+                              onChange={(e) =>
+                                setEditingComponent({ ...editingComponent, component_tag_id: e.target.value })
+                              }
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-tagId">Tag ID</Label>
-                          <Input
-                            id="edit-tagId"
-                            value={editingComponent.component_tag_id || ""}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, component_tag_id: e.target.value })
-                            }
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-category">Category *</Label>
+                            <Input
+                              id="edit-category"
+                              value={editingComponent.component_category}
+                              onChange={(e) =>
+                                setEditingComponent({ ...editingComponent, component_category: e.target.value })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-location">Location *</Label>
+                            <Input
+                              id="edit-location"
+                              value={editingComponent.component_location}
+                              onChange={(e) =>
+                                setEditingComponent({ ...editingComponent, component_location: e.target.value })
+                              }
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      </CardContent>
+                    </Card>
+                  </div>
+                  {/* Right Column */}
+                  <div className="space-y-6">
+                    {/* Purchase Information */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Purchase Information</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-category">Category *</Label>
+                          <Label htmlFor="edit-invoice">Invoice Number</Label>
                           <Input
-                            id="edit-category"
-                            value={editingComponent.component_category}
+                            id="edit-invoice"
+                            value={editingComponent.invoice_number || ""}
                             onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, component_category: e.target.value })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-location">Location *</Label>
-                          <Input
-                            id="edit-location"
-                            value={editingComponent.component_location}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, component_location: e.target.value })
-                            }
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                {/* Right Column */}
-                <div className="space-y-6">
-                  {/* Purchase Information */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Purchase Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-invoice">Invoice Number</Label>
-                        <Input
-                          id="edit-invoice"
-                          value={editingComponent.invoice_number || ""}
-                          onChange={(e) =>
-                            setEditingComponent({ ...editingComponent, invoice_number: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-value">Purchase Value</Label>
-                          <Input
-                            id="edit-value"
-                            type="number"
-                            value={editingComponent.purchase_value || ""}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, purchase_value: e.target.value })
+                              setEditingComponent({ ...editingComponent, invoice_number: e.target.value })
                             }
                           />
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-value">Purchase Value</Label>
+                            <Input
+                              id="edit-value"
+                              type="number"
+                              value={editingComponent.purchase_value || ""}
+                              onChange={(e) =>
+                                setEditingComponent({ ...editingComponent, purchase_value: e.target.value })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-currency">Currency</Label>
+                            <Input
+                              id="edit-currency"
+                              value={editingComponent.purchase_currency}
+                              onChange={(e) =>
+                                setEditingComponent({ ...editingComponent, purchase_currency: e.target.value })
+                              }
+                            />
+                          </div>
+                        </div>
                         <div className="space-y-2">
-                          <Label htmlFor="edit-currency">Currency</Label>
+                          <Label htmlFor="edit-purchasedFrom">Purchased From</Label>
                           <Input
-                            id="edit-currency"
-                            value={editingComponent.purchase_currency}
+                            id="edit-purchasedFrom"
+                            value={editingComponent.purchased_from || ""}
                             onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, purchase_currency: e.target.value })
+                              setEditingComponent({ ...editingComponent, purchased_from: e.target.value })
                             }
                           />
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-purchasedFrom">Purchased From</Label>
-                        <Input
-                          id="edit-purchasedFrom"
-                          value={editingComponent.purchased_from || ""}
-                          onChange={(e) =>
-                            setEditingComponent({ ...editingComponent, purchased_from: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-purchaseDate">Purchase Date</Label>
-                        <Input
-                          id="edit-purchaseDate"
-                          type="date"
-                          value={
-                            editingComponent.purchase_date
-                              ? new Date(editingComponent.purchase_date).toISOString().split("T")[0]
-                              : ""
-                          }
-                          onChange={(e) =>
-                            setEditingComponent({ ...editingComponent, purchase_date: e.target.value })
-                          }
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-purchaseDate">Purchase Date</Label>
+                          <Input
+                            id="edit-purchaseDate"
+                            type="date"
+                            value={
+                              editingComponent.purchase_date
+                                ? new Date(editingComponent.purchase_date).toISOString().split("T")[0]
+                                : ""
+                            }
+                            onChange={(e) =>
+                              setEditingComponent({ ...editingComponent, purchase_date: e.target.value })
+                            }
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                  {/* Images */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Images</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Placeholder for image uploads */}
-                      <div className="text-sm text-gray-500">Image upload is not available during edit.</div>
-                    </CardContent>
-                  </Card>
+                    {/* Images */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Images</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Placeholder for image uploads */}
+                        <div className="text-sm text-gray-500">Image upload is not available during edit.</div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
+
+                {/* Footer */}
+                <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                          <Button onClick={handleEditComponent} disabled={!isEditFormValid}>
+                            Save Changes
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!isEditFormValid && (
+                        <TooltipContent>
+                          <p>Please fill in all required fields: Name, Category, and Location.</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                </DialogFooter>
               </div>
-
-              {/* Footer */}
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0}>
-                        <Button onClick={handleEditComponent} disabled={!isEditFormValid}>
-                          Save Changes
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {!isEditFormValid && (
-                      <TooltipContent>
-                        <p>Please fill in all required fields: Name, Category, and Location.</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-              </DialogFooter>
             </div>
           )}
         </DialogContent>
@@ -1490,11 +1609,23 @@ export function ManageLabComponents() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm font-medium text-gray-700">Created By:</span>
-                    <p className="text-gray-900">{componentToView.created_by}</p>
+                    <p className="text-gray-900">{componentToView.created_by || "Unknown"}</p>
                   </div>
                   <div>
                     <span className="text-sm font-medium text-gray-700">Created Date:</span>
-                    <p className="text-gray-900">{new Date(componentToView.created_date).toLocaleString()}</p>
+                    <p className="text-gray-900">
+                      {componentToView.created_at 
+                        ? new Date(componentToView.created_at).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })
+                        : "Unknown"
+                      }
+                    </p>
                   </div>
                   <div>
                     <span className="text-sm font-medium text-gray-700">Last Modified By:</span>
@@ -1502,7 +1633,19 @@ export function ManageLabComponents() {
                   </div>
                   <div>
                     <span className="text-sm font-medium text-gray-700">Last Modified Date:</span>
-                    <p className="text-gray-900">{new Date(componentToView.modified_date).toLocaleString()}</p>
+                    <p className="text-gray-900">
+                      {componentToView.modified_at 
+                        ? new Date(componentToView.modified_at).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })
+                        : "Not modified"
+                      }
+                    </p>
                   </div>
                 </div>
               </div>

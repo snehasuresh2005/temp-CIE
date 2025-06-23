@@ -23,7 +23,7 @@ import { useAuth } from "@/components/auth-provider"
 export function AttendanceManagement() {
   const { user } = useAuth()
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(
-    attendanceRecords.filter((record) => record.facultyId === user?.id),
+    attendanceRecords.filter((record) => record.faculty_id === user?.id),
   )
   const [isMarkDialogOpen, setIsMarkDialogOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState("")
@@ -31,7 +31,7 @@ export function AttendanceManagement() {
   const { toast } = useToast()
 
   const [currentAttendance, setCurrentAttendance] = useState<{
-    [studentId: string]: "present" | "absent" | "late"
+    [student_id: string]: "present" | "absent" | "late"
   }>({})
 
   const availableCourses = ["CS101", "CS201", "MATH101"]
@@ -53,13 +53,13 @@ export function AttendanceManagement() {
 
     const attendanceRecord: AttendanceRecord = {
       id: Date.now().toString(),
-      courseCode: selectedCourse,
+      course_code: selectedCourse,
       section: selectedSection,
       date: new Date().toISOString().split("T")[0],
-      facultyId: user?.id || "",
+      faculty_id: user?.id || "",
       students: sectionStudents.map((student) => ({
-        studentId: student.id,
-        studentName: student.name,
+        student_id: student.id,
+        student_name: student.name,
         status: currentAttendance[student.id] || "absent",
       })),
     }
@@ -78,7 +78,7 @@ export function AttendanceManagement() {
 
   const getAttendanceStats = (courseCode: string, section: string) => {
     const courseAttendance = attendance.filter(
-      (record) => record.courseCode === courseCode && record.section === section,
+      (record) => record.course_code === courseCode && record.section === section,
     )
 
     const totalClasses = courseAttendance.length
@@ -188,7 +188,7 @@ export function AttendanceManagement() {
                         <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div>
                             <h4 className="font-medium">{student.name}</h4>
-                            <p className="text-sm text-gray-600">{student.studentId}</p>
+                            <p className="text-sm text-gray-600">{student.student_id}</p>
                           </div>
                           <div className="flex space-x-2">
                             <Button
@@ -207,11 +207,7 @@ export function AttendanceManagement() {
                             </Button>
                             <Button
                               size="sm"
-                              variant={
-                                currentAttendance[student.id] === "absent" || !currentAttendance[student.id]
-                                  ? "default"
-                                  : "outline"
-                              }
+                              variant={currentAttendance[student.id] === "absent" ? "default" : "outline"}
                               onClick={() => setCurrentAttendance((prev) => ({ ...prev, [student.id]: "absent" }))}
                             >
                               Absent
@@ -223,13 +219,11 @@ export function AttendanceManagement() {
                 </div>
               )}
 
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsMarkDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleMarkAttendance} disabled={!selectedCourse || !selectedSection}>
-                  Mark Attendance
-                </Button>
+                <Button onClick={handleMarkAttendance}>Mark Attendance</Button>
               </div>
             </div>
           </DialogContent>
@@ -239,46 +233,33 @@ export function AttendanceManagement() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="records">Attendance Records</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {availableCourses.map((course) =>
               sections.map((section) => {
                 const stats = getAttendanceStats(course, section)
-                const sectionStudents = students.filter(
-                  (student) => student.class === course && student.section === section,
-                )
-
                 return (
                   <Card key={`${course}-${section}`}>
                     <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Users className="h-5 w-5" />
-                        <span>
-                          {course} - Section {section}
-                        </span>
-                      </CardTitle>
-                      <CardDescription>{sectionStudents.length} students</CardDescription>
+                      <CardTitle className="text-lg">{course} - Section {section}</CardTitle>
+                      <CardDescription>
+                        {stats.totalClasses} classes recorded
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Classes Held:</span>
-                            <p className="font-medium">{stats.totalClasses}</p>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Avg. Attendance:</span>
-                            <p className="font-medium">{stats.averageAttendance.toFixed(1)}%</p>
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Average Attendance</span>
+                          <span className="font-medium">{stats.averageAttendance.toFixed(1)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
-                            className="bg-green-600 h-2 rounded-full"
+                            className="bg-blue-600 h-2 rounded-full"
                             style={{ width: `${stats.averageAttendance}%` }}
-                          />
+                          ></div>
                         </div>
                       </div>
                     </CardContent>
@@ -289,59 +270,40 @@ export function AttendanceManagement() {
           </div>
         </TabsContent>
 
-        <TabsContent value="records" className="space-y-4">
-          <div className="grid gap-4">
-            {attendance.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <ClipboardCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No attendance records</h3>
-                  <p className="text-gray-600">Start marking attendance to see records here.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              attendance
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((record) => (
-                  <Card key={record.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <CardTitle className="flex items-center space-x-2">
-                            <Calendar className="h-5 w-5" />
-                            <span>
-                              {record.courseCode} - Section {record.section}
-                            </span>
-                          </CardTitle>
-                          <CardDescription>{record.date}</CardDescription>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-600">
-                            Present: {record.students.filter((s) => s.status === "present").length}/
-                            {record.students.length}
-                          </div>
-                        </div>
+        <TabsContent value="details" className="space-y-4">
+          {attendance.map((record) => (
+            <Card key={record.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg">
+                      {record.course_code} - Section {record.section}
+                    </CardTitle>
+                    <CardDescription>{record.date}</CardDescription>
+                  </div>
+                  <Badge variant="outline">{record.students.length} students</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {record.students.map((student) => (
+                    <div key={student.student_id} className="flex items-center justify-between p-2 border rounded">
+                      <div>
+                        <h4 className="font-medium">{student.student_name}</h4>
+                        <p className="text-sm text-gray-600">{student.student_id}</p>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {record.students.map((student) => (
-                          <div key={student.studentId} className="flex items-center justify-between p-2 border rounded">
-                            <span className="text-sm font-medium">{student.studentName}</span>
-                            <Badge className={getStatusColor(student.status)}>
-                              <div className="flex items-center space-x-1">
-                                {getStatusIcon(student.status)}
-                                <span className="capitalize">{student.status}</span>
-                              </div>
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-            )}
-          </div>
+                      <Badge className={getStatusColor(student.status)}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(student.status)}
+                          <span className="capitalize">{student.status}</span>
+                        </div>
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </TabsContent>
       </Tabs>
     </div>

@@ -1,20 +1,32 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getUserById } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // For now, we'll get projects for the first student
-    // In a real app, this would be based on the authenticated user
-    const students = await prisma.student.findMany({ take: 1 })
-    if (students.length === 0) {
-      return NextResponse.json({ projects: [] })
+    // Get user from header
+    const userId = request.headers.get("x-user-id")
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
     }
 
-    const studentId = students[0].id
+    const user = await getUserById(userId)
+    if (!user || user.role !== "student") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 })
+    }
+
+    // Get student record
+    const student = await prisma.student.findUnique({
+      where: { user_id: userId },
+    })
+
+    if (!student) {
+      return NextResponse.json({ error: "Student profile not found" }, { status: 404 })
+    }
 
     // Get student's enrolled courses
     const enrollments = await prisma.enrollment.findMany({
-      where: { student_id: studentId },
+      where: { student_id: student.id },
       select: { course_id: true, section: true },
     })
 
@@ -27,15 +39,15 @@ export async function GET() {
       {} as Record<string, string>,
     )
 
-    // Get projects for enrolled courses (only faculty-assigned projects)
+    // Get projects for enrolled courses (faculty-assigned and student-proposed projects)
     const projects = await prisma.project.findMany({
       where: {
         course_id: { in: courseIds },
-        type: "FACULTY_ASSIGNED", // Only show faculty-assigned projects
+        type: { in: ["FACULTY_ASSIGNED", "STUDENT_PROPOSED"] },
       },
       include: {
         submissions: {
-          where: { student_id: studentId },
+          where: { student_id: student.id },
           take: 1,
         },
       },

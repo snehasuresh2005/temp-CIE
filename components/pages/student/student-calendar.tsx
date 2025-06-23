@@ -19,9 +19,9 @@ interface ClassSchedule {
     }
   }
   room: string
-  dayOfWeek: string
-  startTime: string
-  endTime: string
+  day_of_week: string
+  start_time: string
+  end_time: string
   section: string
 }
 
@@ -37,7 +37,7 @@ export function StudentCalendar() {
 
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/class-schedules?studentId=${user.studentId}`)
+        const response = await fetch(`/api/class-schedules?studentId=${user.student_id}`)
 
         if (!response.ok) {
           throw new Error("Failed to fetch schedules")
@@ -64,11 +64,11 @@ export function StudentCalendar() {
   const today = new Date()
   const currentDay = daysOfWeek[today.getDay()]
 
-  const todaySchedules = schedules.filter((schedule) => schedule.dayOfWeek === currentDay)
+  const todaySchedules = schedules.filter((schedule) => schedule.day_of_week === currentDay)
 
   const weekSchedules = daysOfWeek.map((day) => ({
     day,
-    schedules: schedules.filter((schedule) => schedule.dayOfWeek === day),
+    schedules: schedules.filter((schedule) => schedule.day_of_week === day),
   }))
 
   const formatTime = (time: string) => {
@@ -127,7 +127,7 @@ export function StudentCalendar() {
                               <div className="flex items-center space-x-4 mt-1">
                                 <div className="flex items-center text-xs text-green-600">
                                   <Clock className="h-3 w-3 mr-1" />
-                                  {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                                  {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                                 </div>
                                 <div className="flex items-center text-xs text-green-600">
                                   <MapPin className="h-3 w-3 mr-1" />
@@ -174,7 +174,7 @@ export function StudentCalendar() {
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center text-xs text-gray-500">
                           <Clock className="h-3 w-3 mr-1" />
-                          {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                          {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                         </div>
                         <div className="flex items-center text-xs text-gray-500">
                           <MapPin className="h-3 w-3 mr-1" />

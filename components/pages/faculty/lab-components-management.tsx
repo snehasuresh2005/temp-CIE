@@ -167,11 +167,13 @@ export function LabComponentsManagement() {
   }
 
   const handleMarkCollected = async (requestId: string) => {
+    if (!user) return;
     try {
       const response = await fetch(`/api/component-requests/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user.id
         },
         body: JSON.stringify({
           status: "COLLECTED",
@@ -206,11 +208,13 @@ export function LabComponentsManagement() {
   }
 
   const handleMarkReturned = async (requestId: string) => {
+    if (!user) return;
     try {
       const response = await fetch(`/api/component-requests/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user.id
         },
         body: JSON.stringify({
           status: "RETURNED",
@@ -586,29 +590,12 @@ export function LabComponentsManagement() {
                         </Badge>
                         {request.status === "APPROVED" && (
                           <div className="text-right">
-                            <p className="text-xs text-blue-600 mb-1">✓ Approved - Ready for collection</p>
                             <Button size="sm" onClick={() => handleMarkCollected(request.id)}>
                               Mark Collected
                             </Button>
                           </div>
                         )}
-                        {request.status === "COLLECTED" && (
-                          <div className="text-right">
-                            <p className="text-xs text-green-600 mb-1">
-                              📦 Collected - Student has the component
-                            </p>
-                            <p className="text-xs text-gray-500 mb-1">
-                              {isOverdue(request.required_date) ? "⚠️ Overdue" : "On time"}
-                            </p>
-                            <Button
-                              size="sm"
-                              onClick={() => handleMarkReturned(request.id)}
-                              variant={isOverdue(request.required_date) ? "destructive" : "default"}
-                            >
-                              {isOverdue(request.required_date) ? "Mark Returned (Overdue)" : "Mark Returned"}
-                            </Button>
-                          </div>
-                        )}
+                        {request.status === "COLLECTED" && null}
                       </div>
                     </div>
                   </CardContent>
@@ -722,7 +709,7 @@ export function LabComponentsManagement() {
                             Requested on: {new Date(request.request_date).toLocaleDateString()} | Required by: {new Date(request.required_date).toLocaleDateString()}
                           </p>
                           {request.status === "RETURNED" && request.return_date && (
-                            <p className="text-xs text-green-600">
+                            <p className="text-xs text-gray-600">
                               Returned: {new Date(request.return_date).toLocaleDateString()}
                               {isOverdue(request.required_date) && (
                                 <span className="text-red-600 ml-2">
@@ -732,7 +719,7 @@ export function LabComponentsManagement() {
                             </p>
                           )}
                           {request.status === "REJECTED" && (
-                            <p className="text-xs text-red-600">
+                            <p className="text-xs text-gray-600">
                               Rejected: {new Date(request.request_date).toLocaleDateString()}
                             </p>
                           )}

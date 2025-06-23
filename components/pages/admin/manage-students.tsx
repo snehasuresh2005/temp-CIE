@@ -20,13 +20,13 @@ import { useToast } from "@/hooks/use-toast"
 
 interface Student {
   id: string
-  userId: string
-  studentId: string
+  user_id: string
+  student_id: string
   program: string
   year: string
   section: string
   gpa: number
-  advisorId: string | null
+  advisor_id: string | null
   user: {
     id: string
     name: string
@@ -61,7 +61,7 @@ export function ManageStudents() {
     email: "",
     phone: "",
     password: "password123", // Default password
-    studentId: "",
+    student_id: "",
     program: "",
     year: "",
     section: "",
@@ -100,12 +100,12 @@ export function ManageStudents() {
     (student) =>
       student.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.student_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.program.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const handleAddStudent = async () => {
-    if (!newStudent.name || !newStudent.email || !newStudent.studentId || !newStudent.program) {
+    if (!newStudent.name || !newStudent.email || !newStudent.student_id || !newStudent.program) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -131,7 +131,7 @@ export function ManageStudents() {
           email: "",
           phone: "",
           password: "password123",
-          studentId: "",
+          student_id: "",
           program: "",
           year: "",
           section: "",
@@ -201,7 +201,7 @@ export function ManageStudents() {
                     id="name"
                     value={newStudent.name}
                     onChange={(e) => setNewStudent((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="John Doe"
+                    placeholder="Enter full name"
                   />
                 </div>
                 <div>
@@ -211,7 +211,7 @@ export function ManageStudents() {
                     type="email"
                     value={newStudent.email}
                     onChange={(e) => setNewStudent((prev) => ({ ...prev, email: e.target.value }))}
-                    placeholder="john.doe@college.edu"
+                    placeholder="Enter email address"
                   />
                 </div>
                 <div>
@@ -220,21 +220,21 @@ export function ManageStudents() {
                     id="phone"
                     value={newStudent.phone}
                     onChange={(e) => setNewStudent((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+91-9876543210"
+                    placeholder="Enter phone number"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="studentId">Student ID *</Label>
+                  <Label htmlFor="student_id">Student ID *</Label>
                   <Input
-                    id="studentId"
-                    value={newStudent.studentId}
-                    onChange={(e) => setNewStudent((prev) => ({ ...prev, studentId: e.target.value }))}
-                    placeholder="STU001"
+                    id="student_id"
+                    value={newStudent.student_id}
+                    onChange={(e) => setNewStudent((prev) => ({ ...prev, student_id: e.target.value }))}
+                    placeholder="Enter student ID"
                   />
                 </div>
                 <div>
                   <Label htmlFor="program">Program *</Label>
-                  <Select onValueChange={(value) => setNewStudent((prev) => ({ ...prev, program: value }))}>
+                  <Select value={newStudent.program} onValueChange={(value) => setNewStudent((prev) => ({ ...prev, program: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select program" />
                     </SelectTrigger>
@@ -250,7 +250,7 @@ export function ManageStudents() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="year">Year</Label>
-                    <Select onValueChange={(value) => setNewStudent((prev) => ({ ...prev, year: value }))}>
+                    <Select value={newStudent.year} onValueChange={(value) => setNewStudent((prev) => ({ ...prev, year: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
@@ -265,21 +265,21 @@ export function ManageStudents() {
                   </div>
                   <div>
                     <Label htmlFor="section">Section</Label>
-                    <Select onValueChange={(value) => setNewStudent((prev) => ({ ...prev, section: value }))}>
+                    <Select value={newStudent.section} onValueChange={(value) => setNewStudent((prev) => ({ ...prev, section: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select section" />
                       </SelectTrigger>
                       <SelectContent>
                         {sections.map((section) => (
                           <SelectItem key={section} value={section}>
-                            Section {section}
+                            {section}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-2 pt-4">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
                   </Button>
@@ -291,77 +291,57 @@ export function ManageStudents() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <Input
-          placeholder="Search students..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder="Search students..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredStudents.length === 0 ? (
-          <Card className="col-span-2">
-            <CardContent className="p-8 text-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No students found</h3>
-              <p className="text-gray-600">Add your first student to get started.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredStudents.map((student) => (
-            <Card key={student.id} className="hover:shadow-lg transition-shadow">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredStudents.map((student) => (
+            <Card key={student.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <GraduationCap className="h-5 w-5" />
-                      <span>{student.user.name}</span>
-                    </CardTitle>
-                    <CardDescription>ID: {student.studentId}</CardDescription>
-                  </div>
-                  <Badge variant="outline">{student.program}</Badge>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{student.user.name}</CardTitle>
+                  <Badge variant="secondary">{student.program}</Badge>
                 </div>
+                <CardDescription>ID: {student.student_id}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Mail className="h-4 w-4" />
-                    <span>{student.user.email}</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Year</Label>
-                      <p className="font-medium">{student.year}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Section</Label>
-                      <p className="font-medium">Section {student.section}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">GPA</Label>
-                      <p className="font-medium">{student.gpa.toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Advisor</Label>
-                      <p className="font-medium">{student.advisor?.user.name || "Not assigned"}</p>
-                    </div>
-                  </div>
-
-                  {student.user.phone && (
-                    <div>
-                      <Label className="text-sm font-medium">Phone</Label>
-                      <p className="text-sm text-gray-600">{student.user.phone}</p>
-                    </div>
-                  )}
+              <CardContent className="space-y-2">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Mail className="h-4 w-4" />
+                  <span>{student.user.email}</span>
                 </div>
+                {student.user.phone && (
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <span>📞</span>
+                    <span>{student.user.phone}</span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <GraduationCap className="h-4 w-4" />
+                  <span>
+                    {student.year} Year, Section {student.section}
+                  </span>
+                </div>
+                {student.gpa && (
+                  <div className="text-sm text-gray-600">
+                    GPA: {student.gpa.toFixed(2)}
+                  </div>
+                )}
               </CardContent>
             </Card>
-          ))
+          ))}
+        </div>
+
+        {filteredStudents.length === 0 && !loading && (
+          <div className="text-center py-8 text-gray-500">
+            {searchTerm ? "No students found matching your search." : "No students found."}
+          </div>
         )}
       </div>
     </div>

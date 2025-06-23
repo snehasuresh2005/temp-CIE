@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle } from "lucide-react"
+import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -127,27 +127,47 @@ export function ProjectManagement() {
       setLoading(true)
 
       // Fetch courses (faculty's courses)
-      const coursesResponse = await fetch("/api/courses")
+      const coursesResponse = await fetch("/api/courses", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
       const coursesData = await coursesResponse.json()
       setCourses(coursesData.courses || [])
 
       // Fetch lab components
-      const componentsResponse = await fetch("/api/lab-components")
+      const componentsResponse = await fetch("/api/lab-components", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
       const componentsData = await componentsResponse.json()
       setLabComponents(componentsData.components || [])
 
       // Fetch projects
-      const projectsResponse = await fetch("/api/projects")
+      const projectsResponse = await fetch("/api/projects", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
       const projectsData = await projectsResponse.json()
       setProjects(projectsData.projects || [])
 
       // Fetch project requests
-      const requestsResponse = await fetch("/api/project-requests")
+      const requestsResponse = await fetch("/api/project-requests", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
       const requestsData = await requestsResponse.json()
       setProjectRequests(requestsData.projectRequests || [])
 
       // Fetch submissions
-      const submissionsResponse = await fetch("/api/project-submissions")
+      const submissionsResponse = await fetch("/api/project-submissions", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
       const submissionsData = await submissionsResponse.json()
       setSubmissions(submissionsData.submissions || [])
     } catch (error) {
@@ -253,21 +273,23 @@ export function ProjectManagement() {
 
   const handleGradeSubmission = async (submissionId: string, marks: number, feedback: string) => {
     try {
-      const response = await fetch(`/api/project-submissions/${submissionId}`, {
-        method: "PATCH",
+      const response = await fetch("/api/project-submissions", {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
         },
         body: JSON.stringify({
+          submissionId,
           marks,
           feedback,
-          status: "GRADED",
         }),
       })
 
       if (response.ok) {
+        const data = await response.json()
         setSubmissions((prev) =>
-          prev.map((sub) => (sub.id === submissionId ? { ...sub, marks, feedback, status: "GRADED" } : sub)),
+          prev.map((sub) => (sub.id === submissionId ? data.submission : sub)),
         )
 
         toast({
@@ -614,18 +636,18 @@ export function ProjectManagement() {
                       <Badge className={getSubmissionStatusColor(submission.status)}>
                         {submission.status}
                       </Badge>
-                          </div>
+                    </div>
                     
                     <div className="space-y-2">
                       <CardDescription className="text-sm font-medium text-gray-700">
                         Submitted on {new Date(submission.submissionDate).toLocaleDateString()}
                       </CardDescription>
-                          </div>
-                        </div>
+                    </div>
+                  </div>
                 </CardHeader>
                 
                 <CardContent className="pt-0">
-                                <div className="space-y-4">
+                  <div className="space-y-4">
                     {/* Submission Content */}
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submission Content</Label>
@@ -634,6 +656,29 @@ export function ProjectManagement() {
                       </div>
                     </div>
 
+                    {/* Attachments */}
+                    {submission.attachments && submission.attachments.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Attached Files</Label>
+                        <div className="space-y-2">
+                          {submission.attachments.map((attachment, index) => (
+                            <div key={index} className="flex items-center space-x-2 p-2 bg-blue-50 rounded-md">
+                              <FileText className="h-4 w-4 text-blue-600" />
+                              <a
+                                href={attachment}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:text-blue-800 underline"
+                              >
+                                {attachment.split('/').pop() || `File ${index + 1}`}
+                              </a>
+                              <span className="text-xs text-gray-500">(Click to view)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Grading Section */}
                     {submission.status === "SUBMITTED" && (
                       <div className="space-y-3 pt-2 border-t border-gray-100">
@@ -641,21 +686,23 @@ export function ProjectManagement() {
                         <div className="grid grid-cols-1 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor={`marks-${submission.id}`} className="text-sm font-medium">Marks (0-100)</Label>
-                                    <Input
+                            <Input
                               id={`marks-${submission.id}`}
-                                      type="number"
-                                      min="0"
+                              type="number"
+                              min="0"
                               max="100"
-                                      placeholder="Enter marks"
+                              placeholder="Enter marks"
                               defaultValue={submission.marks || 0}
                               className="w-full"
-                              onChange={(e) => {
-                                const marks = parseInt(e.target.value)
-                                const feedback = submission.feedback || ""
-                                handleGradeSubmission(submission.id, marks, feedback)
+                              onBlur={(e) => {
+                                const marks = parseInt(e.target.value) || 0
+                                const feedback = (document.getElementById(`feedback-${submission.id}`) as HTMLTextAreaElement)?.value || ""
+                                if (marks > 0) {
+                                  handleGradeSubmission(submission.id, marks, feedback)
+                                }
                               }}
-                                    />
-                                  </div>
+                            />
+                          </div>
                           <div className="space-y-2">
                             <Label htmlFor={`feedback-${submission.id}`} className="text-sm font-medium">Feedback</Label>
                             <Textarea
@@ -663,15 +710,36 @@ export function ProjectManagement() {
                               placeholder="Enter feedback for the student..."
                               defaultValue={submission.feedback || ""}
                               rows={3}
-                              onChange={(e) => {
-                                const marks = submission.marks || 0
+                              onBlur={(e) => {
+                                const marks = parseInt((document.getElementById(`marks-${submission.id}`) as HTMLInputElement)?.value || "0") || 0
                                 const feedback = e.target.value
-                                handleGradeSubmission(submission.id, marks, feedback)
+                                if (marks > 0 && feedback.trim()) {
+                                  handleGradeSubmission(submission.id, marks, feedback)
+                                }
                               }}
                             />
-                                  </div>
-                                  </div>
-                                </div>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              const marks = parseInt((document.getElementById(`marks-${submission.id}`) as HTMLInputElement)?.value || "0") || 0
+                              const feedback = (document.getElementById(`feedback-${submission.id}`) as HTMLTextAreaElement)?.value || ""
+                              if (marks > 0) {
+                                handleGradeSubmission(submission.id, marks, feedback)
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Please enter marks before grading",
+                                  variant: "destructive",
+                                })
+                              }
+                            }}
+                            className="w-full bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Grade Submission
+                          </Button>
+                        </div>
+                      </div>
                     )}
 
                     {/* Graded Results */}
@@ -682,8 +750,8 @@ export function ProjectManagement() {
                           <div className="p-3 bg-green-50 rounded-md">
                             <div className="font-medium text-green-900">Marks</div>
                             <div className="text-lg font-bold text-green-700">{submission.marks}/100</div>
-                              </div>
-                              {submission.feedback && (
+                          </div>
+                          {submission.feedback && (
                             <div className="p-3 bg-blue-50 rounded-md col-span-2">
                               <div className="font-medium text-blue-900 mb-1">Feedback</div>
                               <p className="text-sm text-blue-700">{submission.feedback}</p>
@@ -692,9 +760,9 @@ export function ProjectManagement() {
                         </div>
                       </div>
                     )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
             {submissions.length === 0 && (
               <div className="text-center py-12 text-gray-500">

@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock } from "lucide-react"
+import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -104,8 +104,10 @@ export function ViewProjects() {
   const [loading, setLoading] = useState(true)
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isGradeDialogOpen, setIsGradeDialogOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [submissionContent, setSubmissionContent] = useState("")
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null)
   const { toast } = useToast()
 
   const [newProject, setNewProject] = useState({
@@ -123,33 +125,46 @@ export function ViewProjects() {
   }, [])
 
   const fetchData = async () => {
+    if (!user) return
+
     try {
       setLoading(true)
+      const [projectsResponse, coursesResponse, facultyResponse, labComponentsResponse] = await Promise.all([
+        fetch("/api/student/projects", {
+          headers: {
+            "x-user-id": user.id,
+          },
+        }),
+        fetch("/api/courses"),
+        fetch("/api/faculty"),
+        fetch("/api/lab-components"),
+      ])
 
-      // Fetch available projects
-      const projectsResponse = await fetch("/api/projects")
-      const projectsData = await projectsResponse.json()
-      setProjects(projectsData.projects || [])
+      if (projectsResponse.ok) {
+        const projectsData = await projectsResponse.json()
+        console.log('Fetched projects data:', projectsData)
+        setProjects(projectsData.projects)
+      }
 
-      // Fetch faculty for project creation
-      const facultyResponse = await fetch("/api/faculty")
-      const facultyData = await facultyResponse.json()
-      setFaculty(facultyData.faculty || [])
+      if (coursesResponse.ok) {
+        const coursesData = await coursesResponse.json()
+        setCourses(coursesData.courses)
+      }
 
-      // Fetch courses
-      const coursesResponse = await fetch("/api/courses")
-      const coursesData = await coursesResponse.json()
-      setCourses(coursesData.courses || [])
+      if (facultyResponse.ok) {
+        const facultyData = await facultyResponse.json()
+        setFaculty(facultyData.faculty)
+      }
 
-      // Fetch lab components
-      const componentsResponse = await fetch("/api/lab-components")
-      const componentsData = await componentsResponse.json()
-      setLabComponents(componentsData.components || [])
+      if (labComponentsResponse.ok) {
+        const labComponentsData = await labComponentsResponse.json()
+        setLabComponents(labComponentsData.components)
+      }
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({
         title: "Error",
-        description: "Failed to load project data",
+        description: "Failed to fetch data",
         variant: "destructive",
       })
     } finally {
@@ -166,34 +181,60 @@ export function ViewProjects() {
       })
       return
     }
-
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to submit a project.",
+        variant: "destructive",
+      })
+      return
+    }
     try {
+      const formData = new FormData()
+      formData.append("projectId", selectedProject.id)
+      formData.append("content", submissionContent)
+      if (submissionFile) {
+        formData.append("file", submissionFile)
+      }
       const response = await fetch("/api/project-submissions", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "x-user-id": user.id,
         },
-        body: JSON.stringify({
-          projectId: selectedProject.id,
-          content: submissionContent,
-          attachments: [],
-        }),
+        body: formData,
       })
-
       if (response.ok) {
         const data = await response.json()
-
-        // Update the project with the new submission
-        setProjects((prev) =>
-          prev.map((project) =>
-            project.id === selectedProject.id ? { ...project, submission: data.submission } : project,
-          ),
-        )
-
+        console.log('Submission response:', data)
+        
+        // Update the project with the submission data
+        setProjects((prev) => {
+          const updatedProjects = prev.map((project) =>
+            project.id === selectedProject.id 
+              ? { 
+                  ...project, 
+                  submission: {
+                    id: data.submission.id,
+                    projectId: data.submission.project_id,
+                    studentId: data.submission.student_id,
+                    content: data.submission.content,
+                    attachments: data.submission.attachments,
+                    marks: data.submission.marks,
+                    feedback: data.submission.feedback,
+                    status: data.submission.status,
+                    submissionDate: data.submission.submission_date
+                  }
+                } 
+              : project,
+          )
+          console.log('Updated projects state:', updatedProjects)
+          return updatedProjects
+        })
+        
         setSubmissionContent("")
+        setSubmissionFile(null)
         setSelectedProject(null)
         setIsSubmitDialogOpen(false)
-
         toast({
           title: "Success",
           description: "Project submitted successfully",
@@ -206,7 +247,7 @@ export function ViewProjects() {
       console.error("Error submitting project:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit project",
+        description: "Failed to submit project",
         variant: "destructive",
       })
     }
@@ -293,6 +334,12 @@ export function ViewProjects() {
     }
     if (project.status === "ONGOING") {
       if (project.submission) {
+        if (project.submission.status === "SUBMITTED") {
+          return "Submitted - Awaiting Grade"
+        }
+        if (project.submission.status === "GRADED") {
+          return "Graded"
+        }
         return "Submitted"
       }
       return "In Progress"
@@ -479,6 +526,9 @@ export function ViewProjects() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project: Project) => {
+          // Debug logging
+          console.log('Rendering project:', project.id, 'Status:', project.status, 'Submission:', project.submission)
+          
           // Find the rejected request if any
           const rejectedRequest = (project.project_requests || []).find((r: ProjectRequest) => r.status === "REJECTED")
 
@@ -528,6 +578,22 @@ export function ViewProjects() {
               <CardContent className="flex-grow flex flex-col">
                 <div className="mb-4">
                   <Badge className={`${getStatusColor(project)}`}>{getStatusText(project)}</Badge>
+                  {project.submission && (
+                    <div className="mt-2 flex items-center text-sm">
+                      {project.submission.status === "SUBMITTED" && (
+                        <div className="flex items-center text-yellow-600">
+                          <Clock className="h-4 w-4 mr-1" />
+                          <span>Waiting for faculty grading</span>
+                        </div>
+                      )}
+                      {project.submission.status === "GRADED" && (
+                        <div className="flex items-center text-green-600">
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          <span>Graded by faculty</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-grow">
                   <div className="space-y-2">
@@ -576,54 +642,163 @@ export function ViewProjects() {
                 </div>
               </CardContent>
               <div className="p-6 pt-0">
-                {project.status === "ONGOING" && !project.submission && (
-                  <Dialog open={isSubmitDialogOpen && selectedProject?.id === project.id} onOpenChange={(isOpen) => {
-                    setIsSubmitDialogOpen(isOpen)
-                    if (!isOpen) {
-                      setSelectedProject(null)
-                    }
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Submit Project
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Submit Project</DialogTitle>
-                        <DialogDescription>
-                          Submit your work for {project.name}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="content">Project Content</Label>
-                          <Textarea
-                            id="content"
-                            value={submissionContent}
-                            onChange={(e) => setSubmissionContent(e.target.value)}
-                            placeholder="Describe your project work, findings, and any additional notes..."
-                            rows={6}
-                          />
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button onClick={handleSubmitProject}>Submit Project</Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                {project.status === "ONGOING" && (!project.submission || project.submission.status === "REVISION_REQUESTED") && (
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      setSelectedProject(project)
+                      setIsSubmitDialogOpen(true)
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    {project.submission && project.submission.status === "REVISION_REQUESTED" ? "Resubmit Project" : "Submit Project"}
+                  </Button>
+                )}
+                
+                {project.submission && project.submission.status === "SUBMITTED" && (
+                  <div className="space-y-2">
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      disabled
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Submitted ✓
+                    </Button>
+                    <p className="text-xs text-gray-500 text-center">
+                      Waiting for faculty grading
+                    </p>
+                  </div>
+                )}
+                
+                {project.submission && project.submission.status === "GRADED" && (
+                  <Button
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    onClick={() => {
+                      setSelectedProject(project)
+                      setIsGradeDialogOpen(true)
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View Grade
+                  </Button>
                 )}
               </div>
             </Card>
           )
         })}
       </div>
+
+      <Dialog open={isSubmitDialogOpen} onOpenChange={(isOpen) => {
+        setIsSubmitDialogOpen(isOpen)
+        if (!isOpen) setSelectedProject(null)
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Project</DialogTitle>
+            <DialogDescription>Upload your project submission (PDF).</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="submissionContent">Submission Notes</Label>
+            <Textarea
+              id="submissionContent"
+              value={submissionContent}
+              onChange={(e) => setSubmissionContent(e.target.value)}
+              placeholder="Enter any notes or description for your submission"
+              rows={3}
+            />
+            </div>
+            <div className="space-y-2">
+            <Label htmlFor="submissionFile">Upload PDF</Label>
+            <Input
+              id="submissionFile"
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => setSubmissionFile(e.target.files?.[0] || null)}
+            />
+            </div>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitProject} disabled={!submissionContent.trim() || !submissionFile}>
+              Submit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Grade Viewing Dialog */}
+      <Dialog open={isGradeDialogOpen} onOpenChange={(isOpen) => {
+        setIsGradeDialogOpen(isOpen)
+        if (!isOpen) setSelectedProject(null)
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Project Grade</DialogTitle>
+            <DialogDescription>Your project has been graded by the faculty.</DialogDescription>
+          </DialogHeader>
+          {selectedProject?.submission && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <h3 className="text-sm font-semibold text-green-800">Marks</h3>
+                  <p className="text-2xl font-bold text-green-600">
+                    {selectedProject.submission.marks}/100
+                  </p>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h3 className="text-sm font-semibold text-blue-800">Status</h3>
+                  <p className="text-lg font-semibold text-blue-600 capitalize">
+                    {selectedProject.submission.status}
+                  </p>
+                </div>
+              </div>
+              
+              {selectedProject.submission.feedback && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Faculty Feedback</Label>
+                  <div className="p-3 bg-gray-50 rounded-md">
+                    <p className="text-sm text-gray-700">{selectedProject.submission.feedback}</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Your Submission</Label>
+                <div className="p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-700">{selectedProject.submission.content}</p>
+                </div>
+              </div>
+              
+              {selectedProject.submission.attachments && selectedProject.submission.attachments.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Submitted Files</Label>
+                  <div className="space-y-2">
+                    {selectedProject.submission.attachments.map((attachment, index) => (
+                      <div key={index} className="flex items-center space-x-2 p-2 bg-blue-50 rounded-md">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <a
+                          href={attachment}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {attachment.split('/').pop() || `File ${index + 1}`}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button onClick={() => setIsGradeDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

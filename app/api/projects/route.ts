@@ -61,7 +61,7 @@ export async function GET() {
           // Find the faculty who created this project by user ID
           const faculty = await prisma.faculty.findFirst({
             where: {
-              userId: project.created_by,
+              user_id: project.created_by,
             },
             include: {
               user: {

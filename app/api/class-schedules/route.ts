@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     if (facultyId) {
       // Get schedules for a specific faculty
       schedules = await prisma.classSchedule.findMany({
-        where: { facultyId },
+        where: { faculty_id: facultyId },
         include: {
           course: true,
           faculty: {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     } else if (courseId) {
       // Get schedules for a specific course
       schedules = await prisma.classSchedule.findMany({
-        where: { courseId },
+        where: { course_id: courseId },
         include: {
           course: true,
           faculty: {
@@ -52,12 +52,12 @@ export async function GET(request: NextRequest) {
     } else if (studentId) {
       // Get schedules for a specific student based on their enrollments
       const studentEnrollments = await prisma.enrollment.findMany({
-        where: { studentId },
-        select: { courseId: true, section: true },
+        where: { student_id: studentId },
+        select: { course_id: true, section: true },
       })
 
       const enrollmentFilters = studentEnrollments.map((enrollment) => ({
-        courseId: enrollment.courseId,
+        course_id: enrollment.course_id,
         section: enrollment.section,
       }))
 
@@ -114,12 +114,12 @@ export async function POST(request: NextRequest) {
 
     const schedule = await prisma.classSchedule.create({
       data: {
-        courseId: data.courseId,
-        facultyId: data.facultyId,
+        course_id: data.courseId,
+        faculty_id: data.facultyId,
         room: data.room,
-        dayOfWeek: data.dayOfWeek,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        day_of_week: data.dayOfWeek,
+        start_time: data.startTime,
+        end_time: data.endTime,
         section: data.section,
       },
       include: {

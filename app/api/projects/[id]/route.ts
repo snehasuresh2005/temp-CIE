@@ -9,9 +9,9 @@ export async function DELETE(
     const { id } = params
 
     // Delete related project requests
-    await prisma.projectRequest.deleteMany({ where: { projectId: id } })
+    await prisma.projectRequest.deleteMany({ where: { project_id: id } })
     // Delete related submissions
-    await prisma.projectSubmission.deleteMany({ where: { projectId: id } })
+    await prisma.projectSubmission.deleteMany({ where: { project_id: id } })
     // Delete the project
     await prisma.project.delete({ where: { id } })
 
