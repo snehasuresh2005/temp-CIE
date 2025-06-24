@@ -74,6 +74,7 @@ model Student {
 
 model Course {
   id                  String   @id @default(cuid())
+  course_code         String   @unique
   course_name         String
   course_description  String
   course_start_date   DateTime

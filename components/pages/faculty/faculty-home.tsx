@@ -3,15 +3,36 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/components/auth-provider"
 import { Users, BookOpen, ClipboardCheck, Clock, AlertTriangle, CheckCircle } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ManageCourses } from "@/components/pages/admin/manage-courses"
 
 export function FacultyHome() {
   const { user } = useAuth()
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setLoading(true)
+      try {
+        const res = await fetch("/api/courses")
+        const data = await res.json()
+        // Only show courses created by this faculty
+        setCourses(data.courses.filter((c: any) => c.created_by === user?.id))
+      } catch (e) {
+        setCourses([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    if (user?.id) fetchCourses()
+  }, [user?.id])
 
   const stats = [
     {
-      title: "My Classes",
-      value: user?.assignedClasses?.length.toString() || "0",
-      description: "Assigned classes",
+      title: "Courses",
+      value: courses.length.toString(),
+      description: "Your created courses",
       icon: BookOpen,
       color: "text-blue-600",
     },
@@ -66,7 +87,7 @@ export function FacultyHome() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user?.name}</h1>
-        <p className="text-gray-600 mt-2">Here's what's happening with your classes today</p>
+        <p className="text-gray-600 mt-2">Here's what's happening with your courses today</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -87,25 +108,29 @@ export function FacultyHome() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>My Classes</CardTitle>
-            <CardDescription>Classes assigned to you</CardDescription>
+            <CardTitle>Courses</CardTitle>
+            <CardDescription>Your created courses</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {user?.assignedClasses?.map((className) => (
-                <div key={className} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h3 className="font-medium">{className}</h3>
-                    <p className="text-sm text-gray-500">
-                      {className === "CS101" ? "Introduction to Computer Science" : "Data Structures and Algorithms"}
-                    </p>
+              {loading ? (
+                <p className="text-gray-500 text-center py-4">Loading...</p>
+              ) : courses.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No courses created</p>
+              ) : (
+                courses.map((course: any) => (
+                  <div key={course.course_id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <h3 className="font-medium">{course.course_name}</h3>
+                      <p className="text-sm text-gray-500">{course.course_code}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{course.course_enrollments} students</p>
+                      <p className="text-xs text-gray-500">{course.course_start_date} - {course.course_end_date}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{className === "CS101" ? "25" : "22"} students</p>
-                    <p className="text-xs text-gray-500">Room {className === "CS101" ? "A101" : "B205"}</p>
-                  </div>
-                </div>
-              )) || <p className="text-gray-500 text-center py-4">No classes assigned</p>}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

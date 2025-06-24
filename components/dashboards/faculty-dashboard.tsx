@@ -6,13 +6,13 @@ import { Home, Users, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench } fro
 import { FacultyHome } from "@/components/pages/faculty/faculty-home"
 import { LabComponentsManagement } from "@/components/pages/faculty/lab-components-management"
 import { FacultyCalendar } from "@/components/pages/faculty/faculty-calendar"
-import { ViewCourses } from "@/components/pages/faculty/view-courses"
+import { FacultyViewCourses } from "@/components/pages/faculty/view-courses"
 import { ProjectManagement } from "@/components/pages/faculty/project-management"
 import { AttendanceManagement } from "@/components/pages/faculty/attendance-management"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
-  { id: "classes", label: "My Classes", icon: Users },
+  { id: "courses", label: "Courses", icon: Users },
   { id: "locations", label: "Class Locations", icon: MapPin },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "projects", label: "Student Projects", icon: FolderOpen },
@@ -27,8 +27,8 @@ export function FacultyDashboard() {
     switch (currentPage) {
       case "home":
         return <FacultyHome />
-      case "classes":
-        return <ViewCourses />
+      case "courses":
+        return <FacultyViewCourses />
       case "locations":
         return (
           <div className="p-8 text-center">

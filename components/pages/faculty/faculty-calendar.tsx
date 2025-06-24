@@ -113,7 +113,7 @@ export function FacultyCalendar() {
                       {day === currentDay && <Badge variant="default">Today</Badge>}
                     </div>
                     {schedules.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No classes scheduled</p>
+                      <p className="text-gray-500 text-sm">No courses scheduled</p>
                     ) : (
                       <div className="space-y-2">
                         {schedules.map((schedule) => (
@@ -156,7 +156,7 @@ export function FacultyCalendar() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Clock className="h-5 w-5" />
-                <span>Today's Classes</span>
+                <span>Today's Courses</span>
               </CardTitle>
               <CardDescription>Your schedule for today</CardDescription>
             </CardHeader>
@@ -164,7 +164,7 @@ export function FacultyCalendar() {
               {todaySchedules.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No classes today</p>
+                  <p className="text-gray-500">No courses today</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -201,11 +201,11 @@ export function FacultyCalendar() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total Classes This Week</span>
+                  <span className="text-sm text-gray-600">Total Courses This Week</span>
                   <span className="font-medium">{schedules.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Classes Today</span>
+                  <span className="text-sm text-gray-600">Courses Today</span>
                   <span className="font-medium">{todaySchedules.length}</span>
                 </div>
                 <div className="flex items-center justify-between">

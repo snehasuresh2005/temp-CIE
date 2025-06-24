@@ -6,7 +6,6 @@ export async function GET(request: NextRequest) {
     const faculty = await prisma.faculty.findMany({
       include: {
         user: true,
-        courses: true,
       },
     })
 

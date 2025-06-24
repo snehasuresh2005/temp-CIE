@@ -27,22 +27,18 @@ export async function GET(request: Request) {
     // Get student's enrolled courses
     const enrollments = await prisma.enrollment.findMany({
       where: { student_id: student.id },
-      select: { course_id: true, section: true },
+      select: { course_id: true },
     })
 
     const courseIds = enrollments.map((e) => e.course_id)
-    const sections = enrollments.reduce(
-      (acc, e) => {
-        acc[e.course_id] = e.section
-        return acc
-      },
-      {} as Record<string, string>,
-    )
 
     // Get projects for enrolled courses (faculty-assigned and student-proposed projects)
     const projects = await prisma.project.findMany({
       where: {
-        course_id: { in: courseIds },
+        OR: [
+          { course_id: { in: courseIds } },
+          { created_by: userId }
+        ],
         type: { in: ["FACULTY_ASSIGNED", "STUDENT_PROPOSED"] },
       },
       include: {
@@ -77,30 +73,16 @@ export async function GET(request: Request) {
     const coursesWithFaculty = await prisma.course.findMany({
       where: {
         id: { in: courseIdsForFaculty }
-      },
-      include: {
-        faculty: {
-          include: {
-            user: {
-              select: { name: true, email: true }
-            }
-          }
-        }
       }
     })
 
     // Create a map of course_id to faculty
-    const courseFacultyMap = coursesWithFaculty.reduce((acc, course) => {
-      acc[course.id] = course.faculty
-      return acc
-    }, {} as Record<string, any>)
+    const courseFacultyMap = {}
 
     // Transform to include submission directly and faculty information
     const projectsWithSubmissions = projects.map((project) => {
       // For faculty-assigned projects, use the course faculty as faculty_creator
-      const faculty_creator = project.type === "FACULTY_ASSIGNED" ? {
-        user: courseFacultyMap[project.course_id]?.user
-      } : null
+      const faculty_creator = project.type === "FACULTY_ASSIGNED" ? {} : null
 
       // Destructure to remove submissions, then add faculty_creator
       const { submissions, ...projectWithoutSubmissions } = project

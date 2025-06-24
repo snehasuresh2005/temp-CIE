@@ -64,7 +64,7 @@ interface FacultyProfileData extends BaseProfileData {
   role: "faculty"
   department: string
   office: string
-  assigned_classes: string[]
+  assigned_courses: string[]
   specialization: string
   office_hours: string
 }
@@ -143,7 +143,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           role: "faculty" as const,
           department: "Computer Science",
           office: "Engineering Building, Room 205",
-          assigned_classes: ["CS101 - Intro to Programming", "CS201 - Data Structures", "CS301 - Algorithms"],
+          assigned_courses: ["CS101 - Intro to Programming", "CS201 - Data Structures", "CS301 - Algorithms"],
           specialization: "Software Engineering",
           office_hours: "Mon-Wed-Fri: 2:00 PM - 4:00 PM",
         }
@@ -308,9 +308,9 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                       <div className="flex items-start space-x-3 px-2">
                         <Users className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-xs font-medium text-gray-700">Assigned Classes</p>
+                          <p className="text-xs font-medium text-gray-700">Assigned Courses</p>
                           <div className="space-y-1 mt-1">
-                            {profileData.assigned_classes.map((className: string) => (
+                            {profileData.assigned_courses.map((className: string) => (
                               <Badge key={className} variant="outline" className="text-xs block w-fit">
                                 {className}
                               </Badge>

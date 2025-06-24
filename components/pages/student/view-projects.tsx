@@ -84,6 +84,7 @@ interface Faculty {
 }
 
 interface Course {
+  id: string
   course_id: string
   course_name: string
   course_description: string
@@ -371,6 +372,24 @@ export function ViewProjects() {
     return diffDays
   }
 
+  // Debug: log courses and selected value
+  useEffect(() => {
+    if (courses.length > 0) {
+      const ids = courses.map(c => c.course_id)
+      const uniqueIds = new Set(ids)
+      if (ids.length !== uniqueIds.size) {
+        console.warn('Duplicate course_id values found in courses:', ids)
+      }
+      if (ids.some(id => typeof id !== 'string')) {
+        console.warn('Non-string course_id values found in courses:', ids)
+      }
+    }
+    console.log('Current selected course_id:', newProject.course_id)
+  }, [courses, newProject.course_id])
+
+  // Filter courses to only those the student is enrolled in
+  const enrolledCourses = courses.filter(course => course.course_enrollments.includes(user?.id ?? ''))
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -418,13 +437,13 @@ export function ViewProjects() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="course">Course</Label>
-                    <Select value={newProject.course_id} onValueChange={(value) => setNewProject({ ...newProject, course_id: value })}>
+                    <Select value={String(newProject.course_id)} onValueChange={(value) => setNewProject({ ...newProject, course_id: value })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select course" />
                       </SelectTrigger>
                       <SelectContent>
-                        {courses.map((course) => (
-                          <SelectItem key={course.course_id} value={course.course_id}>
+                        {enrolledCourses.map((course) => (
+                          <SelectItem key={String(course.id)} value={String(course.id)}>
                             {course.course_name}
                           </SelectItem>
                         ))}
@@ -561,7 +580,7 @@ export function ViewProjects() {
             facultyLabel = "Faculty: "
           }
 
-          const course = courses.find((c) => c.course_id === project.course_id)
+          const course = courses.find((c) => c.id === project.course_id)
 
           return (
             <Card key={project.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
