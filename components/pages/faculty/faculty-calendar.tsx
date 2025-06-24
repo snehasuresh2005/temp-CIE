@@ -10,8 +10,8 @@ import { useToast } from "@/hooks/use-toast"
 interface ClassSchedule {
   id: string
   course: {
-    code: string
-    name: string
+    course_id: string
+    course_name: string
   }
   faculty: {
     user: {
@@ -19,9 +19,9 @@ interface ClassSchedule {
     }
   }
   room: string
-  dayOfWeek: string
-  startTime: string
-  endTime: string
+  day_of_week: string
+  start_time: string
+  end_time: string
   section: string
 }
 
@@ -37,7 +37,7 @@ export function FacultyCalendar() {
 
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/class-schedules?facultyId=${user.facultyId}`)
+        const response = await fetch(`/api/class-schedules?facultyId=${user.id}`)
 
         if (!response.ok) {
           throw new Error("Failed to fetch schedules")
@@ -64,11 +64,11 @@ export function FacultyCalendar() {
   const today = new Date()
   const currentDay = daysOfWeek[today.getDay()]
 
-  const todaySchedules = schedules.filter((schedule) => schedule.dayOfWeek === currentDay)
+  const todaySchedules = schedules.filter((schedule) => schedule.day_of_week === currentDay)
 
   const weekSchedules = daysOfWeek.map((day) => ({
     day,
-    schedules: schedules.filter((schedule) => schedule.dayOfWeek === day),
+    schedules: schedules.filter((schedule) => schedule.day_of_week === day),
   }))
 
   const formatTime = (time: string) => {
@@ -122,12 +122,12 @@ export function FacultyCalendar() {
                             className="flex items-center justify-between p-3 bg-blue-50 rounded-lg"
                           >
                             <div>
-                              <h4 className="font-medium text-blue-900">{schedule.course.code}</h4>
-                              <p className="text-sm text-blue-700">{schedule.course.name}</p>
+                              <h4 className="font-medium text-blue-900">{schedule.course.course_id}</h4>
+                              <p className="text-sm text-blue-700">{schedule.course.course_name}</p>
                               <div className="flex items-center space-x-4 mt-1">
                                 <div className="flex items-center text-xs text-blue-600">
                                   <Clock className="h-3 w-3 mr-1" />
-                                  {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                                  {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                                 </div>
                                 <div className="flex items-center text-xs text-blue-600">
                                   <MapPin className="h-3 w-3 mr-1" />
@@ -170,12 +170,12 @@ export function FacultyCalendar() {
                 <div className="space-y-3">
                   {todaySchedules.map((schedule) => (
                     <div key={schedule.id} className="p-3 border rounded-lg">
-                      <h4 className="font-medium">{schedule.course.code}</h4>
-                      <p className="text-sm text-gray-600">{schedule.course.name}</p>
+                      <h4 className="font-medium">{schedule.course.course_id}</h4>
+                      <p className="text-sm text-gray-600">{schedule.course.course_name}</p>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center text-xs text-gray-500">
                           <Clock className="h-3 w-3 mr-1" />
-                          {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                          {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                         </div>
                         <div className="flex items-center text-xs text-gray-500">
                           <MapPin className="h-3 w-3 mr-1" />
@@ -210,7 +210,7 @@ export function FacultyCalendar() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Unique Courses</span>
-                  <span className="font-medium">{new Set(schedules.map((s) => s.course.code)).size}</span>
+                  <span className="font-medium">{new Set(schedules.map((s) => s.course.course_id)).size}</span>
                 </div>
               </div>
             </CardContent>
