@@ -50,18 +50,67 @@ export async function GET(request: Request) {
           where: { student_id: student.id },
           take: 1,
         },
+        project_requests: {
+          include: {
+            faculty: {
+              include: {
+                user: {
+                  select: { name: true, email: true }
+                }
+              }
+            }
+          },
+          orderBy: {
+            request_date: 'desc'
+          }
+        }
       },
       orderBy: {
         expected_completion_date: "asc",
       },
     })
 
-    // Transform to include submission directly
-    const projectsWithSubmissions = projects.map((project) => ({
-      ...project,
-      submission: project.submissions[0] || null,
-      submissions: undefined,
-    }))
+    // Get faculty information for faculty-assigned projects
+    const facultyAssignedProjects = projects.filter(p => p.type === "FACULTY_ASSIGNED")
+    const courseIdsForFaculty = facultyAssignedProjects.map(p => p.course_id)
+    
+    const coursesWithFaculty = await prisma.course.findMany({
+      where: {
+        id: { in: courseIdsForFaculty }
+      },
+      include: {
+        faculty: {
+          include: {
+            user: {
+              select: { name: true, email: true }
+            }
+          }
+        }
+      }
+    })
+
+    // Create a map of course_id to faculty
+    const courseFacultyMap = coursesWithFaculty.reduce((acc, course) => {
+      acc[course.id] = course.faculty
+      return acc
+    }, {} as Record<string, any>)
+
+    // Transform to include submission directly and faculty information
+    const projectsWithSubmissions = projects.map((project) => {
+      // For faculty-assigned projects, use the course faculty as faculty_creator
+      const faculty_creator = project.type === "FACULTY_ASSIGNED" ? {
+        user: courseFacultyMap[project.course_id]?.user
+      } : null
+
+      // Destructure to remove submissions, then add faculty_creator
+      const { submissions, ...projectWithoutSubmissions } = project
+
+      return {
+        ...projectWithoutSubmissions,
+        submission: submissions[0] || null,
+        faculty_creator,
+      }
+    })
 
     return NextResponse.json({ projects: projectsWithSubmissions })
   } catch (error) {
