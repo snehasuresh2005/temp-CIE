@@ -47,9 +47,8 @@ model Faculty {
   attendance_records  AttendanceRecord[]
   class_schedules     ClassSchedule[]
   component_approvals ComponentRequest[] @relation("ComponentApprovals")
-  courses             Course[]
-  user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
   project_requests    ProjectRequest[]
+  user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("faculty")
 }
@@ -74,31 +73,47 @@ model Student {
 }
 
 model Course {
-  id                String          @id @default(cuid())
-  code              String          @unique
-  name              String
-  description       String
-  credits           Int
-  department        String
-  semester          String
-  status            CourseStatus    @default(ACTIVE)
-  sections          String[]
-  enrolled_students Int             @default(0)
-  faculty_id        String
-  max_students      Int
-  class_schedules   ClassSchedule[]
-  faculty           Faculty         @relation(fields: [faculty_id], references: [id])
-  enrollments       Enrollment[]
+  id                  String   @id @default(cuid())
+  course_name         String
+  course_description  String
+  course_start_date   DateTime
+  course_end_date     DateTime
+  course_enrollments  String[] // Array of user IDs
+  created_by          String
+  created_date        DateTime @default(now())
+  modified_by         String?
+  modified_date       DateTime @updatedAt
+  class_schedules     ClassSchedule[]
+  enrollments         Enrollment[]
+  course_units        CourseUnit[]
 
   @@map("courses")
 }
 
+model CourseUnit {
+  id                String   @id @default(cuid())
+  course_id         String
+  unit_number       Int
+  unit_name         String
+  unit_description  String
+  assignment_count  Int      @default(0)
+  hours_per_unit    Int      @default(1)
+  created_by        String
+  created_date      DateTime @default(now())
+  modified_by       String?
+  modified_date     DateTime @updatedAt
+  course            Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([course_id, unit_number])
+  @@map("course_units")
+}
+
 model Enrollment {
   id          String   @id @default(cuid())
-  section     String
   course_id   String
   enrolled_at DateTime @default(now())
   student_id  String
+  grade       String?
   course      Course   @relation(fields: [course_id], references: [id])
   student     Student  @relation(fields: [student_id], references: [id])
 
