@@ -390,7 +390,6 @@ export function LabComponentsRequest() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lab Components Request</h1>
-          <p className="text-gray-600 mt-2">Request lab equipment and components for your projects</p>
         </div>
         <Button onClick={fetchData} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
