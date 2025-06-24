@@ -84,9 +84,16 @@ interface Faculty {
 }
 
 interface Course {
-  id: string
-  code: string
-  name: string
+  course_id: string
+  course_name: string
+  course_description: string
+  course_start_date: string
+  course_end_date: string
+  course_enrollments: string[]
+  created_by: string
+  created_date: string
+  modified_by?: string
+  modified_date: string
 }
 
 interface LabComponent {
@@ -417,8 +424,8 @@ export function ViewProjects() {
                       </SelectTrigger>
                       <SelectContent>
                         {courses.map((course) => (
-                          <SelectItem key={course.id} value={course.id}>
-                            {course.code} - {course.name}
+                          <SelectItem key={course.course_id} value={course.course_id}>
+                            {course.course_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -554,7 +561,7 @@ export function ViewProjects() {
             facultyLabel = "Faculty: "
           }
 
-          const course = courses.find((c) => c.id === project.course_id)
+          const course = courses.find((c) => c.course_id === project.course_id)
 
           return (
             <Card key={project.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
@@ -566,7 +573,7 @@ export function ViewProjects() {
                       {project.name}
                     </CardTitle>
                     <CardDescription className="mt-2 text-sm text-gray-600">
-                      {course ? `${course.code} - ${course.name}` : "Unknown Course"}
+                      {course ? course.course_name : "Unknown Course"}
                     </CardDescription>
                     <p className="text-sm text-gray-500 mt-1">
                       {facultyLabel}
