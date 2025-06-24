@@ -87,10 +87,16 @@ interface ProjectRequest {
 }
 
 interface Course {
-  id: string
-  code: string
-  name: string
-  sections: string[]
+  course_id: string
+  course_name: string
+  course_description: string
+  course_start_date: string
+  course_end_date: string
+  course_enrollments: string[]
+  created_by: string
+  created_date: string
+  modified_by?: string
+  modified_date: string
 }
 
 interface LabComponent {
@@ -397,8 +403,8 @@ export function ProjectManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.code} - {course.name}
+                        <SelectItem key={course.course_id} value={course.course_id}>
+                          {course.course_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -500,7 +506,7 @@ export function ProjectManagement() {
                     
                     <div className="space-y-2">
                       <CardDescription className="text-sm font-medium text-gray-700">
-                        {courses.find(c => c.id === project.course_id)?.code} - {courses.find(c => c.id === project.course_id)?.name}
+                        {courses.find(c => c.course_id === project.course_id)?.course_name}
                       </CardDescription>
                     </div>
                   </div>
@@ -636,18 +642,18 @@ export function ProjectManagement() {
                       <Badge className={getSubmissionStatusColor(submission.status)}>
                         {submission.status}
                       </Badge>
-                    </div>
+                          </div>
                     
                     <div className="space-y-2">
                       <CardDescription className="text-sm font-medium text-gray-700">
                         Submitted on {new Date(submission.submissionDate).toLocaleDateString()}
                       </CardDescription>
-                    </div>
-                  </div>
+                          </div>
+                        </div>
                 </CardHeader>
                 
                 <CardContent className="pt-0">
-                  <div className="space-y-4">
+                                <div className="space-y-4">
                     {/* Submission Content */}
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submission Content</Label>
@@ -686,23 +692,23 @@ export function ProjectManagement() {
                         <div className="grid grid-cols-1 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor={`marks-${submission.id}`} className="text-sm font-medium">Marks (0-100)</Label>
-                            <Input
+                                    <Input
                               id={`marks-${submission.id}`}
-                              type="number"
-                              min="0"
+                                      type="number"
+                                      min="0"
                               max="100"
-                              placeholder="Enter marks"
+                                      placeholder="Enter marks"
                               defaultValue={submission.marks || 0}
                               className="w-full"
                               onBlur={(e) => {
                                 const marks = parseInt(e.target.value) || 0
                                 const feedback = (document.getElementById(`feedback-${submission.id}`) as HTMLTextAreaElement)?.value || ""
                                 if (marks > 0) {
-                                  handleGradeSubmission(submission.id, marks, feedback)
+                                handleGradeSubmission(submission.id, marks, feedback)
                                 }
                               }}
-                            />
-                          </div>
+                                    />
+                                  </div>
                           <div className="space-y-2">
                             <Label htmlFor={`feedback-${submission.id}`} className="text-sm font-medium">Feedback</Label>
                             <Textarea
@@ -714,11 +720,11 @@ export function ProjectManagement() {
                                 const marks = parseInt((document.getElementById(`marks-${submission.id}`) as HTMLInputElement)?.value || "0") || 0
                                 const feedback = e.target.value
                                 if (marks > 0 && feedback.trim()) {
-                                  handleGradeSubmission(submission.id, marks, feedback)
+                                handleGradeSubmission(submission.id, marks, feedback)
                                 }
                               }}
                             />
-                          </div>
+                                  </div>
                           <Button
                             onClick={() => {
                               const marks = parseInt((document.getElementById(`marks-${submission.id}`) as HTMLInputElement)?.value || "0") || 0
@@ -738,8 +744,8 @@ export function ProjectManagement() {
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Grade Submission
                           </Button>
-                        </div>
-                      </div>
+                                  </div>
+                                </div>
                     )}
 
                     {/* Graded Results */}
@@ -750,8 +756,8 @@ export function ProjectManagement() {
                           <div className="p-3 bg-green-50 rounded-md">
                             <div className="font-medium text-green-900">Marks</div>
                             <div className="text-lg font-bold text-green-700">{submission.marks}/100</div>
-                          </div>
-                          {submission.feedback && (
+                              </div>
+                              {submission.feedback && (
                             <div className="p-3 bg-blue-50 rounded-md col-span-2">
                               <div className="font-medium text-blue-900 mb-1">Feedback</div>
                               <p className="text-sm text-blue-700">{submission.feedback}</p>
@@ -760,9 +766,9 @@ export function ProjectManagement() {
                         </div>
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
+                      </div>
+                    </CardContent>
+                  </Card>
             ))}
             {submissions.length === 0 && (
               <div className="text-center py-12 text-gray-500">
