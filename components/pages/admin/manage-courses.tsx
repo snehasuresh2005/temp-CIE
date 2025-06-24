@@ -15,76 +15,54 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, BookOpen, Clock, Users, RefreshCw } from "lucide-react"
+import { Plus, Trash2, BookOpen, Calendar, Users, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
 
 interface Course {
-  id: string
-  code: string
-  name: string
-  description: string
-  credits: number
-  department: string
-  semester: string
-  maxStudents: number
-  enrolledStudents: number
-  sections: string[]
-  facultyId: string | null
-  faculty?: {
-    user: {
-      name: string
-    }
-  }
-}
-
-interface Faculty {
-  id: string
-  user: {
-    name: string
-  }
-  department: string
+  course_id: string
+  course_name: string
+  course_description: string
+  course_start_date: string
+  course_end_date: string
+  course_enrollments: string[]
+  created_by: string
+  created_date: string
+  modified_by?: string
+  modified_date: string
 }
 
 export function ManageCourses() {
   const [courses, setCourses] = useState<Course[]>([])
-  const [faculty, setFaculty] = useState<Faculty[]>([])
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const [newCourse, setNewCourse] = useState({
-    code: "",
-    name: "",
-    description: "",
-    credits: 3,
-    department: "",
-    semester: "",
-    maxStudents: 30,
-    sections: [] as string[],
-    facultyId: "",
+    course_name: "",
+    course_description: "",
+    course_start_date: "",
+    course_end_date: "",
   })
 
   useEffect(() => {
-    fetchData()
+    fetchCourses()
   }, [])
 
-  const fetchData = async () => {
+  const fetchCourses = async () => {
     try {
       setLoading(true)
-
-      // Fetch courses
-      const coursesResponse = await fetch("/api/courses")
-      const coursesData = await coursesResponse.json()
-      setCourses(coursesData.courses || [])
-
-      // Fetch faculty
-      const facultyResponse = await fetch("/api/faculty")
-      const facultyData = await facultyResponse.json()
-      setFaculty(facultyData.faculty || [])
+      const response = await fetch("/api/courses", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
+      const data = await response.json()
+      setCourses(data.courses || [])
     } catch (error) {
-      console.error("Error fetching data:", error)
+      console.error("Error fetching courses:", error)
       toast({
         title: "Error",
         description: "Failed to load course data",
@@ -97,16 +75,28 @@ export function ManageCourses() {
 
   const filteredCourses = courses.filter(
     (course) =>
-      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.department.toLowerCase().includes(searchTerm.toLowerCase()),
+      course.course_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.course_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.created_by.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const handleAddCourse = async () => {
-    if (!newCourse.code || !newCourse.name || !newCourse.department) {
+    if (!newCourse.course_name || !newCourse.course_description || !newCourse.course_start_date || !newCourse.course_end_date) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate dates
+    const startDate = new Date(newCourse.course_start_date)
+    const endDate = new Date(newCourse.course_end_date)
+    if (endDate <= startDate) {
+      toast({
+        title: "Error",
+        description: "End date must be after start date",
         variant: "destructive",
       })
       return
@@ -117,6 +107,7 @@ export function ManageCourses() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
         },
         body: JSON.stringify(newCourse),
       })
@@ -125,15 +116,10 @@ export function ManageCourses() {
         const data = await response.json()
         setCourses((prev) => [...prev, data.course])
         setNewCourse({
-          code: "",
-          name: "",
-          description: "",
-          credits: 3,
-          department: "",
-          semester: "",
-          maxStudents: 30,
-          sections: [],
-          facultyId: "",
+          course_name: "",
+          course_description: "",
+          course_start_date: "",
+          course_end_date: "",
         })
         setIsAddDialogOpen(false)
 
@@ -159,12 +145,15 @@ export function ManageCourses() {
     if (!confirm("Are you sure you want to delete this course?")) return
 
     try {
-      const response = await fetch(`/api/courses/${courseId}`, {
+      const response = await fetch(`/api/courses?id=${courseId}`, {
         method: "DELETE",
+        headers: {
+          "x-user-id": user?.id || "",
+        },
       })
 
       if (response.ok) {
-        setCourses((prev) => prev.filter((course) => course.id !== courseId))
+        setCourses((prev) => prev.filter((course) => course.course_id !== courseId))
         toast({
           title: "Success",
           description: "Course deleted successfully",
@@ -181,17 +170,6 @@ export function ManageCourses() {
       })
     }
   }
-
-  const departments = [
-    "Computer Science",
-    "Information Technology",
-    "Electronics",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-  ]
-  const semesters = ["Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6", "Sem 7", "Sem 8"]
-  const availableSections = ["A", "B", "C", "D"]
 
   if (loading) {
     return (
@@ -210,7 +188,7 @@ export function ManageCourses() {
         </div>
 
         <div className="flex space-x-2">
-          <Button onClick={fetchData} variant="outline">
+          <Button onClick={fetchCourses} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -227,102 +205,45 @@ export function ManageCourses() {
                 <DialogTitle>Add New Course</DialogTitle>
                 <DialogDescription>Enter the details for the new course</DialogDescription>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4">
                 <div>
-                  <Label htmlFor="code">Course Code *</Label>
+                  <Label htmlFor="course_name">Course Name *</Label>
                   <Input
-                    id="code"
-                    value={newCourse.code}
-                    onChange={(e) => setNewCourse((prev) => ({ ...prev, code: e.target.value }))}
-                    placeholder="CSE301"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="credits">Credits</Label>
-                  <Input
-                    id="credits"
-                    type="number"
-                    value={newCourse.credits}
-                    onChange={(e) => setNewCourse((prev) => ({ ...prev, credits: Number.parseInt(e.target.value) }))}
-                    min="1"
-                    max="6"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="name">Course Name *</Label>
-                  <Input
-                    id="name"
-                    value={newCourse.name}
-                    onChange={(e) => setNewCourse((prev) => ({ ...prev, name: e.target.value }))}
+                    id="course_name"
+                    value={newCourse.course_name}
+                    onChange={(e) => setNewCourse((prev) => ({ ...prev, course_name: e.target.value }))}
                     placeholder="Data Structures and Algorithms"
                   />
                 </div>
-                <div className="col-span-2">
-                  <Label htmlFor="description">Description</Label>
+                <div>
+                  <Label htmlFor="course_description">Course Description *</Label>
                   <Textarea
-                    id="description"
-                    value={newCourse.description}
-                    onChange={(e) => setNewCourse((prev) => ({ ...prev, description: e.target.value }))}
+                    id="course_description"
+                    value={newCourse.course_description}
+                    onChange={(e) => setNewCourse((prev) => ({ ...prev, course_description: e.target.value }))}
                     placeholder="Course description..."
                     rows={3}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="department">Department *</Label>
-                  <Select onValueChange={(value) => setNewCourse((prev) => ({ ...prev, department: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="semester">Semester</Label>
-                  <Select onValueChange={(value) => setNewCourse((prev) => ({ ...prev, semester: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select semester" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {semesters.map((semester) => (
-                        <SelectItem key={semester} value={semester}>
-                          {semester}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="faculty">Faculty</Label>
-                  <Select onValueChange={(value) => setNewCourse((prev) => ({ ...prev, facultyId: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select faculty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {faculty.map((f) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.user.name} ({f.department})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="maxStudents">Max Students</Label>
-                  <Input
-                    id="maxStudents"
-                    type="number"
-                    value={newCourse.maxStudents}
-                    onChange={(e) =>
-                      setNewCourse((prev) => ({ ...prev, maxStudents: Number.parseInt(e.target.value) }))
-                    }
-                    min="1"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="course_start_date">Start Date *</Label>
+                    <Input
+                      id="course_start_date"
+                      type="date"
+                      value={newCourse.course_start_date}
+                      onChange={(e) => setNewCourse((prev) => ({ ...prev, course_start_date: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="course_end_date">End Date *</Label>
+                    <Input
+                      id="course_end_date"
+                      type="date"
+                      value={newCourse.course_end_date}
+                      onChange={(e) => setNewCourse((prev) => ({ ...prev, course_end_date: e.target.value }))}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end space-x-2 mt-4">
@@ -356,68 +277,49 @@ export function ManageCourses() {
           </Card>
         ) : (
           filteredCourses.map((course) => (
-            <Card key={course.id} className="hover:shadow-lg transition-shadow">
+            <Card key={course.course_id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="flex items-center space-x-2">
                       <BookOpen className="h-5 w-5" />
-                      <span>
-                        {course.code} - {course.name}
-                      </span>
+                      <span>{course.course_name}</span>
                     </CardTitle>
-                    <CardDescription>{course.department}</CardDescription>
+                    <CardDescription>{course.course_description}</CardDescription>
                   </div>
                   <Badge variant="default">Active</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">{course.description}</p>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 gap-2 text-sm">
                     <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <span>{course.credits} Credits</span>
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span>
+                        {new Date(course.course_start_date).toLocaleDateString()} - {new Date(course.course_end_date).toLocaleDateString()}
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-gray-400" />
-                      <span>
-                        {course.enrolledStudents}/{course.maxStudents} Students
-                      </span>
+                      <span>{course.course_enrollments.length} Student(s) Enrolled</span>
                     </div>
                   </div>
 
-                  {course.faculty && (
-                    <div>
-                      <Label className="text-sm font-medium">Instructor</Label>
-                      <p className="text-sm text-gray-600">{course.faculty.user.name}</p>
-                    </div>
-                  )}
-
-                  {course.semester && (
-                    <div>
-                      <Label className="text-sm font-medium">Semester</Label>
-                      <p className="text-sm text-gray-600">{course.semester}</p>
-                    </div>
-                  )}
+                  <div>
+                    <Label className="text-sm font-medium">Created by</Label>
+                    <p className="text-sm text-gray-600">{course.created_by}</p>
+                  </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Sections</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {course.sections.map((section) => (
-                        <Badge key={section} variant="outline" className="text-xs">
-                          Section {section}
-                        </Badge>
-                      ))}
-                    </div>
+                    <Label className="text-sm font-medium">Created on</Label>
+                    <p className="text-sm text-gray-600">{new Date(course.created_date).toLocaleDateString()}</p>
                   </div>
 
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteCourse(course.id)}
+                      onClick={() => handleDeleteCourse(course.course_id)}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
