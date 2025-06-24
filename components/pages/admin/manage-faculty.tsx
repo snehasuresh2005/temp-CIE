@@ -36,10 +36,16 @@ interface Faculty {
 }
 
 interface Course {
-  id: string
-  code: string
-  name: string
-  facultyId: string
+  course_id: string
+  course_name: string
+  course_description: string
+  course_start_date: string
+  course_end_date: string
+  course_enrollments: string[]
+  created_by: string
+  created_date: string
+  modified_by?: string
+  modified_date: string
 }
 
 export function ManageFaculty() {
@@ -153,7 +159,7 @@ export function ManageFaculty() {
   }
 
   const getFacultyCourses = (facultyId: string) => {
-    return courses.filter((course) => course.facultyId === facultyId)
+    return courses.filter((course) => course.created_by === facultyId)
   }
 
   const departments = [
@@ -359,8 +365,8 @@ export function ManageFaculty() {
                       <div className="flex flex-wrap gap-2 mt-2">
                         {facultyCourses.length > 0 ? (
                           facultyCourses.map((course) => (
-                            <Badge key={course.id} variant="outline">
-                              {course.code}
+                            <Badge key={course.course_id} variant="outline">
+                              {course.course_name}
                             </Badge>
                           ))
                         ) : (
