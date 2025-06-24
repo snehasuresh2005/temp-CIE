@@ -10,8 +10,8 @@ import { useToast } from "@/hooks/use-toast"
 interface ClassSchedule {
   id: string
   course: {
-    code: string
-    name: string
+    course_id: string
+    course_name: string
   }
   faculty: {
     user: {
@@ -122,8 +122,8 @@ export function StudentCalendar() {
                             className="flex items-center justify-between p-3 bg-green-50 rounded-lg"
                           >
                             <div>
-                              <h4 className="font-medium text-green-900">{schedule.course.code}</h4>
-                              <p className="text-sm text-green-700">{schedule.course.name}</p>
+                              <h4 className="font-medium text-green-900">{schedule.course.course_id}</h4>
+                              <p className="text-sm text-green-700">{schedule.course.course_name}</p>
                               <div className="flex items-center space-x-4 mt-1">
                                 <div className="flex items-center text-xs text-green-600">
                                   <Clock className="h-3 w-3 mr-1" />
@@ -169,8 +169,8 @@ export function StudentCalendar() {
                 <div className="space-y-3">
                   {todaySchedules.map((schedule) => (
                     <div key={schedule.id} className="p-3 border rounded-lg">
-                      <h4 className="font-medium">{schedule.course.code}</h4>
-                      <p className="text-sm text-gray-600">{schedule.course.name}</p>
+                      <h4 className="font-medium">{schedule.course.course_id}</h4>
+                      <p className="text-sm text-gray-600">{schedule.course.course_name}</p>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center text-xs text-gray-500">
                           <Clock className="h-3 w-3 mr-1" />
@@ -208,7 +208,7 @@ export function StudentCalendar() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Enrolled Courses</span>
-                  <span className="font-medium">{new Set(schedules.map((s) => s.course.code)).size}</span>
+                  <span className="font-medium">{new Set(schedules.map((s) => s.course.course_id)).size}</span>
                 </div>
               </div>
             </CardContent>
