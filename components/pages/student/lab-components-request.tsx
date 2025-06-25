@@ -511,56 +511,21 @@ export function LabComponentsRequest() {
                       </div>
                     )}
                     
-                    <p className="text-sm text-gray-600 line-clamp-2">{component.component_description}</p>
-                    <div className="text-xs text-gray-500">Location: {component.component_location}</div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
-                        <p className="font-medium">{component.component_quantity}</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs font-medium text-gray-500">Available</Label>
-                        <p className="font-medium">{component.available_quantity}</p>
-                      </div>
-                    </div>
-
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">{component.component_description}</p>
                     {component.component_specification && (
-                      <div>
-                        <Label className="text-sm font-medium">Specifications</Label>
-                        <p className="text-sm text-gray-600">{component.component_specification}</p>
+                      <div className="mb-2">
+                        <Label className="text-sm font-medium text-gray-500">Specifications</Label>
+                        <p className="text-sm text-gray-700">{component.component_specification}</p>
                       </div>
                     )}
+                    <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
+                      <div><span className="font-semibold">Total:</span> {component.component_quantity}</div>
+                      <div><span className="font-semibold">Available:</span> {component.available_quantity}</div>
+                      <div><span className="font-semibold">Location:</span> {component.component_location}</div>
+                    </div>
                   </div>
 
                   <div className="mt-auto pt-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{
-                          width: `${(component.available_quantity / component.component_quantity) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="text-xs text-gray-500 text-center mt-1">
-                      {Math.round((component.available_quantity / component.component_quantity) * 100)}% Available
-                    </div>
-
-                    {/* Project Availability Indicator */}
-                    {component.projects.length > 0 && (
-                      <div className="mb-2">
-                        {hasApprovedProject(component) ? (
-                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                            ✓ Projects available for requests
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-600">
-                            ⚠️ Projects pending approval
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
                     <Dialog open={isRequestDialogOpen && selectedComponent?.id === component.id} onOpenChange={(isOpen) => {
                       setIsRequestDialogOpen(isOpen)
                       if (!isOpen) {
@@ -569,7 +534,8 @@ export function LabComponentsRequest() {
                     }}>
                       <DialogTrigger asChild>
                         <Button
-                          className="w-full mt-3"
+                          size="sm"
+                          className="w-full mt-2 py-2 text-sm"
                           disabled={
                             component.available_quantity === 0 || !hasApprovedProject(component)
                           }
@@ -584,59 +550,56 @@ export function LabComponentsRequest() {
                           }
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-2xl">
+                      <DialogContent className="sm:max-w-lg">
                         {selectedComponent && (
                           <>
                             <DialogHeader>
                               <DialogTitle>Request Component</DialogTitle>
-                              <DialogDescription>
-                                Select the quantity and specify the purpose for your request.
-                              </DialogDescription>
                             </DialogHeader>
-                            <div className="grid gap-6 py-4">
-                              <div>
-                                <h3 className="text-lg font-semibold mb-2">{selectedComponent.component_name}</h3>
-                                <p className="text-sm text-muted-foreground">{selectedComponent.component_description}</p>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-4 items-end">
-                                <div className="space-y-2">
-                                  <Label htmlFor="quantity">Quantity *</Label>
+                            <div className="space-y-6 py-4">
+                              {/* Top row: Name and Quantity */}
+                              <div className="flex flex-col md:flex-row md:items-center md:space-x-6">
+                                <div className="flex-1 mb-2 md:mb-0">
+                                  <h2 className="text-xl font-bold text-gray-900">{selectedComponent.component_name}</h2>
+                                  <p className="text-sm text-gray-500">{selectedComponent.component_category}</p>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Label htmlFor="quantity" className="mb-0">Quantity *</Label>
                                   <Input
                                     id="quantity"
                                     type="number"
                                     value={newRequest.quantity}
-                                    onChange={(e) =>
-                                      setNewRequest((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))
-                                    }
+                                    onChange={(e) => setNewRequest((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))}
                                     min="1"
                                     max={selectedComponent.available_quantity || 1}
+                                    className="w-20 px-2 py-1 text-sm"
                                   />
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Available: {selectedComponent.available_quantity}
-                                  </p>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="purpose">Purpose *</Label>
-                                  <Textarea
-                                    id="purpose"
-                                    value={newRequest.purpose}
-                                    onChange={(e) => setNewRequest((prev) => ({ ...prev, purpose: e.target.value }))}
-                                    placeholder="Describe how you plan to use this component..."
-                                    rows={3}
-                                  />
+                                  <span className="text-xs text-gray-500 ml-2">Available: {selectedComponent.available_quantity}</span>
                                 </div>
                               </div>
-
-                              <div className="grid grid-cols-2 gap-4 items-end">
+                              {/* Purpose textarea */}
+                              <div className="space-y-2">
+                                <Label htmlFor="purpose">Purpose *</Label>
+                                <Textarea
+                                  id="purpose"
+                                  value={newRequest.purpose}
+                                  onChange={(e) => setNewRequest((prev) => ({ ...prev, purpose: e.target.value }))}
+                                  placeholder="Describe how you plan to use this component..."
+                                  rows={5}
+                                  className="w-full text-base p-3 min-h-[120px] resize-vertical border border-gray-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                />
+                              </div>
+                              {/* Required date and project */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                  <Label htmlFor="required_date">Required Date *</Label>
+                                  <Label htmlFor="required_date">Return Date *</Label>
                                   <Input
                                     id="required_date"
                                     type="date"
                                     value={newRequest.required_date}
                                     onChange={(e) => setNewRequest((prev) => ({ ...prev, required_date: e.target.value }))}
                                     min={new Date().toISOString().split("T")[0]}
+                                    className="text-base py-2 border-gray-200 rounded-lg"
                                   />
                                 </div>
                                 <div className="space-y-2">
@@ -683,48 +646,48 @@ export function LabComponentsRequest() {
                                   </Select>
                                 </div>
                               </div>
-                            </div>
-                            
-                            <div className="flex justify-end space-x-2">
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  setIsRequestDialogOpen(false)
-                                  setSelectedComponent(null)
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span tabIndex={0}>
-                                      <Button
-                                        onClick={handleRequestComponent}
-                                        disabled={!canSubmitRequest()}
-                                        className={!canSubmitRequest() ? "opacity-50 cursor-not-allowed" : ""}
-                                      >
-                                        Submit Request
-                                      </Button>
-                                    </span>
-                                  </TooltipTrigger>
-                                  {!canSubmitRequest() && (
-                                    <TooltipContent>
-                                      <div className="max-w-xs">
-                                        {!isFormValid() && (
-                                          <p>Please fill in all required fields (quantity, purpose, required date, and project)</p>
-                                        )}
-                                        {isFormValid() && !isProjectApproved(newRequest.project_id) && (
-                                          <p>You can only request components for projects with "ONGOING" status (approved by faculty)</p>
-                                        )}
-                                        {selectedComponent.projects.length === 0 && (
-                                          <p>No projects are associated with this component.</p>
-                                        )}
-                                      </div>
-                                    </TooltipContent>
-                                  )}
-                                </Tooltip>
-                              </TooltipProvider>
+                              {/* Action buttons */}
+                              <div className="flex justify-end space-x-2 pt-4">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setIsRequestDialogOpen(false)
+                                    setSelectedComponent(null)
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span tabIndex={0}>
+                                        <Button
+                                          onClick={handleRequestComponent}
+                                          disabled={!canSubmitRequest()}
+                                          className={!canSubmitRequest() ? "opacity-50 cursor-not-allowed" : ""}
+                                        >
+                                          Submit Request
+                                        </Button>
+                                      </span>
+                                    </TooltipTrigger>
+                                    {!canSubmitRequest() && (
+                                      <TooltipContent>
+                                        <div className="max-w-xs">
+                                          {!isFormValid() && (
+                                            <p>Please fill in all required fields (quantity, purpose, required date, and project)</p>
+                                          )}
+                                          {isFormValid() && !isProjectApproved(newRequest.project_id) && (
+                                            <p>You can only request components for projects with "ONGOING" status (approved by faculty)</p>
+                                          )}
+                                          {selectedComponent.projects.length === 0 && (
+                                            <p>No projects are associated with this component.</p>
+                                          )}
+                                        </div>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
                             </div>
                           </>
                         )}

@@ -128,6 +128,9 @@ export function ViewProjects() {
     student_notes: "",
   })
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -390,6 +393,16 @@ export function ViewProjects() {
   // Filter courses to only those the student is enrolled in
   const enrolledCourses = courses.filter(course => course.course_enrollments.includes(user?.id ?? ''))
 
+  // Filtered projects based on search and status
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "ALL" || project.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -402,8 +415,7 @@ export function ViewProjects() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Projects</h1>
-          <p className="text-gray-600 mt-2">View and submit your course projects</p>
+          <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
         </div>
         <div className="flex space-x-2">
           <Button onClick={fetchData} variant="outline">
@@ -420,9 +432,6 @@ export function ViewProjects() {
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Create New Project</DialogTitle>
-                <DialogDescription>
-                  Propose a new project to a faculty member for approval.
-                </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -461,72 +470,31 @@ export function ViewProjects() {
                     rows={3}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="faculty">Faculty Advisor</Label>
-                  <Select value={newProject.accepted_by} onValueChange={(value) => setNewProject({ ...newProject, accepted_by: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select faculty advisor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {faculty.map((fac) => (
-                        <SelectItem key={fac.id} value={fac.id}>
-                          {fac.user.name} - {fac.specialization}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="components">Required Components</Label>
-                  <Select onValueChange={(value) => {
-                    if (!newProject.components_needed.includes(value)) {
-                      setNewProject({
-                        ...newProject,
-                        components_needed: [...newProject.components_needed, value]
-                      })
-                    }
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select components" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {labComponents.map((component) => (
-                        <SelectItem key={component.id} value={component.id}>
-                          {component.component_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newProject.components_needed.map((componentId) => {
-                      const component = labComponents.find(c => c.id === componentId)
-                      return (
-                        <Badge key={componentId} variant="secondary">
-                          {component?.component_name}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="ml-1 h-auto p-0"
-                            onClick={() => setNewProject({
-                              ...newProject,
-                              components_needed: newProject.components_needed.filter(id => id !== componentId)
-                            })}
-                          >
-                            ×
-                          </Button>
-                        </Badge>
-                      )
-                    })}
+                <div className="flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="faculty">Faculty Advisor</Label>
+                    <Select value={newProject.accepted_by} onValueChange={(value) => setNewProject({ ...newProject, accepted_by: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select faculty advisor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {faculty.map((fac) => (
+                          <SelectItem key={fac.id} value={fac.id}>
+                            {fac.user.name} - {fac.specialization}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Expected Completion Date</Label>
-                  <Input
-                    id="dueDate"
-                    type="datetime-local"
-                    value={newProject.expected_completion_date}
-                    onChange={(e) => setNewProject({ ...newProject, expected_completion_date: e.target.value })}
-                  />
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="dueDate">Expected Completion Date</Label>
+                    <Input
+                      id="dueDate"
+                      type="datetime-local"
+                      value={newProject.expected_completion_date}
+                      onChange={(e) => setNewProject({ ...newProject, expected_completion_date: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes for Faculty</Label>
@@ -550,8 +518,31 @@ export function ViewProjects() {
         </div>
       </div>
 
+      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-6 gap-2">
+        <Input
+          placeholder="Search projects..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-xs"
+        />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Status</SelectItem>
+            <SelectItem value="ONGOING">Ongoing</SelectItem>
+            <SelectItem value="SUBMITTED">Submitted</SelectItem>
+            <SelectItem value="GRADED">Graded</SelectItem>
+            <SelectItem value="OVERDUE">Overdue</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="REJECTED">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project: Project) => {
+        {filteredProjects.map((project: Project) => {
           // Debug logging
           console.log('Rendering project:', project.id, 'Status:', project.status, 'Submission:', project.submission)
           
@@ -624,12 +615,12 @@ export function ViewProjects() {
                 <div className="flex-grow">
                   <div className="space-y-2">
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-700">DESCRIPTION</h3>
+                      <h3 className="text-sm font-semibold text-gray-700">Description</h3>
                       <p className="text-sm text-gray-600 mt-1">{project.description}</p>
                     </div>
                     {project.components_needed && project.components_needed.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold text-gray-700">REQUIRED COMPONENTS</h3>
+                        <h3 className="text-sm font-semibold text-gray-700">Required Components</h3>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {project.components_needed.map((componentId) => {
                             const component = labComponents.find((c) => c.id === componentId)
@@ -644,7 +635,7 @@ export function ViewProjects() {
                     )}
                     {rejectedRequest && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <h3 className="text-sm font-semibold text-red-700">REJECTION REASON</h3>
+                        <h3 className="text-sm font-semibold text-red-700">Rejection Reason</h3>
                         <p className="text-sm text-red-600 mt-1">{rejectedRequest.faculty_notes}</p>
                       </div>
                     )}

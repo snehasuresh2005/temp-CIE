@@ -14,9 +14,9 @@ const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
   { id: "locations", label: "Class Locations", icon: MapPin },
   { id: "calendar", label: "Calendar", icon: Calendar },
-  { id: "courses", label: "Available Courses", icon: BookOpen },
-  { id: "projects", label: "My Projects", icon: FolderOpen },
-  { id: "attendance", label: "My Attendance", icon: ClipboardCheck },
+  { id: "courses", label: "Courses", icon: BookOpen },
+  { id: "projects", label: "Projects", icon: FolderOpen },
+  { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
 ]
 

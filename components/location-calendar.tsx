@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { format, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns';
-import { CalendarIcon, Clock, MapPin, Users, Plus, Edit, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Users, Plus, Edit, Trash2, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigation } from 'react-day-picker';
 
 interface Location {
@@ -46,13 +46,15 @@ interface LocationBooking {
 interface LocationCalendarProps {
   userRole: 'admin' | 'faculty';
   userId?: string;
+  locationId?: string;
+  onSlotSelect?: (start: string, end: string) => void;
 }
 
-export function LocationCalendar({ userRole, userId }: LocationCalendarProps) {
+export function LocationCalendar({ userRole, userId, locationId, onSlotSelect }: LocationCalendarProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [locations, setLocations] = useState<Location[]>([]);
   const [bookings, setBookings] = useState<LocationBooking[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [selectedLocation, setSelectedLocation] = useState<string>(locationId || 'all');
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<LocationBooking | null>(null);
@@ -68,10 +70,16 @@ export function LocationCalendar({ userRole, userId }: LocationCalendarProps) {
     description: '',
   });
 
+  // Add state for month navigation
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+
   useEffect(() => {
+    if (locationId) {
+      setSelectedLocation(locationId);
+    }
     fetchLocations();
     fetchBookings();
-  }, [selectedLocation, date]);
+  }, [selectedLocation, date, locationId]);
 
   const fetchLocations = async () => {
     try {
@@ -98,7 +106,6 @@ export function LocationCalendar({ userRole, userId }: LocationCalendarProps) {
       }
       
       if (userRole === 'faculty' && userId) {
-        // For faculty, get their bookings
         const facultyResponse = await fetch(`/api/faculty?userId=${userId}`);
         const facultyData = await facultyResponse.json();
         if (facultyData.faculty) {
@@ -123,13 +130,30 @@ export function LocationCalendar({ userRole, userId }: LocationCalendarProps) {
 
   const getBookingsForDate = (date: Date) => {
     return bookings.filter(booking => {
-      const bookingDate = parseISO(booking.start_time);
-      return isSameDay(bookingDate, date);
+      if (locationId && booking.location_id !== locationId) return false;
+      const bookingDate = new Date(booking.start_time);
+      return (
+        bookingDate.getFullYear() === date.getFullYear() &&
+        bookingDate.getMonth() === date.getMonth() &&
+        bookingDate.getDate() === date.getDate()
+      );
     });
   };
 
+  // Update handleDateSelect to update calendarMonth
   const handleDateSelect = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
+    if (selectedDate) {
+      setCalendarMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    }
+  };
+
+  // Navigation handlers
+  const goToPrevMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+  const goToNextMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
   const handleCreateBooking = async (e: React.FormEvent) => {
@@ -267,16 +291,34 @@ export function LocationCalendar({ userRole, userId }: LocationCalendarProps) {
     setIsEditDialogOpen(true);
   };
 
+  // CustomCaption: just the month/year label, no navigation
+  function CustomCaption(props: { displayMonth: Date }) {
+    return (
+      <div className="flex items-center justify-center px-4 py-2">
+        <h2 className="text-lg font-semibold text-gray-800">
+          {format(props.displayMonth, 'MMMM yyyy')}
+        </h2>
+      </div>
+    );
+  }
+
+  // CustomDayContent: highlight only today, no blue, use gray bg and bold
   function CustomDayContent(props: { date: Date }) {
     const day = props.date;
     const dayBookings = getBookingsForDate(day);
+    const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
     return (
-      <div className="relative">
-        <span>{format(day, 'd')}</span>
+      <div className="relative w-full h-full flex items-center justify-center">
+        <span className={`${isToday ? 'font-bold bg-gray-200 rounded-full px-2 py-1 text-gray-900' : ''}`}>
+          {format(day, 'd')}
+        </span>
         {dayBookings.length > 0 && (
-          <div className="absolute -top-1 -right-1">
-            <Badge variant="secondary" className="h-4 w-4 p-0 text-xs">
-              {dayBookings.length}
+          <div className="absolute -top-0.5 -right-0.5">
+            <Badge 
+              variant="secondary" 
+              className="h-4 w-4 p-0 text-xs bg-gray-100 text-gray-700 border-gray-200 rounded-full flex items-center justify-center"
+            >
+              {dayBookings.length > 9 ? '9+' : dayBookings.length}
             </Badge>
           </div>
         )}
@@ -284,324 +326,398 @@ export function LocationCalendar({ userRole, userId }: LocationCalendarProps) {
     );
   }
 
-  function CustomCaption(props: { displayMonth: Date }) {
-    const { goToMonth, nextMonth, previousMonth } = useNavigation();
-    return (
-      <div className="flex items-center justify-between mb-2 px-2">
-        <button
-          className="rounded p-1 hover:bg-accent disabled:opacity-50"
-          onClick={() => previousMonth && goToMonth(previousMonth)}
-          disabled={!previousMonth}
-        >
-          <span className="sr-only">Previous month</span>
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <span className="font-semibold text-lg">{format(props.displayMonth, 'MMMM yyyy')}</span>
-        <button
-          className="rounded p-1 hover:bg-accent disabled:opacity-50"
-          onClick={() => nextMonth && goToMonth(nextMonth)}
-          disabled={!nextMonth}
-        >
-          <span className="sr-only">Next month</span>
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-        </button>
-      </div>
-    );
-  }
+  const selectedLocationData = locations.find(loc => loc.id === selectedLocation);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select location" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Locations</SelectItem>
-              {locations.map((location) => (
-                <SelectItem key={location.id} value={location.id}>
-                  {location.name} - {location.building}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {userRole === 'faculty' && (
-          <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Booking
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Create New Booking</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateBooking} className="space-y-4">
-                <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Select
-                    value={bookingForm.location_id}
-                    onValueChange={(value) => setBookingForm({ ...bookingForm, location_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name} - {location.building}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="start_time">Start Time</Label>
-                    <Input
-                      id="start_time"
-                      type="datetime-local"
-                      value={bookingForm.start_time}
-                      onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="end_time">End Time</Label>
-                    <Input
-                      id="end_time"
-                      type="datetime-local"
-                      value={bookingForm.end_time}
-                      onChange={(e) => setBookingForm({ ...bookingForm, end_time: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={bookingForm.title}
-                    onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="purpose">Purpose</Label>
-                  <Input
-                    id="purpose"
-                    value={bookingForm.purpose}
-                    onChange={(e) => setBookingForm({ ...bookingForm, purpose: e.target.value })}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={bookingForm.description}
-                    onChange={(e) => setBookingForm({ ...bookingForm, description: e.target.value })}
-                  />
-                </div>
-                
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsBookingDialogOpen(false)}>
-                    Cancel
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div>
+              <p className="text-gray-600 text-bold text-xl space-x-4">
+                {locationId ? `Manage bookings for ${selectedLocationData?.name}` : 'View and manage location bookings across facilities'}
+              </p>
+            </div>
+            
+            {userRole === 'faculty' && (
+              <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Booking
                   </Button>
-                  <Button type="submit">Create Booking</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <CalendarIcon className="h-5 w-5 mr-2" />
-                Location Calendar
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={handleDateSelect}
-                className="rounded-md border"
-                components={{
-                  Caption: CustomCaption,
-                  DayContent: CustomDayContent
-                }}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Bookings for {date ? format(date, 'MMMM d, yyyy') : 'Selected Date'}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-4">Loading...</div>
-              ) : (
-                <div className="space-y-3">
-                  {getBookingsForDate(date || new Date()).map((booking) => (
-                    <div key={booking.id} className="border rounded-lg p-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{booking.title}</h4>
-                          <p className="text-sm text-gray-600">{booking.purpose}</p>
-                          <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              {format(parseISO(booking.start_time), 'HH:mm')} - 
-                              {format(parseISO(booking.end_time), 'HH:mm')}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-2 mt-1 text-xs text-gray-500">
-                            <MapPin className="h-3 w-3" />
-                            <span>{booking.location.name}</span>
-                          </div>
-                          <div className="flex items-center space-x-2 mt-1 text-xs text-gray-500">
-                            <Users className="h-3 w-3" />
-                            <span>{booking.faculty.user.name}</span>
-                          </div>
-                        </div>
-                        
-                        {userRole === 'faculty' && (
-                          <div className="flex space-x-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(booking)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteBooking(booking.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-semibold text-gray-900">Create New Booking</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateBooking} className="space-y-4">
+                    <div>
+                      <Label htmlFor="location" className="text-sm font-medium text-gray-700">Location</Label>
+                      <Select
+                        value={bookingForm.location_id}
+                        onValueChange={(value) => setBookingForm({ ...bookingForm, location_id: value })}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              <div className="flex items-center space-x-2">
+                                <Building2 className="h-4 w-4 text-gray-500" />
+                                <span>{location.name} - {location.building}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="start_time" className="text-sm font-medium text-gray-700">Start Time</Label>
+                        <Input
+                          id="start_time"
+                          type="datetime-local"
+                          className="mt-1"
+                          value={bookingForm.start_time}
+                          onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="end_time" className="text-sm font-medium text-gray-700">End Time</Label>
+                        <Input
+                          id="end_time"
+                          type="datetime-local"
+                          className="mt-1"
+                          value={bookingForm.end_time}
+                          onChange={(e) => setBookingForm({ ...bookingForm, end_time: e.target.value })}
+                          required
+                        />
                       </div>
                     </div>
-                  ))}
-                  
-                  {getBookingsForDate(date || new Date()).length === 0 && (
-                    <div className="text-center py-4 text-gray-500">
-                      No bookings for this date
+                    
+                    <div>
+                      <Label htmlFor="title" className="text-sm font-medium text-gray-700">Title</Label>
+                      <Input
+                        id="title"
+                        className="mt-1"
+                        value={bookingForm.title}
+                        onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
+                        placeholder="Enter booking title"
+                        required
+                      />
                     </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                    
+                    <div>
+                      <Label htmlFor="purpose" className="text-sm font-medium text-gray-700">Purpose</Label>
+                      <Input
+                        id="purpose"
+                        className="mt-1"
+                        value={bookingForm.purpose}
+                        onChange={(e) => setBookingForm({ ...bookingForm, purpose: e.target.value })}
+                        placeholder="Enter booking purpose"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="description" className="text-sm font-medium text-gray-700">Description</Label>
+                      <Textarea
+                        id="description"
+                        className="mt-1"
+                        value={bookingForm.description}
+                        onChange={(e) => setBookingForm({ ...bookingForm, description: e.target.value })}
+                        placeholder="Additional details (optional)"
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="flex justify-end space-x-3 pt-4">
+                      <Button type="button" variant="outline" onClick={() => setIsBookingDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                        Create Booking
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
 
-      {/* Edit Booking Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Booking</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpdateBooking} className="space-y-4">
-            <div>
-              <Label htmlFor="edit_location">Location</Label>
-              <Select
-                value={bookingForm.location_id}
-                onValueChange={(value) => setBookingForm({ ...bookingForm, location_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name} - {location.building}
+          {/* Location Filter */}
+          {!locationId && (
+            <div className="bg-white rounded-lg shadow-sm border p-4">
+              <div className="flex items-center space-x-4">
+                <Label className="text-sm font-medium text-gray-700">Filter by Location:</Label>
+                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                  <SelectTrigger className="w-[300px]">
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center space-x-2">
+                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <span>All Locations</span>
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="h-4 w-4 text-gray-500" />
+                          <span>{location.name} - {location.building}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+          )}
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Calendar Section */}
+          <div className="xl:col-span-2">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-white rounded-t-lg flex flex-col gap-2">
+                <div className="flex items-center justify-between w-full">
+                  <button onClick={goToPrevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50" aria-label="Previous month">
+                    <ChevronLeft className="h-5 w-5 text-gray-600" />
+                  </button>
+                  <span className="text-lg font-semibold text-gray-800">
+                    {format(calendarMonth, 'MMMM yyyy')}
+                  </span>
+                  <button onClick={goToNextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50" aria-label="Next month">
+                    <ChevronRight className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={handleDateSelect}
+                  month={calendarMonth}
+                  onMonthChange={setCalendarMonth}
+                  className="w-full"
+                  classNames={{
+                    months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                    month: "space-y-4 w-full",
+                    caption: "flex justify-center pt-1 items-center",
+                    caption_label: "text-sm font-medium",
+                    nav: "hidden", // hide navigation inside calendar
+                    table: "w-full border-collapse space-y-1",
+                    head_row: "flex",
+                    head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] bg-gray-50 text-center py-2",
+                    row: "flex w-full mt-2",
+                    cell: "text-center text-sm relative p-0 focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent",
+                    day: "h-12 w-12 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-100 rounded-lg transition-colors",
+                    day_selected: "bg-gray-800 text-white hover:bg-gray-900 focus:bg-gray-800",
+                    day_today: "bg-gray-200 text-gray-900 font-bold",
+                    day_outside: "text-muted-foreground opacity-50",
+                    day_disabled: "text-muted-foreground opacity-50",
+                    day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                    day_hidden: "invisible",
+                  }}
+                  components={{
+                    Caption: CustomCaption,
+                    DayContent: CustomDayContent
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Bookings Panel */}
+          <div>
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
+                <CardTitle className="text-lg flex items-center">
+                  <Clock className="h-5 w-5 mr-2" />
+                  {date ? format(date, 'MMMM d, yyyy') : 'Select a Date'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {getBookingsForDate(date || new Date()).map((booking) => (
+                      <div key={booking.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900 truncate">{booking.title}</h4>
+                            <p className="text-sm text-gray-600 mt-1">{booking.purpose}</p>
+                            
+                            <div className="flex items-center space-x-4 mt-3 text-xs text-gray-500">
+                              <div className="flex items-center space-x-1">
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                  {format(parseISO(booking.start_time), 'HH:mm')} - 
+                                  {format(parseISO(booking.end_time), 'HH:mm')}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {!locationId && (
+                              <div className="flex items-center space-x-1 mt-2 text-xs text-gray-500">
+                                <MapPin className="h-3 w-3" />
+                                <span className="truncate">{booking.location.name}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
+                              <Users className="h-3 w-3" />
+                              <span className="truncate">{booking.faculty.user.name}</span>
+                            </div>
+                          </div>
+                          
+                          {userRole === 'faculty' && (
+                            <div className="flex space-x-1 ml-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 hover:bg-blue-100"
+                                onClick={() => openEditDialog(booking)}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                                onClick={() => handleDeleteBooking(booking.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {getBookingsForDate(date || new Date()).length === 0 && (
+                      <div className="text-center py-12">
+                        <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500">No bookings for this date</p>
+                        <p className="text-sm text-gray-400 mt-1">Select a different date to view bookings</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Edit Booking Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-gray-900">Edit Booking</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUpdateBooking} className="space-y-4">
               <div>
-                <Label htmlFor="edit_start_time">Start Time</Label>
+                <Label htmlFor="edit_location" className="text-sm font-medium text-gray-700">Location</Label>
+                <Select
+                  value={bookingForm.location_id}
+                  onValueChange={(value) => setBookingForm({ ...bookingForm, location_id: value })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="h-4 w-4 text-gray-500" />
+                          <span>{location.name} - {location.building}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_start_time" className="text-sm font-medium text-gray-700">Start Time</Label>
+                  <Input
+                    id="edit_start_time"
+                    type="datetime-local"
+                    className="mt-1"
+                    value={bookingForm.start_time}
+                    onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_end_time" className="text-sm font-medium text-gray-700">End Time</Label>
+                  <Input
+                    id="edit_end_time"
+                    type="datetime-local"
+                    className="mt-1"
+                    value={bookingForm.end_time}
+                    onChange={(e) => setBookingForm({ ...bookingForm, end_time: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit_title" className="text-sm font-medium text-gray-700">Title</Label>
                 <Input
-                  id="edit_start_time"
-                  type="datetime-local"
-                  value={bookingForm.start_time}
-                  onChange={(e) => setBookingForm({ ...bookingForm, start_time: e.target.value })}
+                  id="edit_title"
+                  className="mt-1"
+                  value={bookingForm.title}
+                  onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
                   required
                 />
               </div>
+              
               <div>
-                <Label htmlFor="edit_end_time">End Time</Label>
+                <Label htmlFor="edit_purpose" className="text-sm font-medium text-gray-700">Purpose</Label>
                 <Input
-                  id="edit_end_time"
-                  type="datetime-local"
-                  value={bookingForm.end_time}
-                  onChange={(e) => setBookingForm({ ...bookingForm, end_time: e.target.value })}
+                  id="edit_purpose"
+                  className="mt-1"
+                  value={bookingForm.purpose}
+                  onChange={(e) => setBookingForm({ ...bookingForm, purpose: e.target.value })}
                   required
                 />
               </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_title">Title</Label>
-              <Input
-                id="edit_title"
-                value={bookingForm.title}
-                onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_purpose">Purpose</Label>
-              <Input
-                id="edit_purpose"
-                value={bookingForm.purpose}
-                onChange={(e) => setBookingForm({ ...bookingForm, purpose: e.target.value })}
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_description">Description</Label>
-              <Textarea
-                id="edit_description"
-                value={bookingForm.description}
-                onChange={(e) => setBookingForm({ ...bookingForm, description: e.target.value })}
-              />
-            </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Update Booking</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+              
+              <div>
+                <Label htmlFor="edit_description" className="text-sm font-medium text-gray-700">Description</Label>
+                <Textarea
+                  id="edit_description"
+                  className="mt-1"
+                  value={bookingForm.description}
+                  onChange={(e) => setBookingForm({ ...bookingForm, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                  Update Booking
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
-} 
+}

@@ -156,7 +156,7 @@ export function ManageStudents() {
     }
   }
 
-  const programs = ["BTech CSE", "BTech IT", "BTech ECE", "BTech ME", "MTech CSE", "MTech IT"]
+  const programs = ["CSE", "IT", "ECE", "ME", "IT"]
   const years = ["2024", "2023", "2022", "2021"]
   const sections = ["A", "B", "C", "D"]
 
@@ -301,7 +301,7 @@ export function ManageStudents() {
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {filteredStudents.map((student) => (
             <Card key={student.id} className="hover:shadow-md transition-shadow">
               <CardHeader>

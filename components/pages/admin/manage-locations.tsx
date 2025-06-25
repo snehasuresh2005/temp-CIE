@@ -143,7 +143,7 @@ export function ManageLocations() {
         fetchLocations();
       } else {
         const error = await response.json();
-        toast({
+    toast({
           title: 'Error',
           description: error.error || 'Failed to save location',
           variant: 'destructive',
@@ -151,7 +151,7 @@ export function ManageLocations() {
       }
     } catch (error) {
       console.error('Error saving location:', error);
-      toast({
+    toast({
         title: 'Error',
         description: 'Failed to save location',
         variant: 'destructive',
@@ -176,7 +176,7 @@ export function ManageLocations() {
         fetchLocations();
       } else {
         const error = await response.json();
-        toast({
+    toast({
           title: 'Error',
           description: error.error || 'Failed to delete location',
           variant: 'destructive',
@@ -302,9 +302,8 @@ export function ManageLocations() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Manage Locations</h1>
-          <p className="text-gray-600">Create and manage all locations in the institution</p>
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
@@ -320,19 +319,19 @@ export function ManageLocations() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div>
                   <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
+                <Input
+                  id="name"
                     placeholder="Enter location name (e.g., Computer Lab 101)"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                  />
-                </div>
-                <div>
+                />
+              </div>
+              <div>
                   <Label htmlFor="room_number">Room Number</Label>
-                  <Input
+                <Input
                     id="room_number"
                     placeholder="Enter room number (e.g., 101, A-201)"
                     value={formData.room_number}
@@ -351,12 +350,12 @@ export function ManageLocations() {
                     value={formData.building}
                     onChange={(e) => setFormData({ ...formData, building: e.target.value })}
                     required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="floor">Floor</Label>
-                  <Input
-                    id="floor"
+                />
+              </div>
+              <div>
+                <Label htmlFor="floor">Floor</Label>
+                <Input
+                  id="floor"
                     placeholder="Enter floor number (e.g., 1, 2, Ground)"
                     value={formData.floor}
                     onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
@@ -450,21 +449,24 @@ export function ManageLocations() {
                   )}
                   {previewImage && (
                     <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-                      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent shadow-none border-none">
-                        <div className="relative w-full h-full flex items-center justify-center bg-black/80 rounded-lg">
+                      <DialogContent className="max-w-4xl max-h-[90vh] p-6">
+                        <DialogHeader>
+                          <DialogTitle>Image Preview</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex items-center justify-center">
                           <img 
                             src={previewImage} 
-                            alt="Preview" 
-                            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl" 
+                            alt="Location Preview" 
+                            className="w-full h-96 object-contain rounded-lg bg-gray-50" 
                           />
+                        </div>
+                        <div className="flex justify-end">
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="absolute top-4 right-4 z-10 bg-white/90 hover:bg-white"
                             onClick={() => setPreviewImage(null)}
                           >
-                            <X className="h-4 w-4" />
+                            Close
                           </Button>
                         </div>
                       </DialogContent>
@@ -500,16 +502,13 @@ export function ManageLocations() {
         </Dialog>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search locations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="flex items-center space-x-2">
+        <Input
+          placeholder="Search courses..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
         <Select value={locationTypeFilter} onValueChange={setLocationTypeFilter}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Filter by type" />
@@ -529,22 +528,25 @@ export function ManageLocations() {
         </Select>
       </div>
 
+        
+
+
       {loading ? (
         <div className="text-center py-8">Loading locations...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {locations.map((location) => (
             <Card key={location.id} className="overflow-hidden">
               {location.images.length > 0 && (
-                <div className="relative h-48 group">
+                <div className="relative h-48 group bg-gray-50 flex items-center justify-center">
                   <Carousel className="w-full h-full">
                     <CarouselContent>
                       {location.images.map((image, index) => (
-                        <CarouselItem key={index}>
+                        <CarouselItem key={index} className="flex items-center justify-center h-48">
                           <img
                             src={image}
                             alt={`${location.name} ${index + 1}`}
-                            className="w-full h-48 object-cover"
+                            className="w-full h-48 object-contain rounded"
                           />
                         </CarouselItem>
                       ))}
@@ -572,7 +574,7 @@ export function ManageLocations() {
                   <Badge className={getLocationTypeColor(location.location_type)}>
                     {location.location_type.replace('_', ' ')}
                   </Badge>
-                </div>
+                  </div>
               </CardHeader>
               
               <CardContent className="space-y-3">
@@ -580,22 +582,22 @@ export function ManageLocations() {
                   <Building className="h-4 w-4" />
                   <span>{capitalizeWords(location.building)}, {getOrdinal(location.floor)}</span>
                   {location.wing && <span>- {location.wing}</span>}
-                </div>
+                  </div>
                 
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="h-4 w-4" />
                   <span>Capacity: {location.capacity}</span>
                 </div>
-                
+
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <MapPin className="h-4 w-4" />
                   <span>{location.bookings?.length || 0} upcoming bookings</span>
-                </div>
+                    </div>
                 
                 {location.description && (
                   <p className="text-sm text-gray-600 line-clamp-2">{location.description}</p>
                 )}
-                
+
                 <div className="flex items-center justify-between pt-2">
                   <Badge variant={location.is_available ? "default" : "secondary"}>
                     {location.is_available ? 'Available' : 'Unavailable'}
@@ -611,17 +613,17 @@ export function ManageLocations() {
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
+                    variant="outline"
                       onClick={() => { setLocationToDelete(location); setDeleteDialogOpen(true); }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
       )}
 
       {totalPages > 1 && (

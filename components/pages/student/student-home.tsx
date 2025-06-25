@@ -11,7 +11,7 @@ export function StudentHome() {
     {
       title: "Enrolled Courses",
       value: "4",
-      description: "Active this semester",
+      description: "Active",
       icon: BookOpen,
       color: "text-blue-600",
     },
@@ -31,10 +31,24 @@ export function StudentHome() {
     },
     {
       title: "Borrowed Items",
-      value: "1",
+      value: "4",
       description: "Lab components",
       icon: Clock,
       color: "text-orange-600",
+    },
+    {
+      title: "Overdue Items",
+      value: "2",
+      description: "Lab components",
+      icon: Calendar,
+      color: "text-pink-600",
+    },
+    {
+      title: "Pending Tasks",
+      value: "3",
+      description: "Assignments",
+      icon: ClipboardCheck,
+      color: "text-yellow-600",
     },
   ]
 
@@ -93,7 +107,7 @@ export function StudentHome() {
         <p className="text-gray-600 mt-2">Here's your academic overview for today</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         {stats.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -108,14 +122,13 @@ export function StudentHome() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
               <span>Today's Classes</span>
             </CardTitle>
-            <CardDescription>Your schedule for today</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -142,7 +155,6 @@ export function StudentHome() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Activities</CardTitle>
-            <CardDescription>Latest updates and notifications</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -158,13 +170,10 @@ export function StudentHome() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Active Projects</CardTitle>
-            <CardDescription>Your current assignments</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -191,30 +200,30 @@ export function StudentHome() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks you can perform</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
-                <div className="font-medium">Request Lab Components</div>
-                <div className="text-sm text-gray-500">Borrow equipment for projects</div>
-              </button>
-              <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
-                <div className="font-medium">View Attendance</div>
-                <div className="text-sm text-gray-500">Check your attendance record</div>
-              </button>
-              <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
-                <div className="font-medium">Browse Courses</div>
-                <div className="text-sm text-gray-500">Explore available courses</div>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Common tasks you can perform</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+              <div className="font-medium">Request Lab Components</div>
+              <div className="text-sm text-gray-500">Borrow equipment for projects</div>
+            </button>
+            <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+              <div className="font-medium">View Attendance</div>
+              <div className="text-sm text-gray-500">Check your attendance record</div>
+            </button>
+            <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+              <div className="font-medium">Browse Courses</div>
+              <div className="text-sm text-gray-500">Explore available courses</div>
+            </button>
+          </div>
+        </CardContent>
+      </Card> */}
     </div>
   )
 }

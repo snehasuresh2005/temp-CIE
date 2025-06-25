@@ -6,43 +6,43 @@ import { Users, GraduationCap, BookOpen, MapPin, Wrench, TrendingUp } from "luci
 export function AdminHome() {
   const stats = [
     {
-      title: "Total Faculty",
-      value: "24",
-      description: "Active faculty members",
+      title: "Faculty",
+      value: "24 (*)",
+      description: "Active",
       icon: Users,
       color: "text-blue-600",
     },
     {
-      title: "Total Students",
-      value: "342",
-      description: "Enrolled students",
+      title: "Students",
+      value: "342 (*)",
+      description: "Enrolled",
       icon: GraduationCap,
       color: "text-green-600",
     },
     {
-      title: "Active Courses",
-      value: "18",
+      title: "Courses",
+      value: "18 (*)",
       description: "Currently offered",
       icon: BookOpen,
       color: "text-purple-600",
     },
     {
-      title: "Class Locations",
-      value: "12",
+      title: "Locations",
+      value: "12 (*)",
       description: "Available classrooms",
       icon: MapPin,
       color: "text-orange-600",
     },
     {
       title: "Lab Components",
-      value: "156",
+      value: "156 (*)",
       description: "Total inventory",
       icon: Wrench,
       color: "text-red-600",
     },
     {
-      title: "System Usage",
-      value: "94%",
+      title: "System Usage ??",
+      value: "94% (*)",
       description: "Active user rate",
       icon: TrendingUp,
       color: "text-indigo-600",
@@ -56,7 +56,7 @@ export function AdminHome() {
         <p className="text-gray-600 mt-2">Welcome to the CIE University Management System</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         {stats.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -71,11 +71,14 @@ export function AdminHome() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card>
+          
+        </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
-            <CardDescription>Latest system activities</CardDescription>
+            <CardTitle>Recent Activities (*)</CardTitle>
+            {/* <CardDescription>Latest system activities</CardDescription> */}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -106,10 +109,11 @@ export function AdminHome() {
             </div>
           </CardContent>
         </Card>
+        
 
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>Quick Actions (*)</CardTitle>
             <CardDescription>Common administrative tasks</CardDescription>
           </CardHeader>
           <CardContent>

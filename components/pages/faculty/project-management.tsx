@@ -380,9 +380,6 @@ export function ProjectManagement() {
           <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
-              <DialogDescription>
-                Create a new project assignment for your students.
-              </DialogDescription>
               </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -487,7 +484,7 @@ export function ProjectManagement() {
       <Tabs defaultValue="projects" className="space-y-4">
         <TabsList>
           <TabsTrigger value="projects">My Projects</TabsTrigger>
-          <TabsTrigger value="requests">Student Requests</TabsTrigger>
+          <TabsTrigger value="requests">Student Projects</TabsTrigger>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
         </TabsList>
 
@@ -516,13 +513,13 @@ export function ProjectManagement() {
                   <div className="space-y-4">
                     {/* Project Description */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Description</Label>
+                      <Label className="text-sm font-bold text-gray-700 tracking-wide">Description</Label>
                       <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{project.description}</p>
                     </div>
 
                     {/* Timeline and Submissions */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Project Info</Label>
+                      <Label className="text-sm font-bold text-gray-700 tracking-wide">Project Info:</Label>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
                           <Calendar className="h-4 w-4 text-gray-500" />
@@ -556,30 +553,32 @@ export function ProjectManagement() {
 
         <TabsContent value="requests" className="space-y-4">
           {projectRequests.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {projectRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{request.project.name}</CardTitle>
-                          <CardDescription>
-                            Request from {request.student.user.name} ({request.student.user.email})
-                          </CardDescription>
-                        </div>
-                        <Badge className={getRequestStatusColor(request.status)}>{request.status}</Badge>
-                      </div>
-
+                <Card key={request.id} className="hover:shadow-lg transition-shadow duration-200">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="text-sm font-semibold">PROJECT DESCRIPTION</h4>
-                        <p className="text-sm text-muted-foreground">{request.project.description}</p>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <FolderOpen className="h-5 w-5 text-blue-600" />
+                          <span>{request.project.name}</span>
+                        </CardTitle>
+                        <CardDescription className="text-sm text-gray-600">
+                          Request from {request.student.user.name} ({request.student.user.email})
+                        </CardDescription>
                       </div>
-
-                      {request.project.components_needed_details &&
-                      request.project.components_needed_details.length > 0 && (
+                      <Badge className={getRequestStatusColor(request.status)}>{request.status}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-semibold text-gray-700 tracking-wide">Description</Label>
+                        <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">{request.project.description}</p>
+                      </div>
+                      {request.project.components_needed_details && request.project.components_needed_details.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-semibold">Required Components</h4>
+                          <Label className="text-xs font-semibold text-gray-700 tracking-wide">Required Components</Label>
                           <ul className="list-disc pl-5 text-sm text-muted-foreground">
                             {request.project.components_needed_details.map((component) => (
                               <li key={component.id}>{component.component_name}</li>
@@ -587,17 +586,12 @@ export function ProjectManagement() {
                           </ul>
                         </div>
                       )}
-
-                      <div>
-                        <h4 className="text-sm font-semibold">REQUEST DETAILS</h4>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          <p>{new Date(request.request_date).toLocaleDateString()}</p>
-                        </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        <span>Requested: {new Date(request.request_date).toLocaleDateString()}</span>
                       </div>
-
                       {request.status === "PENDING" && (
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 pt-2">
                           <Button
                             variant="ghost"
                             className="bg-green-500 text-white hover:bg-green-600"
@@ -656,7 +650,7 @@ export function ProjectManagement() {
                                 <div className="space-y-4">
                     {/* Submission Content */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submission Content</Label>
+                      <Label className="text-xs font-semibold text-gray-700 tracking-wide">Submission Content</Label>
                       <div className="p-3 bg-gray-50 rounded-md">
                         <p className="text-sm text-gray-700 leading-relaxed">{submission.content}</p>
                       </div>
@@ -665,7 +659,7 @@ export function ProjectManagement() {
                     {/* Attachments */}
                     {submission.attachments && submission.attachments.length > 0 && (
                       <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Attached Files</Label>
+                        <Label className="text-xs font-semibold text-gray-700 tracking-wide">Attached Files</Label>
                         <div className="space-y-2">
                           {submission.attachments.map((attachment, index) => (
                             <div key={index} className="flex items-center space-x-2 p-2 bg-blue-50 rounded-md">
@@ -688,7 +682,7 @@ export function ProjectManagement() {
                     {/* Grading Section */}
                     {submission.status === "SUBMITTED" && (
                       <div className="space-y-3 pt-2 border-t border-gray-100">
-                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Grade Submission</Label>
+                        <Label className="text-xs font-semibold text-gray-700 tracking-wide">Grade Submission</Label>
                         <div className="grid grid-cols-1 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor={`marks-${submission.id}`} className="text-sm font-medium">Marks (0-100)</Label>
@@ -751,7 +745,7 @@ export function ProjectManagement() {
                     {/* Graded Results */}
                     {submission.status === "GRADED" && (
                       <div className="space-y-3 pt-2 border-t border-gray-100">
-                        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Grading Results</Label>
+                        <Label className="text-xs font-semibold text-gray-700 tracking-wide">Grading Results</Label>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="p-3 bg-green-50 rounded-md">
                             <div className="font-medium text-green-900">Marks</div>

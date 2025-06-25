@@ -21,11 +21,12 @@ import { useToast } from "@/hooks/use-toast"
 interface Faculty {
   id: string
   userId: string
-  employeeId: string
+  facultyId: string
   department: string
   office: string
   specialization: string
   officeHours: string
+  profilePhotoUrl?: string
   user: {
     id: string
     name: string
@@ -61,14 +62,18 @@ export function ManageFaculty() {
     email: "",
     phone: "",
     password: "password123", // Default password
-    employeeId: "",
+    facultyId: "",
     department: "",
     office: "",
     specialization: "",
     officeHours: "10:00 AM - 4:00 PM",
   })
 
+  const [newFacultyImage, setNewFacultyImage] = useState<File | null>(null)
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
+
   useEffect(() => {
+    console.log("ManageFaculty component mounted");
     fetchData()
   }, [])
 
@@ -102,11 +107,11 @@ export function ManageFaculty() {
       f.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.employeeId.toLowerCase().includes(searchTerm.toLowerCase()),
+      f.facultyId.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const handleAddFaculty = async () => {
-    if (!newFaculty.name || !newFaculty.email || !newFaculty.employeeId || !newFaculty.department) {
+    if (!newFaculty.name || !newFaculty.email || !newFaculty.facultyId || !newFaculty.department) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -132,7 +137,7 @@ export function ManageFaculty() {
           email: "",
           phone: "",
           password: "password123",
-          employeeId: "",
+          facultyId: "",
           department: "",
           office: "",
           specialization: "",
@@ -144,6 +149,16 @@ export function ManageFaculty() {
           title: "Success",
           description: "Faculty member added successfully",
         })
+
+        if (newFacultyImage) {
+          const formData = new FormData();
+          formData.append('file', newFacultyImage);
+          formData.append('facultyId', data.faculty.id);
+          await fetch('/api/faculty/upload', {
+            method: 'POST',
+            body: formData,
+          });
+        }
       } else {
         const errorData = await response.json()
         throw new Error(errorData.error || "Failed to add faculty")
@@ -171,6 +186,47 @@ export function ManageFaculty() {
     "Chemistry",
   ]
 
+  const getImageSrc = (faculty: Faculty) => {
+    // If we've already failed to load this image, use placeholder directly
+    if (failedImages.has(faculty.facultyId)) {
+      return '/placeholder-user.jpg';
+    }
+    
+    // Use facultyId for image URL (from profilePhotoUrl or construct it)
+    if (faculty.profilePhotoUrl) {
+      // Try the URL from API first (without extension)
+      return `${faculty.profilePhotoUrl}.jpg`;
+    }
+    
+    // Fallback: construct URL using facultyId
+    return `/profile-img/${faculty.facultyId}.jpg`;
+  };
+
+  const handleImageError = (faculty: Faculty, e: React.SyntheticEvent<HTMLImageElement>) => {
+    const currentSrc = e.currentTarget.src;
+    console.log(`Failed to load image: ${currentSrc}`);
+    
+    // Try different extensions in order: .jpg -> .jpeg -> .png -> placeholder
+    if (currentSrc.includes('.jpg') && !currentSrc.includes('.jpeg')) {
+      const jpegUrl = currentSrc.replace('.jpg', '.jpeg');
+      console.log(`Trying .jpeg extension: ${jpegUrl}`);
+      e.currentTarget.src = jpegUrl;
+      return;
+    }
+    
+    if (currentSrc.includes('.jpeg')) {
+      const pngUrl = currentSrc.replace('.jpeg', '.png');
+      console.log(`Trying .png extension: ${pngUrl}`);
+      e.currentTarget.src = pngUrl;
+      return;
+    }
+    
+    // All extensions failed, use placeholder and mark as failed
+    console.log(`All extensions failed for faculty ${faculty.facultyId}, using placeholder`);
+    setFailedImages(prev => new Set(prev).add(faculty.facultyId));
+    e.currentTarget.src = '/placeholder-user.jpg';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -184,7 +240,6 @@ export function ManageFaculty() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Faculty Management</h1>
-          <p className="text-gray-600 mt-2">Manage faculty members and their details</p>
         </div>
 
         <div className="flex space-x-2">
@@ -235,11 +290,11 @@ export function ManageFaculty() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="employeeId">Employee ID *</Label>
+                  <Label htmlFor="facultyId">Faculty ID *</Label>
                   <Input
-                    id="employeeId"
-                    value={newFaculty.employeeId}
-                    onChange={(e) => setNewFaculty((prev) => ({ ...prev, employeeId: e.target.value }))}
+                    id="facultyId"
+                    value={newFaculty.facultyId}
+                    onChange={(e) => setNewFaculty((prev) => ({ ...prev, facultyId: e.target.value }))}
                     placeholder="FAC001"
                   />
                 </div>
@@ -276,6 +331,24 @@ export function ManageFaculty() {
                     placeholder="Data Structures and Algorithms"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="officeHours">Office Hours</Label>
+                  <Input
+                    id="officeHours"
+                    value={newFaculty.officeHours}
+                    onChange={(e) => setNewFaculty((prev) => ({ ...prev, officeHours: e.target.value }))}
+                    placeholder="10:00 AM - 4:00 PM"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="image">Profile Image</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => setNewFacultyImage(e.target.files?.[0] || null)}
+                    className="mb-2"
+                  />
+                </div>
                 <div className="flex justify-end space-x-2">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
@@ -297,7 +370,7 @@ export function ManageFaculty() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {filteredFaculty.length === 0 ? (
           <Card className="col-span-2">
             <CardContent className="p-8 text-center">
@@ -312,12 +385,15 @@ export function ManageFaculty() {
             return (
               <Card key={member.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
-                  <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={getImageSrc(member)}
+                      alt={member.user.name}
+                      className="w-16 h-16 rounded-full object-cover border"
+                      onError={(e) => handleImageError(member, e)}
+                    />
                     <div>
-                      <CardTitle className="flex items-center space-x-2">
-                        <span>{member.user.name}</span>
-                        <Badge variant="default">Active</Badge>
-                      </CardTitle>
+                      <CardTitle className="text-2xl font-bold">{member.user.name}</CardTitle>
                       <CardDescription>{member.department}</CardDescription>
                     </div>
                   </div>
@@ -339,8 +415,8 @@ export function ManageFaculty() {
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <Label className="text-xs font-medium text-gray-500">Employee ID</Label>
-                        <p className="font-medium">{member.employeeId}</p>
+                        <Label className="text-xs font-medium text-gray-500">Faculty ID</Label>
+                        <p className="font-medium">{member.facultyId}</p>
                       </div>
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Office</Label>

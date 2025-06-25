@@ -318,7 +318,6 @@ export function LabComponentsManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lab Components Management</h1>
-          <p className="text-gray-600 mt-2">Manage lab component requests and inventory</p>
         </div>
         <Button onClick={fetchData} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />

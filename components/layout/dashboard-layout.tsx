@@ -123,8 +123,8 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       name: user.name,
       email: user.email,
       id: user.id,
-      phone: "+1 (555) 123-4567",
-      join_date: "January 2024",
+      phone: user.phone,
+      join_date: user.join_date,
     }
 
     switch (user.role.toLowerCase()) {
@@ -251,7 +251,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                   </div>
 
                   {/* User ID */}
-                  <div className="flex items-center space-x-3 px-2">
+                  {/* <div className="flex items-center space-x-3 px-2">
                     <IdCard className="h-4 w-4 text-gray-500 flex-shrink-0" />
                     <div>
                       <p className="text-xs font-medium text-gray-700">
@@ -261,7 +261,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                         {isStudentProfile(profileData!) ? profileData.student_id : profileData?.id}
                       </p>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Role-specific Information */}
                   {isAdminProfile(profileData!) && (

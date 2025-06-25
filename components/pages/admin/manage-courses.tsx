@@ -344,7 +344,6 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Course Management</h1>
-          <p className="text-gray-600 mt-2">Manage university courses and their details</p>
         </div>
 
         <div className="flex space-x-2">

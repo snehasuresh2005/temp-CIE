@@ -16,7 +16,7 @@ const menuItems = [
   { id: "courses", label: "Courses", icon: Users },
   { id: "locations", label: "Book Locations", icon: MapPin },
   { id: "calendar", label: "Calendar", icon: Calendar },
-  { id: "projects", label: "Student Projects", icon: FolderOpen },
+  { id: "projects", label: "Projects", icon: FolderOpen },
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
 ]

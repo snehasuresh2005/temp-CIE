@@ -653,29 +653,27 @@ export function ManageLabComponents() {
                 Add Component
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Lab Component</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 w-full">
-                {/* Component Name */}
-                <div>
-                  <Label htmlFor="name" className="text-sm font-medium">Component Name *</Label>
-                  <Input
-                    id="name"
-                    value={newComponent.component_name}
-                    onChange={(e) => setNewComponent((prev) => ({ ...prev, component_name: e.target.value }))}
-                    placeholder="Arduino Uno R3"
-                    className={`mt-1 ${formErrors.component_name ? 'border-red-500' : ''}`}
-                  />
-                  {formErrors.component_name && (
-                    <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>
-                  )}
-                </div>
-
-                {/* Basic Details Row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
+              <div className="space-y-4 w-fill">
+                {/* Basic Details Row - Name and Quantity */}
+                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="name" className="text-sm font-medium">Component Name *</Label>
+                    <Input
+                      id="name"
+                      value={newComponent.component_name}
+                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_name: e.target.value }))}
+                      placeholder="Arduino Uno R3"
+                      className={`mt-1 w-full h-9 text-sm ${formErrors.component_name ? 'border-red-500' : ''}`}
+                    />
+                    {formErrors.component_name && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center w-40 md:w-48">
                     <Label htmlFor="quantity" className="text-sm font-medium">Total Quantity *</Label>
                     <Input
                       id="quantity"
@@ -683,13 +681,16 @@ export function ManageLabComponents() {
                       value={newComponent.component_quantity}
                       onChange={(e) => setNewComponent((prev) => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))}
                       min="1"
-                      className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`}
+                      className={`mt-1 w-full h-9 text-sm ${formErrors.component_quantity ? 'border-red-500' : ''}`}
                     />
                     {formErrors.component_quantity && (
                       <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>
                     )}
                   </div>
-                  <div>
+                </div>
+                {/* Basic Details Row - Location, Tag ID, Category */}
+                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
+                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
                     <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
                     <Select
                       open={showAddLocation || undefined}
@@ -741,7 +742,17 @@ export function ManageLabComponents() {
                       <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>
                     )}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
+                    <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
+                    <Input
+                      id="tagId"
+                      value={newComponent.component_tag_id}
+                      onChange={e => setNewComponent((prev) => ({ ...prev, component_tag_id: e.target.value }))}
+                      placeholder="e.g. 123-XYZ"
+                      className="mt-1 w-full h-9 text-sm"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
                     <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
                     <Select
                       open={showAddCategory || undefined}
@@ -793,25 +804,25 @@ export function ManageLabComponents() {
                       <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>
                     )}
                   </div>
-                  <div>
-                    <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
-                    <Input
-                      id="tagId"
-                      value={newComponent.component_tag_id}
-                      onChange={e => setNewComponent((prev) => ({ ...prev, component_tag_id: e.target.value }))}
-                      placeholder="e.g. 123-XYZ"
-                      className="mt-1"
-                    />
-                  </div>
                 </div>
 
-                {/* Image Upload Section */}
+                {/* Image Upload Section with Gen Button */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900">Component Images</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-900">Component Images</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      className="h-8"
+                    >
+                      gen
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <Label htmlFor="frontImage" className="text-sm font-medium">Front Image *</Label>
-                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.frontImage ? 'border-red-500' : 'border-gray-300'}`}>
+                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.frontImage ? 'border-red-500' : 'border-gray-300'}`}> 
                         <Input
                           id="frontImage"
                           type="file"
@@ -836,7 +847,7 @@ export function ManageLabComponents() {
                     </div>
                     <div className="space-y-3">
                       <Label htmlFor="backImage" className="text-sm font-medium">Back Image *</Label>
-                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.backImage ? 'border-red-500' : 'border-gray-300'}`}>
+                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.backImage ? 'border-red-500' : 'border-gray-300'}`}> 
                         <Input
                           id="backImage"
                           type="file"
@@ -862,43 +873,33 @@ export function ManageLabComponents() {
                   </div>
                 </div>
 
-                {/* Description and Gen Button Row */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
+                {/* Description and Specifications Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
                     <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      className="h-8"
-                    >
-                      gen
-                    </Button>
+                    <Textarea
+                      id="description"
+                      value={newComponent.component_description}
+                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_description: e.target.value }))}
+                      placeholder="Provide a detailed description of the component..."
+                      rows={4}
+                      className={`mt-0 ${formErrors.component_description ? 'border-red-500' : ''}`}
+                    />
+                    {formErrors.component_description && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>
+                    )}
                   </div>
-                  <Textarea
-                    id="description"
-                    value={newComponent.component_description}
-                    onChange={(e) => setNewComponent((prev) => ({ ...prev, component_description: e.target.value }))}
-                    placeholder="Provide a detailed description of the component..."
-                    rows={4}
-                    className={`mt-0 ${formErrors.component_description ? 'border-red-500' : ''}`}
-                  />
-                  {formErrors.component_description && (
-                    <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>
-                  )}
-                </div>
-
-                {/* Specifications */}
-                <div>
-                  <Label htmlFor="specifications" className="text-sm font-medium">Specifications</Label>
-                  <Textarea
-                    id="specifications"
-                    value={newComponent.component_specification}
-                    onChange={(e) => setNewComponent((prev) => ({ ...prev, component_specification: e.target.value }))}
-                    placeholder="Technical specifications, dimensions, power requirements, etc."
-                    rows={3}
-                    className="mt-1"
-                  />
+                  <div>
+                    <Label htmlFor="specifications" className="text-sm font-medium">Specifications</Label>
+                    <Textarea
+                      id="specifications"
+                      value={newComponent.component_specification}
+                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_specification: e.target.value }))}
+                      placeholder="Technical specifications, dimensions, power requirements, etc."
+                      rows={4}
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
 
                 {/* Purchase Details Section */}
@@ -1140,31 +1141,31 @@ export function ManageLabComponents() {
                   {/* Component Details */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Total Quantity</p>
+                      <p className="text-sm font-bold text-gray-700">Total Quantity</p>
                       <p>{component.component_quantity}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Available</p>
+                      <p className="text-sm font-bold text-gray-700">Available</p>
                       <p>{component.availableQuantity || 0}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Category</p>
+                      <p className="text-sm font-bold text-gray-700">Category</p>
                       <p>{component.component_category}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Location</p>
+                      <p className="text-sm font-bold text-gray-700">Location</p>
                       <p>{component.component_location}</p>
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Description</p>
+                    <p className="text-sm font-bold text-gray-700">Description :</p>
                     <p className="text-sm text-gray-600 line-clamp-2">{component.component_description}</p>
                   </div>
 
                   {component.component_specification && (
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Specifications</p>
+                      <p className="text-sm font-bold text-gray-700">Specifications :</p>
                       <p className="text-sm text-gray-600 line-clamp-2">{component.component_specification}</p>
                     </div>
                   )}

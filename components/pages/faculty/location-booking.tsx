@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Calendar, Clock, MapPin, Users, Plus, Search, Building, CalendarIcon } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Plus, Search, Building, CalendarIcon, Loader2 } from 'lucide-react';
 import { LocationCalendar } from '@/components/location-calendar';
 import { useAuth } from '@/components/auth-provider';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface Location {
   id: string;
@@ -56,6 +57,8 @@ export function LocationBooking() {
   const [searchTerm, setSearchTerm] = useState('');
   const [locationTypeFilter, setLocationTypeFilter] = useState('all');
   const [currentView, setCurrentView] = useState<'calendar' | 'list'>('calendar');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availabilityStatus, setAvailabilityStatus] = useState<'checking' | 'available' | 'unavailable' | null>(null);
 
   const [bookingForm, setBookingForm] = useState({
     location_id: '',
@@ -69,10 +72,22 @@ export function LocationBooking() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<LocationBooking | null>(null);
 
+  const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
+  const [calendarLocation, setCalendarLocation] = useState<Location | null>(null);
+
   useEffect(() => {
     fetchLocations();
     fetchMyBookings();
   }, [searchTerm, locationTypeFilter]);
+
+  // Check availability when booking form changes
+  useEffect(() => {
+    if (bookingForm.location_id && bookingForm.start_time && bookingForm.end_time) {
+      checkAvailability();
+    } else {
+      setAvailabilityStatus(null);
+    }
+  }, [bookingForm.location_id, bookingForm.start_time, bookingForm.end_time]);
 
   const fetchLocations = async () => {
     try {
@@ -114,12 +129,73 @@ export function LocationBooking() {
       setMyBookings(data.bookings || []);
     } catch (error) {
       console.error('Error fetching my bookings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch your bookings',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const checkAvailability = async () => {
+    if (!bookingForm.location_id || !bookingForm.start_time || !bookingForm.end_time) {
+      setAvailabilityStatus(null);
+      return;
+    }
+
+    setAvailabilityStatus('checking');
+    try {
+      const response = await fetch(
+        `/api/location-bookings?locationId=${bookingForm.location_id}&startDate=${bookingForm.start_time}&endDate=${bookingForm.end_time}`
+      );
+      const data = await response.json();
+      
+      // If there are existing bookings, it's unavailable
+      const isAvailable = data.bookings.length === 0;
+      setAvailabilityStatus(isAvailable ? 'available' : 'unavailable');
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      setAvailabilityStatus('unavailable');
     }
   };
 
   const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // Validate form
+    if (!bookingForm.location_id || !bookingForm.start_time || !bookingForm.end_time || !bookingForm.purpose || !bookingForm.title) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if end time is after start time
+    const startDate = new Date(bookingForm.start_time);
+    const endDate = new Date(bookingForm.end_time);
+    if (startDate >= endDate) {
+      toast({
+        title: 'Error',
+        description: 'End time must be after start time',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if booking is in the future
+    if (startDate < new Date()) {
+      toast({
+        title: 'Error',
+        description: 'Cannot book locations in the past',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const response = await fetch('/api/location-bookings', {
         method: 'POST',
@@ -131,6 +207,7 @@ export function LocationBooking() {
       });
 
       if (response.ok) {
+        const booking = await response.json();
         toast({
           title: 'Success',
           description: 'Booking created successfully',
@@ -144,7 +221,9 @@ export function LocationBooking() {
           title: '',
           description: '',
         });
+        setAvailabilityStatus(null);
         fetchMyBookings();
+        fetchLocations(); // Refresh locations to update availability
       } else {
         const error = await response.json();
         toast({
@@ -160,6 +239,8 @@ export function LocationBooking() {
         description: 'Failed to create booking',
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -178,6 +259,7 @@ export function LocationBooking() {
           description: 'Booking deleted successfully',
         });
         fetchMyBookings();
+        fetchLocations(); // Refresh locations to update availability
       } else {
         const error = await response.json();
         toast({
@@ -199,17 +281,9 @@ export function LocationBooking() {
     }
   };
 
-  const checkAvailability = async (locationId: string, startTime: string, endTime: string) => {
-    try {
-      const response = await fetch(
-        `/api/locations/availability?locationId=${locationId}&startTime=${startTime}&endTime=${endTime}`
-      );
-      const data = await response.json();
-      return data.available;
-    } catch (error) {
-      console.error('Error checking availability:', error);
-      return false;
-    }
+  const handleLocationSelect = (locationId: string) => {
+    setBookingForm(prev => ({ ...prev, location_id: locationId }));
+    setIsBookingDialogOpen(true);
   };
 
   const getLocationTypeColor = (type: string) => {
@@ -227,10 +301,7 @@ export function LocationBooking() {
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
 
-  const filteredLocations = locations.filter(location => 
-    location.is_available && 
-    (!selectedLocation || location.id === selectedLocation)
-  );
+  const filteredLocations = locations.filter(location => location.is_available);
 
   // Utility to get ordinal suffix for a number
   function getOrdinal(n: string | number) {
@@ -245,18 +316,70 @@ export function LocationBooking() {
     return str.replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  const getAvailabilityStatusDisplay = () => {
+    switch (availabilityStatus) {
+      case 'checking':
+        return (
+          <div className="flex items-center space-x-2 text-sm text-blue-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Checking availability...</span>
+          </div>
+        );
+      case 'available':
+        return (
+          <div className="flex items-center space-x-2 text-sm text-green-600">
+            <span>✓ Available for booking</span>
+          </div>
+        );
+      case 'unavailable':
+        return (
+          <div className="flex items-center space-x-2 text-sm text-red-600">
+            <span>✗ Not available for this time slot</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Location Booking</h1>
-          <p className="text-gray-600">Book locations for your classes and meetings</p>
         </div>
       </div>
 
       {/* Note about student calendars */}
       <div className="mb-2 text-sm text-blue-700 bg-blue-50 rounded px-3 py-2">
         Bookings will appear in student calendars.
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search courses..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select value={locationTypeFilter} onValueChange={setLocationTypeFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="CABIN">Cabin</SelectItem>
+            <SelectItem value="LECTURE_HALL">Lecture Hall</SelectItem>
+            <SelectItem value="AUDITORIUM">Auditorium</SelectItem>
+            <SelectItem value="SEMINAR_HALL">Seminar Hall</SelectItem>
+            <SelectItem value="LAB">Lab</SelectItem>
+            <SelectItem value="CLASSROOM">Classroom</SelectItem>
+            <SelectItem value="OFFICE">Office</SelectItem>
+            <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
+            <SelectItem value="OTHER">Other</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -276,22 +399,30 @@ export function LocationBooking() {
                   {filteredLocations.map((location) => (
                     <Card key={location.id} className="overflow-hidden">
                       {location.images && location.images.length > 0 && (
-                        <div className="relative h-40 group">
-                          <img
-                            src={location.images[0]}
-                            alt={location.name}
-                            className="w-full h-40 object-cover"
-                          />
-                          {location.images.length > 1 && (
-                            <div className="absolute inset-0 flex items-center justify-between px-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="pointer-events-auto bg-white/80 rounded-full">
-                                <span className="px-2">◀</span>
+                        <div className="relative h-48 group">
+                          <Carousel className="w-full h-full">
+                            <CarouselContent>
+                              {location.images.map((image, index) => (
+                                <CarouselItem key={index}>
+                                  <img
+                                    src={image}
+                                    alt={`${location.name} ${index + 1}`}
+                                    className="w-full h-48 object-cover"
+                                  />
+                                </CarouselItem>
+                              ))}
+                            </CarouselContent>
+                            {location.images.length > 1 && (
+                              <div className="absolute inset-0 flex items-center justify-between px-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="pointer-events-auto bg-white/80 rounded-full">
+                                  <CarouselPrevious className="left-2 top-1/2 -translate-y-1/2" />
+                                </div>
+                                <div className="pointer-events-auto bg-white/80 rounded-full">
+                                  <CarouselNext className="right-2 top-1/2 -translate-y-1/2" />
+                                </div>
                               </div>
-                              <div className="pointer-events-auto bg-white/80 rounded-full">
-                                <span className="px-2">▶</span>
-                              </div>
-                            </div>
-                          )}
+                            )}
+                          </Carousel>
                         </div>
                       )}
                       <CardHeader className="pb-2">
@@ -318,8 +449,23 @@ export function LocationBooking() {
                         {location.description && (
                           <p className="text-sm text-gray-600 line-clamp-2">{location.description}</p>
                         )}
-                        <div className="flex justify-end pt-2">
-                          <Button size="sm" variant="default" onClick={() => { setIsBookingDialogOpen(true); setBookingForm(f => ({ ...f, location_id: location.id })); }}>
+                        <div className="flex justify-end pt-2 space-x-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() => {
+                              setCalendarLocation(location);
+                              setCalendarDialogOpen(true);
+                            }}
+                            title="View Calendar"
+                          >
+                            <CalendarIcon className="h-5 w-5" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="default" 
+                            onClick={() => handleLocationSelect(location.id)}
+                          >
                             Book Now
                           </Button>
                         </div>
@@ -373,7 +519,11 @@ export function LocationBooking() {
                         <p className="text-xs text-gray-600">Purpose: {booking.purpose}</p>
                       )}
                       <div className="flex justify-end pt-2">
-                        <Button size="sm" variant="outline" onClick={() => { setBookingToDelete(booking); setDeleteDialogOpen(true); }}>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => { setBookingToDelete(booking); setDeleteDialogOpen(true); }}
+                        >
                           Cancel
                         </Button>
                       </div>
@@ -386,14 +536,8 @@ export function LocationBooking() {
         </Card>
       </div>
 
-      {/* Booking Dialog and Delete Dialog remain unchanged */}
+      {/* Booking Dialog */}
       <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Booking
-          </Button>
-        </DialogTrigger>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Create New Booking</DialogTitle>
@@ -440,6 +584,9 @@ export function LocationBooking() {
                 />
               </div>
             </div>
+
+            {/* Availability Status */}
+            {getAvailabilityStatusDisplay()}
             
             <div>
               <Label htmlFor="title">Title</Label>
@@ -447,6 +594,7 @@ export function LocationBooking() {
                 id="title"
                 value={bookingForm.title}
                 onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
+                placeholder="Enter booking title"
                 required
               />
             </div>
@@ -457,6 +605,7 @@ export function LocationBooking() {
                 id="purpose"
                 value={bookingForm.purpose}
                 onChange={(e) => setBookingForm({ ...bookingForm, purpose: e.target.value })}
+                placeholder="Enter booking purpose"
                 required
               />
             </div>
@@ -467,19 +616,48 @@ export function LocationBooking() {
                 id="description"
                 value={bookingForm.description}
                 onChange={(e) => setBookingForm({ ...bookingForm, description: e.target.value })}
+                placeholder="Enter additional details (optional)"
               />
             </div>
             
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsBookingDialogOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsBookingDialogOpen(false);
+                  setBookingForm({
+                    location_id: '',
+                    start_time: '',
+                    end_time: '',
+                    purpose: '',
+                    title: '',
+                    description: '',
+                  });
+                  setAvailabilityStatus(null);
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit">Create Booking</Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || availabilityStatus === 'unavailable'}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Booking'
+                )}
+              </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -490,6 +668,29 @@ export function LocationBooking() {
             <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setBookingToDelete(null); }}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteBooking}>Delete</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Calendar Dialog */}
+      <Dialog open={calendarDialogOpen} onOpenChange={setCalendarDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              📅 Booking Calendar for {calendarLocation?.name}
+            </DialogTitle>
+            <p className="text-sm text-gray-600 mt-1">
+              {calendarLocation?.building}, {calendarLocation?.room_number} • Capacity: {calendarLocation?.capacity}
+            </p>
+          </DialogHeader>
+          {calendarLocation && (
+            <div className="mt-4">
+              <LocationCalendar
+                userRole="faculty"
+                userId={user?.id}
+                locationId={calendarLocation.id}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

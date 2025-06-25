@@ -18,7 +18,9 @@ export function FacultyHome() {
         const res = await fetch("/api/courses")
         const data = await res.json()
         // Only show courses created by this faculty
-        setCourses(data.courses.filter((c: any) => c.created_by === user?.id))
+        const filteredCourses = data.courses.filter((c: any) => c.created_by === user?.id)
+        setCourses(filteredCourses)
+        console.log("Faculty courses:", filteredCourses)
       } catch (e) {
         setCourses([])
       } finally {
@@ -32,19 +34,19 @@ export function FacultyHome() {
     {
       title: "Courses",
       value: courses.length.toString(),
-      description: "Your created courses",
+      description: "created courses",
       icon: BookOpen,
       color: "text-blue-600",
     },
     {
-      title: "Total Students",
+      title: "Students",
       value: "67",
       description: "Across all classes",
       icon: Users,
       color: "text-green-600",
     },
     {
-      title: "Pending Requests",
+      title: "Requests",
       value: "3",
       description: "Lab component requests",
       icon: Clock,
@@ -56,6 +58,20 @@ export function FacultyHome() {
       description: "This semester",
       icon: ClipboardCheck,
       color: "text-purple-600",
+    },
+    {
+      title: "Bookings",
+      value: "5",
+      description: "Upcoming location bookings",
+      icon: CheckCircle,
+      color: "text-pink-600",
+    },
+    {
+      title: "Pending Approvals",
+      value: "2",
+      description: "Requests to review",
+      icon: AlertTriangle,
+      color: "text-yellow-600",
     },
   ]
 
@@ -81,6 +97,35 @@ export function FacultyHome() {
       icon: AlertTriangle,
       color: "text-red-600",
     },
+    {
+      type: "booking",
+      message: "You booked Room 204 for tomorrow",
+      time: "6 hours ago",
+      icon: BookOpen,
+      color: "text-blue-600",
+    },
+    {
+      type: "project",
+      message: "Project submission deadline for AI Lab is next week",
+      time: "3 days ago",
+      icon: ClipboardCheck,
+      color: "text-purple-600",
+    },
+  ]
+
+  const quickActions = [
+    {
+      title: "Mark Attendance",
+      description: "Record student attendance",
+    },
+    {
+      title: "Assign Project",
+      description: "Create new student project",
+    },
+    {
+      title: "Book Location",
+      description: "Reserve a classroom or lab",
+    },
   ]
 
   return (
@@ -90,7 +135,7 @@ export function FacultyHome() {
         <p className="text-gray-600 mt-2">Here's what's happening with your courses today</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         {stats.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -105,7 +150,7 @@ export function FacultyHome() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Courses</CardTitle>
@@ -118,15 +163,18 @@ export function FacultyHome() {
               ) : courses.length === 0 ? (
                 <p className="text-gray-500 text-center py-4">No courses created</p>
               ) : (
-                courses.map((course: any) => (
-                  <div key={course.course_id} className="flex items-center justify-between p-3 border rounded-lg">
+                courses.slice(0, 3).map((course: any) => (
+                  <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
-                      <h3 className="font-medium">{course.course_name}</h3>
+                      <h3 className="font-medium text-lg">{course.course_name}</h3>
                       <p className="text-sm text-gray-500">{course.course_code}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{course.course_enrollments} students</p>
-                      <p className="text-xs text-gray-500">{course.course_start_date} - {course.course_end_date}</p>
+                      <p className="text-sm font-medium">{course.course_enrollments?.length || 0} students</p>
+                      <p className="text-xs text-gray-500">
+                        {course.course_start_date ? new Date(course.course_start_date).toLocaleDateString() : ''}
+                        {course.course_end_date ? ` - ${new Date(course.course_end_date).toLocaleDateString()}` : ''}
+                      </p>
                     </div>
                   </div>
                 ))
@@ -154,30 +202,24 @@ export function FacultyHome() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks you can perform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="font-medium">Mark Attendance</div>
-              <div className="text-sm text-gray-500">Record student attendance</div>
-            </button>
-            <button className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="font-medium">Review Lab Requests</div>
-              <div className="text-sm text-gray-500">Approve component requests</div>
-            </button>
-            <button className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="font-medium">Assign Project</div>
-              <div className="text-sm text-gray-500">Create new student project</div>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks you can perform</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-rows-3 gap-0.5">
+              {quickActions.map((action, idx) => (
+                <button key={idx} className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="font-medium">{action.title}</div>
+                  <div className="text-sm text-gray-500">{action.description}</div>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
