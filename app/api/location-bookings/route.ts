@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const userId = request.headers.get("x-user-id");
 
     const skip = (page - 1) * limit;
 
@@ -22,7 +23,22 @@ export async function GET(request: NextRequest) {
     }
 
     if (facultyId) {
-      whereClause.faculty_id = facultyId;
+      if (facultyId === 'current' && userId) {
+        // Get faculty ID for current user
+        const faculty = await prisma.faculty.findFirst({
+          where: { user_id: userId },
+        });
+        if (faculty) {
+          whereClause.faculty_id = faculty.id;
+        } else {
+          return NextResponse.json(
+            { error: 'Faculty profile not found' },
+            { status: 404 }
+          );
+        }
+      } else {
+        whereClause.faculty_id = facultyId;
+      }
     }
 
     if (startDate && endDate) {

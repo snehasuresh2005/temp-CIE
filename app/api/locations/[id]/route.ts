@@ -146,15 +146,6 @@ export async function DELETE(
     // Check if location exists
     const existingLocation = await prisma.location.findUnique({
       where: { id: params.id },
-      include: {
-        bookings: {
-          where: {
-            start_time: {
-              gte: new Date(),
-            },
-          },
-        },
-      },
     });
 
     if (!existingLocation) {
@@ -164,15 +155,12 @@ export async function DELETE(
       );
     }
 
-    // Check if there are any upcoming bookings
-    if (existingLocation.bookings.length > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete location with upcoming bookings' },
-        { status: 400 }
-      );
-    }
+    // Delete all bookings for this location
+    await prisma.locationBooking.deleteMany({
+      where: { location_id: params.id },
+    });
 
-    // Delete the location (bookings will be deleted due to cascade)
+    // Delete the location
     await prisma.location.delete({
       where: { id: params.id },
     });
