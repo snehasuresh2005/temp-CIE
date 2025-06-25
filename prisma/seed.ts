@@ -20,7 +20,7 @@ async function main() {
 
   // Check if admin user exists, if not create one
   let adminUser = await prisma.user.findUnique({
-    where: { email: 'admin@college.edu' },
+    where: { email: 'cie.admin@pes.edu' },
     include: { admin: true }
   });
 
@@ -31,8 +31,8 @@ async function main() {
     // Create Admin User
     adminUser = await prisma.user.create({
       data: {
-        email: 'admin@college.edu',
-        name: 'System Administrator',
+        email: 'cie.admin@pes.edu',
+        name: 'Admin',
         password: hashedPassword,
         role: 'ADMIN',
         phone: '+91-9876543210',
@@ -75,7 +75,7 @@ async function main() {
       {
         name: 'Dr. Rajesh Kumar',
         email: 'rajesh.kumar@college.edu',
-        employee_id: 'FAC001',
+        faculty_id: 'FAC001',
         department: 'Computer Science',
         office: 'CS Block - 301',
         specialization: 'Data Structures and Algorithms',
@@ -84,7 +84,7 @@ async function main() {
       {
         name: 'Prof. Priya Sharma',
         email: 'priya.sharma@college.edu',
-        employee_id: 'FAC002',
+        faculty_id: 'FAC002',
         department: 'Information Technology',
         office: 'IT Block - 205',
         specialization: 'Web Development and Databases',
@@ -93,7 +93,7 @@ async function main() {
       {
         name: 'Dr. Amit Patel',
         email: 'amit.patel@college.edu',
-        employee_id: 'FAC003',
+        faculty_id: 'FAC003',
         department: 'Electronics',
         office: 'ECE Block - 401',
         specialization: 'Digital Electronics and Microprocessors',
@@ -113,7 +113,7 @@ async function main() {
             phone: fac.phone,
             faculty: {
               create: {
-                employee_id: fac.employee_id,
+                faculty_id: fac.faculty_id,
                 department: fac.department,
                 office: fac.office,
                 specialization: fac.specialization,

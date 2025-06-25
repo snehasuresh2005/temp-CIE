@@ -41,15 +41,17 @@ model Faculty {
   department          String
   office              String
   specialization      String
-  employee_id         String             @unique
+  faculty_id         String             @unique
   office_hours        String
   user_id             String             @unique
+  image_id            String?
+  image_path          String?            @default("profile-img")
   attendance_records  AttendanceRecord[]
   class_schedules     ClassSchedule[]
   component_approvals ComponentRequest[] @relation("ComponentApprovals")
-  project_requests    ProjectRequest[]
-  location_bookings   LocationBooking[]
   user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  location_bookings   LocationBooking[]
+  project_requests    ProjectRequest[]
 
   @@map("faculty")
 }
@@ -74,37 +76,37 @@ model Student {
 }
 
 model Course {
-  id                  String   @id @default(cuid())
-  course_code         String   @unique
-  course_name         String
-  course_description  String
-  course_start_date   DateTime
-  course_end_date     DateTime
-  course_enrollments  String[] // Array of user IDs
-  created_by          String
-  created_date        DateTime @default(now())
-  modified_by         String?
-  modified_date       DateTime @updatedAt
-  class_schedules     ClassSchedule[]
-  enrollments         Enrollment[]
-  course_units        CourseUnit[]
+  id                 String          @id @default(cuid())
+  course_description String
+  course_end_date    DateTime
+  course_enrollments String[]
+  course_name        String
+  course_start_date  DateTime
+  created_by         String
+  created_date       DateTime        @default(now())
+  modified_by        String?
+  modified_date      DateTime        @updatedAt
+  course_code        String          @unique
+  class_schedules    ClassSchedule[]
+  course_units       CourseUnit[]
+  enrollments        Enrollment[]
 
   @@map("courses")
 }
 
 model CourseUnit {
-  id                String   @id @default(cuid())
-  course_id         String
-  unit_number       Int
-  unit_name         String
-  unit_description  String
-  assignment_count  Int      @default(0)
-  hours_per_unit    Int      @default(1)
-  created_by        String
-  created_date      DateTime @default(now())
-  modified_by       String?
-  modified_date     DateTime @updatedAt
-  course            Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  course_id        String
+  unit_number      Int
+  unit_name        String
+  unit_description String
+  assignment_count Int      @default(0)
+  hours_per_unit   Int      @default(1)
+  created_by       String
+  created_date     DateTime @default(now())
+  modified_by      String?
+  modified_date    DateTime @updatedAt
+  course           Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
 
   @@unique([course_id, unit_number])
   @@map("course_units")
@@ -161,14 +163,14 @@ model Project {
 
 model ProjectSubmission {
   id              String           @id @default(cuid())
-  project_id      String
-  student_id      String
-  submission_date DateTime         @default(now())
-  content         String           // Description or notes
-  attachments     String[]         // Array of file URLs/paths
+  content         String
+  attachments     String[]
   marks           Int?
   feedback        String?
   status          SubmissionStatus @default(SUBMITTED)
+  project_id      String
+  student_id      String
+  submission_date DateTime         @default(now())
   project         Project          @relation(fields: [project_id], references: [id])
   student         Student          @relation(fields: [student_id], references: [id])
 
@@ -269,39 +271,39 @@ model ComponentRequest {
 }
 
 model Location {
-  id             String       @id @default(cuid())
-  name           String       // Room name or number
-  building       String
-  floor          String
-  wing           String?
-  room_number    String
-  location_type  LocationType
-  images         String[]     // Array of image URLs
-  capacity       Int
-  description    String?
-  is_available   Boolean      @default(true)
-  created_by     String
-  created_date   DateTime     @default(now())
-  modified_by    String?
-  modified_date  DateTime     @updatedAt
-  bookings       LocationBooking[]
+  id            String            @id @default(cuid())
+  name          String
+  capacity      Int
+  description   String?
+  is_available  Boolean           @default(true)
+  building      String
+  created_by    String
+  created_date  DateTime          @default(now())
+  floor         String
+  images        String[]
+  location_type LocationType
+  modified_by   String?
+  modified_date DateTime          @updatedAt
+  room_number   String
+  wing          String?
+  bookings      LocationBooking[]
 
   @@map("locations")
 }
 
 model LocationBooking {
-  id           String   @id @default(cuid())
-  location_id  String
-  faculty_id   String
-  start_time   DateTime
-  end_time     DateTime
-  purpose      String
-  title        String   // Event title
-  description  String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-  location     Location @relation(fields: [location_id], references: [id], onDelete: Cascade)
-  faculty      Faculty  @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  location_id String
+  faculty_id  String
+  start_time  DateTime
+  end_time    DateTime
+  purpose     String
+  title       String
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  faculty     Faculty  @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
+  location    Location @relation(fields: [location_id], references: [id], onDelete: Cascade)
 
   @@map("location_bookings")
 }
@@ -349,15 +351,15 @@ enum RequestStatus {
 }
 
 enum LocationType {
-  CABIN
-  LECTURE_HALL
-  AUDITORIUM
-  SEMINAR_HALL
   LAB
   CLASSROOM
   OFFICE
   WAREHOUSE
   OTHER
+  CABIN
+  LECTURE_HALL
+  AUDITORIUM
+  SEMINAR_HALL
 }
 
 enum ProjectType {
