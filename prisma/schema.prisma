@@ -48,6 +48,7 @@ model Faculty {
   class_schedules     ClassSchedule[]
   component_approvals ComponentRequest[] @relation("ComponentApprovals")
   project_requests    ProjectRequest[]
+  location_bookings   LocationBooking[]
   user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("faculty")
@@ -269,19 +270,40 @@ model ComponentRequest {
 
 model Location {
   id             String       @id @default(cuid())
-  name           String       @unique
-  capacity       Int?
-  type           LocationType
-  contact_email  String?
-  contact_person String?
-  contact_phone  String?
-  created_at     DateTime     @default(now())
+  name           String       // Room name or number
+  building       String
+  floor          String
+  wing           String?
+  room_number    String
+  location_type  LocationType
+  images         String[]     // Array of image URLs
+  capacity       Int
   description    String?
-  in_charge_id   String?
   is_available   Boolean      @default(true)
-  updated_at     DateTime     @updatedAt
+  created_by     String
+  created_date   DateTime     @default(now())
+  modified_by    String?
+  modified_date  DateTime     @updatedAt
+  bookings       LocationBooking[]
 
   @@map("locations")
+}
+
+model LocationBooking {
+  id           String   @id @default(cuid())
+  location_id  String
+  faculty_id   String
+  start_time   DateTime
+  end_time     DateTime
+  purpose      String
+  title        String   // Event title
+  description  String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  location     Location @relation(fields: [location_id], references: [id], onDelete: Cascade)
+  faculty      Faculty  @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
+
+  @@map("location_bookings")
 }
 
 enum UserRole {
@@ -327,6 +349,10 @@ enum RequestStatus {
 }
 
 enum LocationType {
+  CABIN
+  LECTURE_HALL
+  AUDITORIUM
+  SEMINAR_HALL
   LAB
   CLASSROOM
   OFFICE

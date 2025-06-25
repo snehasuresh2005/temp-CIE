@@ -9,11 +9,12 @@ import { FacultyCalendar } from "@/components/pages/faculty/faculty-calendar"
 import { FacultyViewCourses } from "@/components/pages/faculty/view-courses"
 import { ProjectManagement } from "@/components/pages/faculty/project-management"
 import { AttendanceManagement } from "@/components/pages/faculty/attendance-management"
+import { LocationBooking } from "@/components/pages/faculty/location-booking"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
   { id: "courses", label: "Courses", icon: Users },
-  { id: "locations", label: "Class Locations", icon: MapPin },
+  { id: "locations", label: "Book Locations", icon: MapPin },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "projects", label: "Student Projects", icon: FolderOpen },
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
@@ -30,12 +31,7 @@ export function FacultyDashboard() {
       case "courses":
         return <FacultyViewCourses />
       case "locations":
-        return (
-          <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold">Class Locations</h2>
-            <p className="text-gray-600 mt-2">Coming soon...</p>
-          </div>
-        )
+        return <LocationBooking />
       case "calendar":
         return <FacultyCalendar />
       case "projects":
