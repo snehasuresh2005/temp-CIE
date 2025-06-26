@@ -350,15 +350,11 @@ export function LocationBooking() {
         </div>
       </div>
 
-      {/* Note about student calendars */}
-      <div className="mb-2 text-sm text-blue-700 bg-blue-50 rounded px-3 py-2">
-        Bookings will appear in student calendars.
-      </div>
 
       {/* Search and Filter */}
       <div className="flex items-center gap-2">
         <Input
-          placeholder="Search courses..."
+          placeholder="Search Locations..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"

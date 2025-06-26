@@ -86,6 +86,8 @@ export function ManageClassSchedules() {
   })
 
   const [editingSchedule, setEditingSchedule] = useState<ClassSchedule | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [scheduleToDelete, setScheduleToDelete] = useState<ClassSchedule | null>(null)
 
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -243,8 +245,6 @@ export function ManageClassSchedules() {
   }
 
   const handleDeleteSchedule = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this schedule?")) return
-
     try {
       const response = await fetch(`/api/class-schedules/${id}`, {
         method: "DELETE",
@@ -491,7 +491,10 @@ export function ManageClassSchedules() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteSchedule(schedule.id)}
+                          onClick={() => {
+                            setScheduleToDelete(schedule)
+                            setIsDeleteDialogOpen(true)
+                          }}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -688,6 +691,68 @@ export function ManageClassSchedules() {
               Cancel
             </Button>
             <Button onClick={handleEditSchedule}>Update Schedule</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Delete Class Schedule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this class schedule?
+            </DialogDescription>
+          </DialogHeader>
+          {scheduleToDelete && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="delete-course">Course</Label>
+                  <span>{scheduleToDelete.course.course_name}</span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="delete-faculty">Faculty</Label>
+                  <span>{scheduleToDelete.faculty.user.name}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="delete-room">Room</Label>
+                  <span>{scheduleToDelete.room}</span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="delete-section">Section</Label>
+                  <span>{scheduleToDelete.section}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="delete-dayOfWeek">Day</Label>
+                  <span>{scheduleToDelete.dayOfWeek}</span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="delete-startTime">Start Time</Label>
+                  <span>{formatTime(scheduleToDelete.startTime)}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="delete-endTime">End Time</Label>
+                  <span>{formatTime(scheduleToDelete.endTime)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (scheduleToDelete) {
+                handleDeleteSchedule(scheduleToDelete.id)
+              }
+              setIsDeleteDialogOpen(false)
+            }}>Delete Schedule</Button>
           </div>
         </DialogContent>
       </Dialog>

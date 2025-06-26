@@ -67,6 +67,8 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
   const [isUnitsSheetOpen, setIsUnitsSheetOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
 
@@ -216,8 +218,6 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
   }
 
   const handleDeleteCourse = async (courseId: string) => {
-    if (!confirm("Are you sure you want to delete this course?")) return
-
     try {
       const response = await fetch(`/api/courses?id=${courseId}`, {
         method: "DELETE",
@@ -566,7 +566,10 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                       <List className="h-4 w-4 mr-1" />
                       View Units
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteCourse(course.id)}>
+                    <Button size="sm" variant="destructive" onClick={() => {
+                      setCourseToDelete(course)
+                      setIsDeleteDialogOpen(true)
+                    }}>
                       <Trash2 className="h-4 w-4 mr-1" />
                       Delete
                     </Button>
@@ -725,6 +728,82 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleEditCourse}>Update Course</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Course Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Delete Course</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this course?
+            </DialogDescription>
+          </DialogHeader>
+          {courseToDelete && (
+            <div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Course Form */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Course Details</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="delete_course_code">Course Code</Label>
+                      <Input
+                        id="delete_course_code"
+                        value={courseToDelete.course_code}
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="delete_course_name">Course Name</Label>
+                      <Input
+                        id="delete_course_name"
+                        value={courseToDelete.course_name}
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="delete_course_description">Course Description</Label>
+                      <Textarea
+                        id="delete_course_description"
+                        value={courseToDelete.course_description}
+                        disabled
+                        rows={3}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="delete_course_start_date">Start Date</Label>
+                        <Input
+                          id="delete_course_start_date"
+                          type="date"
+                          value={courseToDelete.course_start_date}
+                          disabled
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="delete_course_end_date">End Date</Label>
+                        <Input
+                          id="delete_course_end_date"
+                          type="date"
+                          value={courseToDelete.course_end_date}
+                          disabled
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+                <Button variant="destructive" onClick={() => {
+                  handleDeleteCourse(courseToDelete.id)
+                  setIsDeleteDialogOpen(false)
+                }}>Delete Course</Button>
               </div>
             </div>
           )}

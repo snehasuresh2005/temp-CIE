@@ -49,8 +49,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Get faculty's courses
         const facultyCourses = await prisma.course.findMany({
-          where: { faculty_id: faculty.id },
-          select: { id: true, name: true }
+          where: { created_by: userId },
+          select: { id: true, course_name: true }
         })
         console.log('Faculty courses:', facultyCourses)
 
@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const courseIds = [...new Set(submissions.map(s => s.project.course_id))]
         const courses = await prisma.course.findMany({
           where: { id: { in: courseIds } },
-          select: { id: true, name: true, code: true }
+          select: { id: true, course_name: true, course_code: true }
         })
         const courseMap = new Map(courses.map(c => [c.id, c]))
 
@@ -121,7 +121,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const courseIds = [...new Set(submissions.map(s => s.project.course_id))]
         const courses = await prisma.course.findMany({
           where: { id: { in: courseIds } },
-          select: { id: true, name: true, code: true }
+          select: { id: true, course_name: true, course_code: true }
         })
         const courseMap = new Map(courses.map(c => [c.id, c]))
 
@@ -267,15 +267,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Get course details
         const course = await prisma.course.findUnique({
           where: { id: submission.project.course_id },
-          include: {
-            faculty: {
-              include: {
-                user: {
-                  select: { name: true, email: true }
-                }
-              }
-            }
-          }
+          select: { id: true, course_name: true, course_code: true }
         })
 
         const submissionWithCourse = {
@@ -324,7 +316,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { id: submission.project.course_id }
       })
 
-      if (!course || course.faculty_id !== faculty.id) {
+      if (!course || course.created_by !== userId) {
         return res.status(403).json({ error: 'Access denied - You can only grade submissions for your courses' })
       }
 
@@ -354,7 +346,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Get course details
       const courseDetails = await prisma.course.findUnique({
         where: { id: updatedSubmission.project.course_id },
-        select: { name: true, code: true }
+        select: { course_name: true, course_code: true }
       })
 
       const submissionWithCourse = {

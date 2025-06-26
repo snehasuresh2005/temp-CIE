@@ -180,7 +180,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Course ID is required" }, { status: 400 })
     }
 
-    // Check if user can delete this course (admin can delete any, faculty can only delete their own)
+    // Check if user can delete this course (admin and faculty can delete any course)
     const course = await prisma.course.findUnique({
       where: { id: courseId }
     })
@@ -189,9 +189,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 })
     }
 
-    if (user.role === "faculty" && course.created_by !== userId) {
-      return NextResponse.json({ error: "Access denied - You can only delete courses you created" }, { status: 403 })
-    }
+    // Both admin and faculty can delete any course
+    // No additional permission check needed
 
     // Delete related data first
     await prisma.enrollment.deleteMany({

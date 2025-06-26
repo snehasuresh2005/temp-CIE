@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getUserById } from "@/lib/auth"
 
 export async function GET() {
   try {
@@ -237,6 +238,61 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error creating project:", error)
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Get user from header
+    const userId = request.headers.get("x-user-id")
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
+
+    const user = await getUserById(userId)
+    if (!user || (user.role !== "faculty" && user.role !== "student")) {
+      return NextResponse.json({ error: "Access denied - Faculty or Student only" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const projectId = searchParams.get("id")
+
+    if (!projectId) {
+      return NextResponse.json({ error: "Project ID is required" }, { status: 400 })
+    }
+
+    // Check if project exists and if user can delete it
+    const project = await prisma.project.findUnique({
+      where: { id: projectId }
+    })
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 })
+    }
+
+    // Users can only delete projects they created
+    if (project.created_by !== userId) {
+      return NextResponse.json({ error: "Access denied - You can only delete projects you created" }, { status: 403 })
+    }
+
+    // Delete related data first (cascade delete)
+    await prisma.projectSubmission.deleteMany({
+      where: { project_id: projectId }
+    })
+
+    await prisma.projectRequest.deleteMany({
+      where: { project_id: projectId }
+    })
+
+    // Delete the project
+    await prisma.project.delete({
+      where: { id: projectId }
+    })
+
+    return NextResponse.json({ message: "Project deleted successfully" })
+  } catch (error) {
+    console.error("Delete project error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 

@@ -17,9 +17,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText } from "lucide-react"
+import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Project {
   id: string
@@ -87,7 +97,7 @@ interface ProjectRequest {
 }
 
 interface Course {
-  course_id: string
+  id: string
   course_name: string
   course_description: string
   course_start_date: string
@@ -97,6 +107,7 @@ interface Course {
   created_date: string
   modified_by?: string
   modified_date: string
+  course_code: string
 }
 
 interface LabComponent {
@@ -114,6 +125,8 @@ export function ProjectManagement() {
   const [submissions, setSubmissions] = useState<ProjectSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const { toast } = useToast()
 
   const [newProject, setNewProject] = useState({
@@ -189,7 +202,15 @@ export function ProjectManagement() {
   }
 
   const handleAddProject = async () => {
+    console.log("Form data:", newProject)
+    console.log("User email:", user?.email)
+    
     if (!newProject.name || !newProject.course_id || !newProject.expected_completion_date) {
+      console.log("Validation failed:", {
+        name: !!newProject.name,
+        course_id: !!newProject.course_id,
+        expected_completion_date: !!newProject.expected_completion_date
+      })
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -358,6 +379,40 @@ export function ProjectManagement() {
     }
   }
 
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return
+
+    try {
+      const response = await fetch(`/api/projects?id=${projectToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
+
+      if (response.ok) {
+        setProjects((prev) => prev.filter((project) => project.id !== projectToDelete.id))
+        toast({
+          title: "Success",
+          description: "Project deleted successfully",
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete project")
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete project",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setProjectToDelete(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -400,7 +455,7 @@ export function ProjectManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       {courses.map((course) => (
-                        <SelectItem key={course.course_id} value={course.course_id}>
+                        <SelectItem key={course.id} value={course.id}>
                           {course.course_name}
                         </SelectItem>
                       ))}
@@ -503,7 +558,7 @@ export function ProjectManagement() {
                     
                     <div className="space-y-2">
                       <CardDescription className="text-sm font-medium text-gray-700">
-                        {courses.find(c => c.course_id === project.course_id)?.course_name}
+                        {courses.find(c => c.id === project.course_id)?.course_name}
                       </CardDescription>
                     </div>
                   </div>
@@ -543,6 +598,21 @@ export function ProjectManagement() {
                       <div className="text-xs text-gray-500 text-center">
                         Created: {new Date(project.created_date).toLocaleDateString()}
                       </div>
+                    </div>
+
+                    {/* Delete Button */}
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setProjectToDelete(project)
+                          setIsDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Project
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -773,6 +843,28 @@ export function ProjectManagement() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Project Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the project "{projectToDelete?.name}"? 
+              This action cannot be undone and will also delete all related submissions and requests.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProject}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Project
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

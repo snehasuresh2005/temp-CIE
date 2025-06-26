@@ -16,9 +16,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock, CheckCircle } from "lucide-react"
+import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock, CheckCircle, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Project {
   id: string
@@ -113,6 +123,8 @@ export function ViewProjects() {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isGradeDialogOpen, setIsGradeDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [submissionContent, setSubmissionContent] = useState("")
   const [submissionFile, setSubmissionFile] = useState<File | null>(null)
@@ -373,6 +385,40 @@ export function ViewProjects() {
     const diffTime = due.getTime() - now.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     return diffDays
+  }
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return
+
+    try {
+      const response = await fetch(`/api/projects?id=${projectToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
+
+      if (response.ok) {
+        setProjects((prev) => prev.filter((project) => project.id !== projectToDelete.id))
+        toast({
+          title: "Success",
+          description: "Project deleted successfully",
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete project")
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete project",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setProjectToDelete(null)
+    }
   }
 
   // Debug: log courses and selected value
@@ -699,6 +745,21 @@ export function ViewProjects() {
                     View Grade
                   </Button>
                 )}
+
+                {/* Delete button for student-created projects */}
+                {project.created_by === user?.id && project.type === "STUDENT_PROPOSED" && (
+                  <Button
+                    variant="destructive"
+                    className="w-full mt-2"
+                    onClick={() => {
+                      setProjectToDelete(project)
+                      setIsDeleteDialogOpen(true)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Project
+                  </Button>
+                )}
               </div>
             </Card>
           )
@@ -816,6 +877,28 @@ export function ViewProjects() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Project Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the project "{projectToDelete?.name}"? 
+              This action cannot be undone and will also delete all related submissions and requests.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProject}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Project
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
