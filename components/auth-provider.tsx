@@ -60,13 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { user: userData } = await response.json()
         setUser(userData)
         localStorage.setItem("cie-user", JSON.stringify(userData))
-      } else if (response.status === 404) {
-        // If user not found, clear the session
+      } else if (response.status === 404 || response.status === 401) {
+        // If user not found or session invalid, clear the session
         console.warn("User session invalid, logging out")
         logout()
       }
     } catch (error) {
       console.error("Error refreshing user data:", error)
+      // If there's a network error or other issue, also log out to be safe
+      logout()
     }
   }
 

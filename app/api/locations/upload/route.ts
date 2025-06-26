@@ -18,8 +18,15 @@ export async function POST(request: NextRequest) {
 
     const user = await getUserById(userId);
     console.log('Fetched user:', user);
-    if (!user || user.role !== "admin") {
-      console.log('Access denied: user not found or role is not admin. Role received:', user?.role);
+    if (!user) {
+      console.log('User not found with ID:', userId);
+      return NextResponse.json({ 
+        error: "Invalid session - please log out and log back in", 
+        code: "INVALID_SESSION" 
+      }, { status: 401 });
+    }
+    if (user.role !== "admin") {
+      console.log('Access denied: role is not admin. Role received:', user.role);
       return NextResponse.json({ error: "Access denied - Admin only" }, { status: 403 });
     }
 

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { useAuth } from '@/components/auth-provider';
 
 interface Location {
   id: string;
@@ -55,6 +56,7 @@ function capitalizeWords(str: string) {
 }
 
 export function ManageLocations() {
+  const { user } = useAuth();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -117,6 +119,15 @@ export function ManageLocations() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'User not authenticated. Please log in again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       const url = editingLocation 
         ? `/api/locations/${editingLocation.id}`
@@ -128,7 +139,7 @@ export function ManageLocations() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'cmc98i24d0000rb1ov4xn2w2n', // Correct admin user ID
+          'x-user-id': user.id,
         },
         body: JSON.stringify(formData),
       });
@@ -161,11 +172,21 @@ export function ManageLocations() {
 
   const handleDelete = async () => {
     if (!locationToDelete) return;
+    
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'User not authenticated. Please log in again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/locations/${locationToDelete.id}`, {
         method: 'DELETE',
         headers: {
-          'x-user-id': 'cmc98i24d0000rb1ov4xn2w2n', // Correct admin user ID
+          'x-user-id': user.id,
         },
       });
       if (response.ok) {
@@ -198,6 +219,15 @@ export function ManageLocations() {
   const handleImageUpload = async (files: FileList) => {
     if (!files.length) return;
 
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'User not authenticated. Please log in again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setUploadingImages(true);
       const formData = new FormData();
@@ -209,7 +239,7 @@ export function ManageLocations() {
       const response = await fetch('/api/locations/upload', {
         method: 'POST',
         headers: {
-          'x-user-id': 'cmc98i24d0000rb1ov4xn2w2n', // Correct admin user ID
+          'x-user-id': user.id,
         },
         body: formData,
       });

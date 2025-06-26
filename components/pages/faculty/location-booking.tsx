@@ -399,15 +399,15 @@ export function LocationBooking() {
                   {filteredLocations.map((location) => (
                     <Card key={location.id} className="overflow-hidden">
                       {location.images && location.images.length > 0 && (
-                        <div className="relative h-48 group">
+                        <div className="relative h-48 group bg-gray-50 flex items-center justify-center">
                           <Carousel className="w-full h-full">
                             <CarouselContent>
                               {location.images.map((image, index) => (
-                                <CarouselItem key={index}>
+                                <CarouselItem key={index} className="flex items-center justify-center h-48">
                                   <img
                                     src={image}
                                     alt={`${location.name} ${index + 1}`}
-                                    className="w-full h-48 object-cover"
+                                    className="w-full h-48 object-contain rounded"
                                   />
                                 </CarouselItem>
                               ))}
@@ -425,7 +425,8 @@ export function LocationBooking() {
                           </Carousel>
                         </div>
                       )}
-                      <CardHeader className="pb-2">
+                      
+                      <CardHeader>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <CardTitle className="text-lg">{capitalizeWords(location.name)}</CardTitle>
@@ -436,38 +437,48 @@ export function LocationBooking() {
                           </Badge>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-2 pt-0">
+                      
+                      <CardContent className="space-y-3">
                         <div className="flex items-center space-x-2 text-sm text-gray-600">
                           <Building className="h-4 w-4" />
                           <span>{capitalizeWords(location.building)}, {getOrdinal(location.floor)}</span>
                           {location.wing && <span>- {location.wing}</span>}
                         </div>
+                        
                         <div className="flex items-center space-x-2 text-sm text-gray-600">
                           <Users className="h-4 w-4" />
                           <span>Capacity: {location.capacity}</span>
                         </div>
+                        
                         {location.description && (
                           <p className="text-sm text-gray-600 line-clamp-2">{location.description}</p>
                         )}
-                        <div className="flex justify-end pt-2 space-x-2">
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={() => {
-                              setCalendarLocation(location);
-                              setCalendarDialogOpen(true);
-                            }}
-                            title="View Calendar"
-                          >
-                            <CalendarIcon className="h-5 w-5" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="default" 
-                            onClick={() => handleLocationSelect(location.id)}
-                          >
-                            Book Now
-                          </Button>
+
+                        <div className="flex items-center justify-between pt-2">
+                          <Badge variant="default">
+                            Available
+                          </Badge>
+                          
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setCalendarLocation(location);
+                                setCalendarDialogOpen(true);
+                              }}
+                              title="View Calendar"
+                            >
+                              <CalendarIcon className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="default" 
+                              onClick={() => handleLocationSelect(location.id)}
+                            >
+                              Book Now
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
