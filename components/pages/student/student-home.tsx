@@ -4,7 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/components/auth-provider"
 import { BookOpen, FolderOpen, ClipboardCheck, Clock, Calendar, MapPin } from "lucide-react"
 
-export function StudentHome() {
+interface StudentHomeProps {
+  onPageChange?: (page: string) => void
+}
+
+export function StudentHome({ onPageChange }: StudentHomeProps) {
   const { user } = useAuth()
 
   const stats = [
@@ -122,7 +126,7 @@ export function StudentHome() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -202,28 +206,37 @@ export function StudentHome() {
         </Card>
       </div>
 
-      {/* <Card>
+      <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>Common tasks you can perform</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+            <button 
+              onClick={() => onPageChange?.("lab-components")}
+              className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+            >
               <div className="font-medium">Request Lab Components</div>
               <div className="text-sm text-gray-500">Borrow equipment for projects</div>
             </button>
-            <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+            <button 
+              onClick={() => onPageChange?.("attendance")}
+              className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+            >
               <div className="font-medium">View Attendance</div>
               <div className="text-sm text-gray-500">Check your attendance record</div>
             </button>
-            <button className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+            <button 
+              onClick={() => onPageChange?.("courses")}
+              className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+            >
               <div className="font-medium">Browse Courses</div>
               <div className="text-sm text-gray-500">Explore available courses</div>
             </button>
           </div>
         </CardContent>
-      </Card> */}
+      </Card>
     </div>
   )
 }

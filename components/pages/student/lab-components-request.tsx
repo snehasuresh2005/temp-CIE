@@ -511,7 +511,10 @@ export function LabComponentsRequest() {
                       </div>
                     )}
                     
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">{component.component_description}</p>
+                    <div className="mb-2">
+                      <Label className="text-sm font-medium text-gray-500">Description</Label>
+                      <p className="text-sm text-gray-600 line-clamp-2">{component.component_description}</p>
+                    </div>
                     {component.component_specification && (
                       <div className="mb-2">
                         <Label className="text-sm font-medium text-gray-500">Specifications</Label>
@@ -742,6 +745,12 @@ export function LabComponentsRequest() {
                             <p className="text-xs text-red-600 font-medium">
                               ⚠️ OVERDUE - Please return immediately
                             </p>
+                          )}
+                          {request.purpose && (
+                            <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                              <Label className="text-xs font-medium text-blue-700">Purpose:</Label>
+                              <p className="text-xs text-blue-600 mt-1">"{request.purpose}"</p>
+                            </div>
                           )}
                         </div>
                       </div>

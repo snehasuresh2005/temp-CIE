@@ -516,6 +516,48 @@ export function ViewProjects() {
                     rows={3}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="components">Required Components</Label>
+                  <Select onValueChange={(value) => {
+                    if (!newProject.components_needed.includes(value)) {
+                      setNewProject({
+                        ...newProject,
+                        components_needed: [...newProject.components_needed, value]
+                      })
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select lab components needed for this project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {labComponents.map((component) => (
+                        <SelectItem key={component.id} value={component.id}>
+                          {component.component_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {newProject.components_needed.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {newProject.components_needed.map((componentId) => {
+                        const component = labComponents.find((c) => c.id === componentId)
+                        return (
+                          <Badge
+                            key={componentId}
+                            variant="secondary"
+                            className="cursor-pointer hover:bg-red-100"
+                            onClick={() => setNewProject({
+                              ...newProject,
+                              components_needed: newProject.components_needed.filter((id) => id !== componentId)
+                            })}
+                          >
+                            {component ? component.component_name : "Unknown Component"} ✕
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0">
                   <div className="flex-1 space-y-2">
                     <Label htmlFor="faculty">Faculty Advisor</Label>
