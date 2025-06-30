@@ -73,32 +73,6 @@ export function LoginForm() {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <div className="mt-6 text-sm text-gray-600">
-            <p className="font-semibold mb-2">Test Credentials:</p>
-            <div className="space-y-1">
-              <p>
-                <strong>Admin:</strong> admin@college.edu
-              </p>
-              <p>
-                <strong>Faculty (Dr. Rajesh Kumar):</strong> rajesh.kumar@college.edu
-              </p>
-              <p>
-                <strong>Faculty (Prof. Priya Sharma):</strong> priya.sharma@college.edu
-              </p>
-              <p>
-                <strong>Faculty (Dr. Amit Patel):</strong> amit.patel@college.edu
-              </p>
-              <p>
-                <strong>Student (Student 001):</strong> student001@college.edu
-              </p>
-              <p>
-                <strong>Student (Student 002):</strong> student002@college.edu
-              </p>
-              <p>
-                <strong>Password for all:</strong> password123
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
