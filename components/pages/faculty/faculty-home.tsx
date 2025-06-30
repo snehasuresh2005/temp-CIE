@@ -6,7 +6,11 @@ import { Users, BookOpen, ClipboardCheck, Clock, AlertTriangle, CheckCircle } fr
 import { useEffect, useState } from "react"
 import { ManageCourses } from "@/components/pages/admin/manage-courses"
 
-export function FacultyHome() {
+interface FacultyHomeProps {
+  onPageChange?: (page: string) => void
+}
+
+export function FacultyHome({ onPageChange }: FacultyHomeProps) {
   const { user } = useAuth()
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -117,14 +121,17 @@ export function FacultyHome() {
     {
       title: "Mark Attendance",
       description: "Record student attendance",
+      action: () => onPageChange?.("attendance"),
     },
     {
       title: "Assign Project",
       description: "Create new student project",
+      action: () => onPageChange?.("projects"),
     },
     {
       title: "Book Location",
       description: "Reserve a classroom or lab",
+      action: () => onPageChange?.("locations"),
     },
   ]
 
@@ -211,7 +218,11 @@ export function FacultyHome() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-rows-3 gap-0.5">
               {quickActions.map((action, idx) => (
-                <button key={idx} className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors">
+                <button 
+                  key={idx} 
+                  onClick={action.action}
+                  className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <div className="font-medium">{action.title}</div>
                   <div className="text-sm text-gray-500">{action.description}</div>
                 </button>
