@@ -27,7 +27,7 @@ export function FacultyDashboard() {
   const renderPage = () => {
     switch (currentPage) {
       case "home":
-        return <FacultyHome />
+        return <FacultyHome onPageChange={setCurrentPage} />
       case "courses":
         return <FacultyViewCourses />
       case "locations":
@@ -41,7 +41,7 @@ export function FacultyDashboard() {
       case "lab-components":
         return <LabComponentsManagement />
       default:
-        return <FacultyHome />
+        return <FacultyHome onPageChange={setCurrentPage} />
     }
   }
 

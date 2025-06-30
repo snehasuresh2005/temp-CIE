@@ -26,7 +26,7 @@ export function StudentDashboard() {
   const renderPage = () => {
     switch (currentPage) {
       case "home":
-        return <StudentHome />
+        return <StudentHome onPageChange={setCurrentPage} />
       case "locations":
         return (
           <div className="p-8 text-center">
@@ -45,7 +45,7 @@ export function StudentDashboard() {
       case "lab-components":
         return <LabComponentsRequest />
       default:
-        return <StudentHome />
+        return <StudentHome onPageChange={setCurrentPage} />
     }
   }
 

@@ -48,8 +48,8 @@ interface BaseProfileData {
   email: string
   id: string
   role: string
-  phone: string
-  join_date: string
+  phone: string | undefined
+  join_date: string | Date
 }
 
 interface AdminProfileData extends BaseProfileData {
@@ -201,12 +201,18 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           {/* Profile dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                    {user?.name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
+              <Button variant="ghost" className="relative h-10 px-3 rounded-full flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900 text-sm">{user?.name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                  </div>
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-sm">
+                      {user?.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-96" align="end" forceMount>
@@ -246,7 +252,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                     <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
                     <div>
                       <p className="text-xs font-medium text-gray-700">Phone</p>
-                      <p className="text-sm text-gray-900">{profileData?.phone}</p>
+                      <p className="text-sm text-gray-900">{profileData?.phone || "Not provided"}</p>
                     </div>
                   </div>
 
@@ -400,21 +406,6 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
               <GraduationCap className="h-8 w-8" />
             )}
           </div>
-
-          {/* User info */}
-          {!sidebarCollapsed && (
-            <div className="p-4 border-b">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold">{user?.name.charAt(0)}</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">{user?.name}</p>
-                  <p className="text-sm text-gray-500 capitalize">{user?.role}</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">

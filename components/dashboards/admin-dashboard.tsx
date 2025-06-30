@@ -27,7 +27,7 @@ export function AdminDashboard() {
   const renderPage = () => {
     switch (currentPage) {
       case "home":
-        return <AdminHome />
+        return <AdminHome onPageChange={setCurrentPage} />
       case "faculty":
         return <ManageFaculty />
       case "students":
@@ -41,7 +41,7 @@ export function AdminDashboard() {
       case "lab-components":
         return <ManageLabComponents />
       default:
-        return <AdminHome />
+        return <AdminHome onPageChange={setCurrentPage} />
     }
   }
 
