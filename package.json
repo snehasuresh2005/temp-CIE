@@ -3,15 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
-  },
   "scripts": {
+    "db:seed": "tsx prisma/seed.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
-  },
+    "lint":"next lint"
+},
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "latest",

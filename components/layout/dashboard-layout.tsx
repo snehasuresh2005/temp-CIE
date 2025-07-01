@@ -179,7 +179,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Navbar */}
       <div
         className={cn(
@@ -389,59 +389,110 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 bg-white shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 transform transition-all duration-500 ease-in-out lg:translate-x-0 rounded-r-2xl overflow-hidden shadow-2xl",
           sidebarWidth,
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "bg-gradient-to-b from-blue-100 to-indigo-100"
         )}
+        style={{
+          boxShadow: '4px 0 15px rgba(0, 0, 0, 0.1)'
+        }}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-center h-16 bg-blue-600 text-white">
-            {!sidebarCollapsed ? (
-              <>
-                <GraduationCap className="h-8 w-8 mr-2" />
-                <span className="text-xl font-bold">CIE Portal</span>
-              </>
-            ) : (
-              <GraduationCap className="h-8 w-8" />
-            )}
+          {/* Header with gradient */}
+          <div className="flex items-center justify-center h-20 px-4 border-b border-indigo-200 bg-white/90">
+            <div className="relative w-full h-full flex items-center justify-center p-2">
+              {sidebarCollapsed ? (
+                <img 
+                  src="/logo-collapse.png" 
+                  alt="Logo Collapsed" 
+                  className="object-contain h-12 w-12 transition-all duration-300 hover:scale-110"
+                />
+              ) : (
+                <img 
+                  src="/logo.png" 
+                  alt="Logo" 
+                  className="object-contain max-h-full w-48 transition-all duration-300 hover:scale-105"
+                />
+              )}
+            </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
-            {menuItems.map((item) => (
-              <Button
+          {/* Navigation with animated items */}
+          <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+            {menuItems.map((item, index) => (
+              <div 
                 key={item.id}
-                variant={currentPage === item.id ? "default" : "ghost"}
-                className={cn("w-full", sidebarCollapsed ? "justify-center px-2" : "justify-start")}
-                onClick={() => {
-                  onPageChange(item.id)
-                  setSidebarOpen(false)
+                className="px-2 py-1"
+                style={{
+                  animation: `fadeIn 0.3s ease-out ${index * 0.05}s forwards`,
+                  opacity: 0,
+                  transform: 'translateX(-10px)'
                 }}
-                title={sidebarCollapsed ? item.label : undefined}
               >
-                <item.icon className={cn("h-4 w-4", !sidebarCollapsed && "mr-3")} />
-                {!sidebarCollapsed && item.label}
-              </Button>
+                <button
+                  className={cn(
+                    "w-full flex items-center p-3 transition-all duration-200 rounded-lg mx-1",
+                    sidebarCollapsed ? "justify-center px-2" : "px-4",
+                    currentPage === item.id
+                      ? "bg-indigo-200 text-indigo-800 font-medium shadow-sm"
+                      : "text-gray-800 hover:bg-blue-100 hover:text-indigo-800"
+                  )}
+                  onClick={() => {
+                    onPageChange(item.id)
+                    setSidebarOpen(false)
+                  }}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  <item.icon 
+                    className={cn(
+                      "h-5 w-5 transition-transform duration-300",
+                      !sidebarCollapsed && "mr-3",
+                      currentPage === item.id ? "text-blue-600" : "text-gray-600"
+                    )} 
+                  />
+                  {!sidebarCollapsed && (
+                    <span className="text-sm font-medium">
+                      {item.label}
+                    </span>
+                  )}
+                </button>
+              </div>
             ))}
           </nav>
 
-          {/* Collapse button for desktop */}
-          <div className="hidden lg:block p-4 border-t">
-            <Button
-              variant="ghost"
-              className={cn("w-full", sidebarCollapsed ? "justify-center px-2" : "justify-start")}
+          {/* Add keyframe animations */}
+          <style jsx global>{`
+            @keyframes fadeIn {
+              to {
+                opacity: 1;
+                transform: translateX(0);
+              }
+            }
+          `}</style>
+
+          {/* Enhanced Collapse button with animation */}
+          <div className="hidden lg:block p-2 mt-auto border-t border-gray-100">
+            <button
+              className={cn(
+                "w-full flex items-center text-gray-600 hover:bg-gray-100 p-2 rounded transition-all duration-200",
+                sidebarCollapsed ? "justify-center px-2" : "px-3"
+              )}
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
               <ChevronLeft
                 className={cn(
-                  "h-4 w-4 transition-transform",
+                  "h-5 w-5 transition-transform duration-300",
                   sidebarCollapsed ? "rotate-180" : "",
-                  !sidebarCollapsed && "mr-3",
+                  !sidebarCollapsed && "mr-3"
                 )}
               />
-              {!sidebarCollapsed && "Collapse"}
-            </Button>
+              {!sidebarCollapsed && (
+                <span className="text-sm font-medium transition-opacity duration-300">
+                  Collapse
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -449,7 +500,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       {/* Main content */}
       <div className={cn("transition-all duration-300", mainMargin)}>
         <div className="pt-16">
-          <div className="p-4 lg:p-8">{children}</div>
+          <div className="p-4 lg:p-8 rounded-tl-2xl min-h-[calc(100vh-4rem)]">{children}</div>
         </div>
       </div>
 
