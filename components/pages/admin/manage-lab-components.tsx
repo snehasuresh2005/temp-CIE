@@ -653,356 +653,152 @@ export function ManageLabComponents() {
                 Add Component
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-7xl w-full max-h-[98vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Add New Lab Component</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 w-fill">
-                {/* Basic Details Row - Name and Quantity */}
-                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
-                  <div className="flex-1">
-                    <Label htmlFor="name" className="text-sm font-medium">Component Name *</Label>
-                    <Input
-                      id="name"
-                      value={newComponent.component_name}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_name: e.target.value }))}
-                      placeholder="Arduino Uno R3"
-                      className={`mt-1 w-full h-9 text-sm ${formErrors.component_name ? 'border-red-500' : ''}`}
-                    />
-                    {formErrors.component_name && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>
-                    )}
+              <form className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
+                {/* Left Column: Basic Info & Images */}
+                <div className="space-y-6 pr-3 pl-3">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <Label htmlFor="name">Component Name *</Label>
+                        <Input id="name" value={newComponent.component_name} onChange={e => setNewComponent(prev => ({ ...prev, component_name: e.target.value }))} className={`mt-1 ${formErrors.component_name ? 'border-red-500' : ''}`} />
+                        {formErrors.component_name && <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>}
+                      </div>
+                      <div className="col-span-1">
+                        <Label htmlFor="tagId">Tag ID (optional)</Label>
+                        <Input id="tagId" value={newComponent.component_tag_id} onChange={e => setNewComponent(prev => ({ ...prev, component_tag_id: e.target.value }))} className="mt-1" />
+                      </div>
+                    </div>
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1">
+                        <Label htmlFor="location">Location *</Label>
+                        <Select value={newComponent.component_location} onValueChange={value => setNewComponent(prev => ({ ...prev, component_location: value }))}>
+                          <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}><SelectValue placeholder="Select location" /></SelectTrigger>
+                          <SelectContent>
+                            {locationOptions.map(location => <SelectItem key={location} value={location}>{location}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.component_location && <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>}
+                      </div>
+                      <div className="flex-1">
+                        <Label htmlFor="category">Category *</Label>
+                        <Select value={newComponent.component_category} onValueChange={value => setNewComponent(prev => ({ ...prev, component_category: value }))}>
+                          <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}><SelectValue placeholder="Select category" /></SelectTrigger>
+                          <SelectContent>
+                            {categoryOptions.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.component_category && <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>}
+                      </div>
+                      <div className="w-20">
+                        <Label htmlFor="quantity">Quantity *</Label>
+                        <Input id="quantity" type="number" value={newComponent.component_quantity} onChange={e => setNewComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))} min="1" className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`} />
+                        {formErrors.component_quantity && <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-col justify-center w-40 md:w-48">
-                    <Label htmlFor="quantity" className="text-sm font-medium">Total Quantity *</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      value={newComponent.component_quantity}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))}
-                      min="1"
-                      className={`mt-1 w-full h-9 text-sm ${formErrors.component_quantity ? 'border-red-500' : ''}`}
-                    />
-                    {formErrors.component_quantity && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>
-                    )}
-                  </div>
-                </div>
-                {/* Basic Details Row - Location, Tag ID, Category */}
-                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
-                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                    <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
-                    <Select
-                      open={showAddLocation || undefined}
-                      value={newComponent.component_location}
-                      onValueChange={(value) => {
-                        if (value === '__add_new_location__') {
-                          setShowAddLocation(true)
-                        } else {
-                          setNewComponent((prev) => ({ ...prev, component_location: value }))
-                          setShowAddLocation(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}>
-                        <SelectValue placeholder="Select location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locationOptions.map((location) => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__add_new_location__" className="text-blue-600">+ Add new location…</SelectItem>
-                        {showAddLocation && (
-                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
-                            <Input
-                              value={newLocation}
-                              onChange={e => setNewLocation(e.target.value)}
-                              placeholder="Enter new location name"
-                              className="flex-1 h-8 text-sm"
-                              autoFocus
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Component Images</h3>
+                      <Button variant="outline" size="sm" type="button" className="h-8">gen</Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="frontImage">Front Image *</Label>
+                        <Input id="frontImage" type="file" accept="image/*" onChange={e => setFrontImageFile(e.target.files?.[0] || null)} className={`mt-1 ${formErrors.frontImage ? 'border-red-500' : ''}`} />
+                        {formErrors.frontImage && <p className="text-red-500 text-xs mt-1">{formErrors.frontImage}</p>}
+                        {frontImagePreview && (
+                          <div className="mt-2">
+                            <img
+                              src={frontImagePreview}
+                              alt="Front Preview"
+                              className="w-full h-40 object-contain rounded-lg bg-gray-50"
                             />
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                await handleAddLocation();
-                                setShowAddLocation(false);
-                              }}
-                              disabled={isSavingLocation || !newLocation.trim()}
-                              className="px-3"
-                            >
-                              {isSavingLocation ? "Adding..." : "Add"}
-                            </Button>
                           </div>
                         )}
-                      </SelectContent>
-                    </Select>
-                    {formErrors.component_location && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                    <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
-                    <Input
-                      id="tagId"
-                      value={newComponent.component_tag_id}
-                      onChange={e => setNewComponent((prev) => ({ ...prev, component_tag_id: e.target.value }))}
-                      placeholder="e.g. 123-XYZ"
-                      className="mt-1 w-full h-9 text-sm"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                    <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
-                    <Select
-                      open={showAddCategory || undefined}
-                      value={newComponent.component_category}
-                      onValueChange={(value) => {
-                        if (value === '__add_new__') {
-                          setShowAddCategory(true)
-                        } else {
-                          setNewComponent((prev) => ({ ...prev, component_category: value }))
-                          setShowAddCategory(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__add_new__" className="text-blue-600">+ Add new category…</SelectItem>
-                        {showAddCategory && (
-                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
-                            <Input
-                              value={newCategory}
-                              onChange={e => setNewCategory(e.target.value)}
-                              placeholder="Enter new category name"
-                              className="flex-1 h-8 text-sm"
-                              autoFocus
+                      </div>
+                      <div>
+                        <Label htmlFor="backImage">Back Image *</Label>
+                        <Input id="backImage" type="file" accept="image/*" onChange={e => setBackImageFile(e.target.files?.[0] || null)} className={`mt-1 ${formErrors.backImage ? 'border-red-500' : ''}`} />
+                        {formErrors.backImage && <p className="text-red-500 text-xs mt-1">{formErrors.backImage}</p>}
+                        {backImagePreview && (
+                          <div className="mt-2">
+                            <img
+                              src={backImagePreview}
+                              alt="Back Preview"
+                              className="w-full h-40 object-contain rounded-lg bg-gray-50"
                             />
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                await handleAddCategory();
-                                setShowAddCategory(false);
-                              }}
-                              disabled={isSavingCategory || !newCategory.trim()}
-                              className="px-3"
-                            >
-                              {isSavingCategory ? "Adding..." : "Add"}
-                            </Button>
                           </div>
                         )}
-                      </SelectContent>
-                    </Select>
-                    {formErrors.component_category && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Image Upload Section with Gen Button */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Component Images</h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      className="h-8"
-                    >
-                      gen
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="frontImage" className="text-sm font-medium">Front Image *</Label>
-                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.frontImage ? 'border-red-500' : 'border-gray-300'}`}> 
-                        <Input
-                          id="frontImage"
-                          type="file"
-                          accept="image/*"
-                          onChange={e => setFrontImageFile(e.target.files?.[0] || null)}
-                          className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
                       </div>
-                      {formErrors.frontImage && (
-                        <p className="text-red-500 text-xs">{formErrors.frontImage}</p>
-                      )}
-                      {frontImagePreview && (
-                        <div className="mt-2">
-                          <Label className="text-xs font-medium text-gray-600">Preview:</Label>
-                          <img
-                            src={frontImagePreview}
-                            alt="Front Preview"
-                            className="mt-1 w-full h-64 object-contain rounded-lg bg-gray-50"
-                          />
-                        </div>
-                      )}
                     </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="backImage" className="text-sm font-medium">Back Image *</Label>
-                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.backImage ? 'border-red-500' : 'border-gray-300'}`}> 
-                        <Input
-                          id="backImage"
-                          type="file"
-                          accept="image/*"
-                          onChange={e => setBackImageFile(e.target.files?.[0] || null)}
-                          className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
+                  </div>
+                </div>
+                {/* Right Column: Details & Purchase Info */}
+                <div className="space-y-6 pr-2">
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="description">Description *</Label>
+                      <Textarea id="description" value={newComponent.component_description} onChange={e => setNewComponent(prev => ({ ...prev, component_description: e.target.value }))} rows={3} className={`mt-1 ${formErrors.component_description ? 'border-red-500' : ''}`} />
+                      {formErrors.component_description && <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="specifications">Specifications</Label>
+                      <Textarea id="specifications" value={newComponent.component_specification} onChange={e => setNewComponent(prev => ({ ...prev, component_specification: e.target.value }))} rows={3} className="mt-1" />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Purchase Details (Optional)</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                        <Input id="invoiceNumber" value={newComponent.invoice_number} onChange={e => setNewComponent(prev => ({ ...prev, invoice_number: e.target.value }))} className={`mt-1 ${formErrors.invoice_number ? 'border-red-500' : ''}`} />
+                        {formErrors.invoice_number && <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>}
                       </div>
-                      {formErrors.backImage && (
-                        <p className="text-red-500 text-xs">{formErrors.backImage}</p>
-                      )}
-                      {backImagePreview && (
-                        <div className="mt-2">
-                          <Label className="text-xs font-medium text-gray-600">Preview:</Label>
-                          <img
-                            src={backImagePreview}
-                            alt="Back Preview"
-                            className="mt-1 w-full h-64 object-contain rounded-lg bg-gray-50"
-                          />
-                        </div>
-                      )}
+                      <div>
+                        <Label htmlFor="purchasedFrom">Purchased From</Label>
+                        <Input id="purchasedFrom" value={newComponent.purchased_from} onChange={e => setNewComponent(prev => ({ ...prev, purchased_from: e.target.value }))} className={`mt-1 ${formErrors.purchased_from ? 'border-red-500' : ''}`} />
+                        {formErrors.purchased_from && <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="purchasedDate">Purchase Date</Label>
+                        <Input id="purchasedDate" type="date" value={newComponent.purchase_date} onChange={e => setNewComponent(prev => ({ ...prev, purchase_date: e.target.value }))} className={`mt-1 ${formErrors.purchase_date ? 'border-red-500' : ''}`} />
+                        {formErrors.purchase_date && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedValue">Purchase Value</Label>
+                        <Input id="purchasedValue" type="number" min="0" step="0.01" value={newComponent.purchase_value} onChange={e => setNewComponent(prev => ({ ...prev, purchase_value: e.target.value }))} placeholder="0.00" className={`mt-1 ${formErrors.purchase_value ? 'border-red-500' : ''}`} />
+                        {formErrors.purchase_value && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedCurrency">Currency</Label>
+                        <Select value={newComponent.purchase_currency} onValueChange={value => setNewComponent(prev => ({ ...prev, purchase_currency: value }))}>
+                          <SelectTrigger className={`mt-1 ${formErrors.purchase_currency ? 'border-red-500' : ''}`}><SelectValue placeholder="Select currency" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                            <SelectItem value="USD">USD - US Dollar</SelectItem>
+                            <SelectItem value="EUR">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {formErrors.purchase_currency && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>}
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Description and Specifications Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
-                    <Textarea
-                      id="description"
-                      value={newComponent.component_description}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_description: e.target.value }))}
-                      placeholder="Provide a detailed description of the component..."
-                      rows={4}
-                      className={`mt-0 ${formErrors.component_description ? 'border-red-500' : ''}`}
-                    />
-                    {formErrors.component_description && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="specifications" className="text-sm font-medium">Specifications</Label>
-                    <Textarea
-                      id="specifications"
-                      value={newComponent.component_specification}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_specification: e.target.value }))}
-                      placeholder="Technical specifications, dimensions, power requirements, etc."
-                      rows={4}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                {/* Purchase Details Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900">Purchase Details (Optional)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="invoiceNumber" className="text-sm font-medium">Invoice Number</Label>
-                      <Input
-                        id="invoiceNumber"
-                        value={newComponent.invoice_number}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, invoice_number: e.target.value }))}
-                        placeholder="INV-2025-001"
-                        className={`mt-1 ${formErrors.invoice_number ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.invoice_number && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="purchasedFrom" className="text-sm font-medium">Purchased From</Label>
-                      <Input
-                        id="purchasedFrom"
-                        value={newComponent.purchased_from}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchased_from: e.target.value }))}
-                        placeholder="Vendor/Supplier Name"
-                        className={`mt-1 ${formErrors.purchased_from ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.purchased_from && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="purchasedDate" className="text-sm font-medium">Purchase Date</Label>
-                      <Input
-                        id="purchasedDate"
-                        type="date"
-                        value={newComponent.purchase_date}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_date: e.target.value }))}
-                        className={`mt-1 ${formErrors.purchase_date ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.purchase_date && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="purchasedValue" className="text-sm font-medium">Purchase Value</Label>
-                      <Input
-                        id="purchasedValue"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={newComponent.purchase_value}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_value: e.target.value }))}
-                        placeholder="0.00"
-                        className={`mt-1 ${formErrors.purchase_value ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.purchase_value && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="purchasedCurrency" className="text-sm font-medium">Currency</Label>
-                      <Select
-                        value={newComponent.purchase_currency}
-                        onValueChange={(value) => setNewComponent((prev) => ({ ...prev, purchase_currency: value }))}
-                      >
-                        <SelectTrigger className={`mt-1 ${formErrors.purchase_currency ? 'border-red-500' : ''}`}>
-                          <SelectValue placeholder="Select currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                          <SelectItem value="USD">USD - US Dollar</SelectItem>
-                          <SelectItem value="EUR">EUR - Euro</SelectItem>
-                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {formErrors.purchase_currency && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
                 {/* Form Actions */}
-                <div className="flex justify-end space-x-3 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
-                    className="px-6"
-                  >
-                    Cancel
-                  </Button>
+                <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="px-6">Cancel</Button>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span tabIndex={0}>
-                          <Button onClick={handleAddComponent} disabled={!isAddFormValid()}>
-                            Add Component
-                          </Button>
+                          <Button onClick={handleAddComponent} disabled={!isAddFormValid()}>Add Component</Button>
                         </span>
                       </TooltipTrigger>
                       {!isAddFormValid() && (
@@ -1013,7 +809,7 @@ export function ManageLabComponents() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-              </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
