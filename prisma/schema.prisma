@@ -308,6 +308,32 @@ model LocationBooking {
   @@map("location_bookings")
 }
 
+model LibraryItem {
+  id                  String   @id @default(uuid())
+  item_name           String
+  item_description    String
+  item_specification  String?
+  item_quantity       Int
+  item_tag_id         String?
+  item_category       String
+  item_location       String
+  image_path          String   @default("library-images")
+  front_image_id      String?
+  back_image_id       String?
+  invoice_number      String?
+  purchase_value      Decimal? @db.Decimal(10, 2)
+  purchased_from      String?
+  purchase_currency   String   @default("INR")
+  purchase_date       DateTime?
+  created_by          String
+  modified_by         String?
+  created_at          DateTime @default(now())
+  modified_at         DateTime @updatedAt
+  // Add relations to requests if needed later
+
+  @@map("library_items")
+}
+
 enum UserRole {
   ADMIN
   FACULTY
