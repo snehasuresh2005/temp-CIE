@@ -10,6 +10,7 @@ import { ManageCourses } from "@/components/pages/admin/manage-courses"
 import { ManageLabComponents } from "@/components/pages/admin/manage-lab-components"
 import { ManageLocations } from "@/components/pages/admin/manage-locations"
 import { ManageClassSchedules } from "@/components/pages/admin/manage-class-schedules"
+import { UserProfile } from "@/components/common/user-profile"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -40,6 +41,8 @@ export function AdminDashboard() {
         return <ManageLocations />
       case "lab-components":
         return <ManageLabComponents />
+      case "profile":
+        return <UserProfile />
       default:
         return <AdminHome onPageChange={setCurrentPage} />
     }

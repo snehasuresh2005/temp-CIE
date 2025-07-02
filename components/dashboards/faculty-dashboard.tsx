@@ -10,6 +10,7 @@ import { FacultyViewCourses } from "@/components/pages/faculty/view-courses"
 import { ProjectManagement } from "@/components/pages/faculty/project-management"
 import { AttendanceManagement } from "@/components/pages/faculty/attendance-management"
 import { LocationBooking } from "@/components/pages/faculty/location-booking"
+import { UserProfile } from "@/components/common/user-profile"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -40,6 +41,8 @@ export function FacultyDashboard() {
         return <AttendanceManagement />
       case "lab-components":
         return <LabComponentsManagement />
+      case "profile":
+        return <UserProfile />
       default:
         return <FacultyHome onPageChange={setCurrentPage} />
     }

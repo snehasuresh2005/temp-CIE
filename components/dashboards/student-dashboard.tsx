@@ -9,6 +9,7 @@ import { LabComponentsRequest } from "@/components/pages/student/lab-components-
 import { ViewCourses } from "@/components/pages/student/view-courses"
 import { ViewProjects } from "@/components/pages/student/view-projects"
 import { ViewAttendance } from "@/components/pages/student/view-attendance"
+import { UserProfile } from "@/components/common/user-profile"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -44,6 +45,8 @@ export function StudentDashboard() {
         return <ViewAttendance />
       case "lab-components":
         return <LabComponentsRequest />
+      case "profile":
+        return <UserProfile />
       default:
         return <StudentHome onPageChange={setCurrentPage} />
     }

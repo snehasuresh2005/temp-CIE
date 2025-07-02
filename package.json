@@ -8,8 +8,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint":"next lint"
-},
+    "lint": "next lint"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "latest",
@@ -41,6 +41,8 @@
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
     "@types/formidable": "^3.4.5",
+    "@types/mime-types": "^3.0.1",
+    "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "latest",
     "class-variance-authority": "^0.7.1",
@@ -52,6 +54,7 @@
     "framer-motion": "^12.19.1",
     "input-otp": "latest",
     "lucide-react": "^0.454.0",
+    "mime-types": "^3.0.1",
     "next": "14.2.16",
     "next-themes": "latest",
     "prisma": "latest",
@@ -66,6 +69,7 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
     "typescript": "^5",
+    "uuid": "^11.1.0",
     "vaul": "latest",
     "zod": "^3.24.1"
   },
