@@ -8,6 +8,7 @@ export interface User {
   id: string
   email: string
   name: string
+  image?: string
   role: UserRole
   phone?: string
   join_date: Date

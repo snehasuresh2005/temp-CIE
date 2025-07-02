@@ -22,6 +22,17 @@ import { useAuth } from "@/components/auth-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+// Utility functions - declared at module scope for hoisting
+export function isOverdue(expectedReturnDate: string): boolean {
+  return new Date(expectedReturnDate) < new Date();
+}
+
+export function getOverdueDays(expectedReturnDate: string): number {
+  const diffMs = new Date().getTime() - new Date(expectedReturnDate).getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+
 interface LabComponent {
   id: string
   component_name: string
@@ -313,10 +324,6 @@ export function LabComponentsRequest() {
         variant: "destructive",
       })
     }
-  }
-
-  const isOverdue = (expectedReturnDate: string) => {
-    return new Date(expectedReturnDate) < new Date()
   }
 
   const getStatusColor = (status: string) => {

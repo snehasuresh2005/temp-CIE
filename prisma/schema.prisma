@@ -52,6 +52,8 @@ model Faculty {
   user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
   location_bookings   LocationBooking[]
   project_requests    ProjectRequest[]
+  library_requests     LibraryRequest[]
+  library_items       LibraryItem[]
 
   @@map("faculty")
 }
@@ -70,6 +72,7 @@ model Student {
   project_requests    ProjectRequest[]
   project_submissions ProjectSubmission[]
   attendance_records  StudentAttendance[]
+  library_requests   LibraryRequest[]
   user                User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("students")
@@ -308,6 +311,38 @@ model LocationBooking {
   @@map("location_bookings")
 }
 
+model LibraryItem {
+  id                  String   @id @default(uuid())
+  item_name           String
+  item_description    String
+  item_specification  String?
+  item_quantity       Int
+  item_tag_id         String?
+  item_category       String
+  item_location       String
+  image_path          String   @default("library-images")
+  front_image_id      String?
+  back_image_id       String?
+  invoice_number      String?
+  purchase_value      Decimal? @db.Decimal(10, 2)
+  purchased_from      String?
+  purchase_currency   String   @default("INR")
+  purchase_date       DateTime?
+  created_by          String
+  modified_by         String?
+  created_at          DateTime @default(now())
+  available_quantity        Int      @default(0)
+  faculty_id           String?
+  faculty              Faculty? @relation(fields: [faculty_id], references: [id])
+
+  modified_at         DateTime @updatedAt
+  // Add relations to requests if needed later
+
+  library_requests     LibraryRequest[]
+
+  @@map("library_items")
+}
+
 enum UserRole {
   ADMIN
   FACULTY
@@ -348,7 +383,32 @@ enum RequestStatus {
   COLLECTED
   RETURNED
   PENDING_RETURN
+  OVERDUE
 }
+
+model LibraryRequest {
+  id             String        @id @default(cuid())
+  student_id     String
+  item_id        String
+  quantity       Int
+  purpose        String
+  request_date   DateTime      @default(now())
+  required_date  DateTime
+  status         RequestStatus @default(PENDING)
+  collection_date DateTime?
+  return_date    DateTime?
+  notes          String?
+  faculty_notes  String?
+  faculty_id     String?
+
+  item    LibraryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  student Student     @relation(fields: [student_id], references: [id])
+  faculty Faculty?    @relation(fields: [faculty_id], references: [id])
+
+  @@map("library_requests")
+}
+
+
 
 enum LocationType {
   LAB

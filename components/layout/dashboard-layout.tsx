@@ -27,9 +27,12 @@ import {
   Phone,
   MapPin,
   Calendar,
+  Moon,
+  Sun,
 } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { useTheme } from 'next-themes'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -98,6 +101,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const { theme, setTheme } = useTheme()
 
   const sidebarWidth = sidebarCollapsed ? "w-16" : "w-64"
   const mainMargin = sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
@@ -179,11 +183,11 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-dark5 dark:text-dark1">
       {/* Navbar */}
       <div
         className={cn(
-          "fixed top-0 right-0 left-0 h-16 bg-white border-b border-gray-200 z-30 transition-all duration-300",
+          "fixed top-0 right-0 left-0 h-16 bg-white dark:bg-dark4 border-b border-gray-200 dark:border-dark3 z-30 transition-all duration-300",
           sidebarCollapsed ? "lg:left-16" : "lg:left-64",
         )}
       >
@@ -197,6 +201,17 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
 
           {/* Spacer for desktop to push profile to the right */}
           <div className="hidden lg:block flex-1" />
+
+          {/* Dark mode toggle button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Toggle dark mode"
+            className="mr-2"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
 
           {/* Profile dropdown */}
           <DropdownMenu>
@@ -392,7 +407,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           "fixed inset-y-0 left-0 z-40 transform transition-all duration-500 ease-in-out lg:translate-x-0 rounded-r-2xl overflow-hidden shadow-2xl",
           sidebarWidth,
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          "bg-gradient-to-b from-blue-100 to-indigo-100"
+          "bg-gradient-to-b from-blue-100 to-indigo-100 dark:bg-dark4 dark:text-dark1"
         )}
         style={{
           boxShadow: '4px 0 15px rgba(0, 0, 0, 0.1)'
@@ -423,7 +438,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
             {menuItems.map((item, index) => (
               <div 
                 key={item.id}
-                className="px-2 py-1"
+                className="px-2 py-1 group"
                 style={{
                   animation: `fadeIn 0.3s ease-out ${index * 0.05}s forwards`,
                   opacity: 0,
@@ -432,11 +447,11 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
               >
                 <button
                   className={cn(
-                    "w-full flex items-center p-3 transition-all duration-200 rounded-lg mx-1",
+                    "w-full flex items-center p-3 transition-all duration-200 rounded-lg mx-1 transform hover:scale-105 focus:scale-105",
                     sidebarCollapsed ? "justify-center px-2" : "px-4",
                     currentPage === item.id
                       ? "bg-indigo-200 text-indigo-800 font-medium shadow-sm"
-                      : "text-gray-800 hover:bg-blue-100 hover:text-indigo-800"
+                      : "text-gray-800 hover:bg-blue-100 hover:text-indigo-800 dark:text-dark1"
                   )}
                   onClick={() => {
                     onPageChange(item.id)
@@ -448,7 +463,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                     className={cn(
                       "h-5 w-5 transition-transform duration-300",
                       !sidebarCollapsed && "mr-3",
-                      currentPage === item.id ? "text-blue-600" : "text-gray-600"
+                      currentPage === item.id ? "text-blue-600" : "text-gray-600 dark:text-dark1"
                     )} 
                   />
                   {!sidebarCollapsed && (

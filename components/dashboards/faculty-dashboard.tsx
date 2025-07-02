@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Home, Users, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench } from "lucide-react"
+import { Home, Users, User as UserIcon, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench, BookOpen, Moon, Sun } from "lucide-react"
 import { FacultyHome } from "@/components/pages/faculty/faculty-home"
 import { LabComponentsManagement } from "@/components/pages/faculty/lab-components-management"
 import { FacultyCalendar } from "@/components/pages/faculty/faculty-calendar"
@@ -11,6 +11,7 @@ import { ProjectManagement } from "@/components/pages/faculty/project-management
 import { AttendanceManagement } from "@/components/pages/faculty/attendance-management"
 import { LocationBooking } from "@/components/pages/faculty/location-booking"
 import { UserProfile } from "@/components/common/user-profile"
+import { LibraryManagement } from "@/components/pages/faculty/library-management"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -20,6 +21,8 @@ const menuItems = [
   { id: "projects", label: "Projects", icon: FolderOpen },
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
+  { id: "library", label: "Library", icon: BookOpen },
+  { id: "profile", label: "Profile", icon: UserIcon },
 ]
 
 export function FacultyDashboard() {
@@ -43,6 +46,8 @@ export function FacultyDashboard() {
         return <LabComponentsManagement />
       case "profile":
         return <UserProfile />
+      case "library":
+        return <LibraryManagement />
       default:
         return <FacultyHome onPageChange={setCurrentPage} />
     }
