@@ -94,7 +94,7 @@ function buildProfileData(user: any): ProfileData | null {
         advisor: "Dr. John Smith",
       };
     default:
-      return baseData;
+      return null;
   }
 }
 
@@ -125,156 +125,165 @@ export function UserProfile() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto w-full">
-      <Card>
-        <CardHeader className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24">
-            <AvatarImage 
-              src={previewImage || user?.image || undefined} 
-              alt={user?.name || 'User avatar'} 
-            />
-            <AvatarFallback className="text-3xl font-semibold">
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
-            {/* upload overlay */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
-              title="Change avatar"
-            >
-              <Camera className="h-4 w-4 text-gray-600" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e)=>{
-                const file = e.target.files?.[0];
-                if(file){
-                  const url = URL.createObjectURL(file);
-                  setPreviewImage(url);
-                  // TODO: send to backend
-                }
-              }}
-            />
-            </div>
-          <div className="text-center">
-            <CardTitle>{profile.name}</CardTitle>
-            <CardDescription className="capitalize mt-1">{profile.role}</CardDescription>
-          </div>
-        </CardHeader>
-        <Separator />
-        <CardContent className="grid gap-6 sm:grid-cols-2">
+<div className="p-8 max-w-4xl mx-auto w-full">
+  <Card className="bg-gradient-to-br from-white via-gray-50 to-blue-50 shadow-xl border-0 rounded-3xl overflow-hidden">
+    <CardHeader className="flex flex-col items-center gap-4 pb-0">
+      <div className="relative">
+        <Avatar className="h-28 w-28 ring-4 ring-blue-200 shadow-lg rounded-full">
+          <AvatarImage 
+            src={previewImage || user?.image || undefined} 
+            alt={user?.name || 'User avatar'} 
+          />
+          <AvatarFallback className="text-4xl font-bold bg-blue-100 text-blue-700">
+            {user?.name?.charAt(0).toUpperCase() || 'U'}
+          </AvatarFallback>
+        </Avatar>
+        {/* upload overlay */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="absolute bottom-2 right-2 bg-white border border-blue-100 rounded-full p-2 shadow-md hover:bg-blue-50 transition"
+          title="Change avatar"
+        >
+          <Camera className="h-5 w-5 text-blue-600" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e)=>{
+            const file = e.target.files?.[0];
+            if(file){
+              const url = URL.createObjectURL(file);
+              setPreviewImage(url);
+              // TODO: send to backend
+            }
+          }}
+        />
+      </div>
+      <div className="text-center mt-2">
+        <CardTitle className="text-2xl font-bold text-blue-800">{profile.name}</CardTitle>
+        <CardDescription className="capitalize mt-1 text-blue-500 font-medium tracking-wide">{profile.role}</CardDescription>
+      </div>
+    </CardHeader>
+    <Separator className="my-4" />
+    <CardContent className="grid md:grid-cols-2 gap-x-12 gap-y-8 text-base pb-8">
+
+      <div className="flex items-center gap-3">
+        <Mail className="h-5 w-5 text-blue-400" />
+        <a href={`mailto:${profile.email}`} className="hover:underline text-blue-700 font-medium">{profile.email}</a>
+      </div>
+      {profile.phone && (
+        <div className="flex items-center gap-3">
+          <Phone className="h-5 w-5 text-blue-400" />
+          <a href={`tel:${profile.phone}`} className="hover:underline text-blue-700 font-medium">{profile.phone}</a>
+        </div>
+      )}
+
+      {/* Role specific information */}
+      {isAdminProfile(profile) && (
+        <>
           <div className="flex items-center gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{profile.email}</span>
+            <MapPin className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">{profile.office}</span>
           </div>
-          {profile.phone && (
-            <div className="flex items-center gap-3">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{profile.phone}</span>
+          <div>
+            <p className="text-base font-semibold mb-2 flex items-center gap-2 text-blue-700">
+              <UserIcon className="h-5 w-5 text-blue-400"/>Permissions
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {profile.permissions.map((p: string) => (
+                <span key={p} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-semibold">
+                  {p}
+                </span>
+              ))}
             </div>
-          )}
-          {/* Role specific information */}
-          {isAdminProfile(profile) && (
-            <>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.office}</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold mb-1 flex items-center gap-1"><UserIcon className="h-4 w-4 text-muted-foreground"/>Permissions</p>
-                <div className="flex flex-wrap gap-2">
-                  {profile.permissions.map((p: string) => (
-                    <span key={p} className="text-xs bg-gray-100 px-2 py-0.5 rounded-md">
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {isFacultyProfile(profile) && (
-            <>
-              <div className="flex items-center gap-3">
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.department}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.office}</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold mb-1 flex items-center gap-1"><Users className="h-4 w-4 text-muted-foreground"/>Assigned Courses</p>
-                <div className="flex flex-wrap gap-2">
-                  {profile.assigned_courses.map((c: string) => (
-                    <span key={c} className="text-xs bg-gray-100 px-2 py-0.5 rounded-md">
-                      {c}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.office_hours}</span>
-              </div>
-            </>
-          )}
-
-          <Separator className="my-6" />
-          {/* Resume upload section (common) */}
-          <div className="flex items-center gap-3">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            {resumeName ? (
-              <a href="#" className="text-blue-600 underline" download>{resumeName}</a>
-            ) : (
-              <span>No resume uploaded</span>
-            )}
-            <Button size="sm" className="ml-auto flex items-center gap-1" onClick={() => resumeInputRef.current?.click()}>
-              <FilePlus className="h-3 w-3" /> Upload
-            </Button>
-            <input
-              ref={resumeInputRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={(e)=>{
-                const file = e.target.files?.[0];
-                if(file){
-                  setResumeName(file.name);
-                  // TODO: send to backend
-                }
-              }}
-            />
           </div>
+        </>
+      )}
 
-          {isStudentProfile(profile) && (
-            <>
-              <div className="flex items-center gap-3">
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.program}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.year} - {profile.section}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.advisor}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <IdCard className="h-4 w-4 text-muted-foreground" />
-                <span>GPA: {profile.gpa}</span>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      {isFacultyProfile(profile) && (
+        <>
+          <div className="flex items-center gap-3">
+            <BookOpen className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">{profile.department}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <MapPin className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">{profile.office}</span>
+          </div>
+          <div>
+            <p className="text-base font-semibold mb-2 flex items-center gap-2 text-blue-700">
+              <Users className="h-5 w-5 text-blue-400"/>Assigned Courses
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {profile.assigned_courses.map((c: string) => (
+                <span key={c} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-md font-semibold">
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">{profile.office_hours}</span>
+          </div>
+        </>
+      )}
+
+      {/* Resume upload section (common) */}
+      <div className="flex items-center gap-4 col-span-full mt-2 bg-blue-50 rounded-xl px-6 py-4 shadow-inner">
+        <FileText className="h-5 w-5 text-blue-400" />
+        {resumeName ? (
+          <a href="#" className="text-blue-700 underline font-medium" download>{resumeName}</a>
+        ) : (
+          <span className="text-gray-500">No resume uploaded</span>
+        )}
+        <Button 
+          size="sm" 
+          className="ml-auto flex items-center gap-2 bg-black hover:bg-blue-700 text-white font-semibold rounded-lg shadow"
+          onClick={() => resumeInputRef.current?.click()}
+        >
+          <FilePlus className="h-4 w-4" /> Upload
+        </Button>
+        <input
+          ref={resumeInputRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={(e)=>{
+            const file = e.target.files?.[0];
+            if(file){
+              setResumeName(file.name);
+              // TODO: send to backend
+            }
+          }}
+        />
+      </div>
+
+      {isStudentProfile(profile) && (
+        <>
+          <div className="flex items-center gap-3">
+            <BookOpen className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">{profile.program}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Users className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">{profile.year} - {profile.section}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <UserIcon className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">{profile.advisor}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <IdCard className="h-5 w-5 text-blue-400" />
+            <span className="font-semibold text-gray-700">GPA: {profile.gpa}</span>
+          </div>
+        </>
+      )}
+    </CardContent>
+  </Card>
+</div>
   );
 }

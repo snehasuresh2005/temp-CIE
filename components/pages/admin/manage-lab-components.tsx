@@ -653,14 +653,15 @@ export function ManageLabComponents() {
                 Add Component
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Lab Component</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 w-fill">
-                {/* Basic Details Row - Name and Quantity */}
-                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
-                  <div className="flex-1">
+              <div className="grid gap-y-6 w-full">
+                {/* Basic Details Row 1 – Name & Tag ID */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  {/* Component Name spans 2 columns on md+ */}
+                  <div className="md:col-span-2">
                     <Label htmlFor="name" className="text-sm font-medium">Component Name *</Label>
                     <Input
                       id="name"
@@ -673,8 +674,133 @@ export function ManageLabComponents() {
                       <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>
                     )}
                   </div>
-                  <div className="flex flex-col justify-center w-40 md:w-48">
-                    <Label htmlFor="quantity" className="text-sm font-medium">Total Quantity *</Label>
+
+                  {/* Tag ID */}
+                  <div>
+                    <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
+                    <Input
+                      id="tagId"
+                      value={newComponent.component_tag_id}
+                      onChange={e => setNewComponent((prev) => ({ ...prev, component_tag_id: e.target.value }))}
+                      placeholder="e.g. 123-XYZ"
+                      className="mt-1 w-full h-9 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Basic Details Row 2 – Location, Category, Quantity */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  {/* Location */}
+                  <div>
+                    <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
+                    <Select
+                      open={showAddLocation || undefined}
+                      value={newComponent.component_location}
+                      onValueChange={(value) => {
+                        if (value === '__add_new_location__') {
+                          setShowAddLocation(true)
+                        } else {
+                          setNewComponent((prev) => ({ ...prev, component_location: value }))
+                          setShowAddLocation(false)
+                        }
+                      }}
+                    >
+                      <SelectTrigger className={`mt-1 w-full h-9 text-sm ${formErrors.component_location ? 'border-red-500' : ''}`}> 
+                        <SelectValue placeholder="Select location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationOptions.map((location) => (
+                          <SelectItem key={location} value={location}>
+                            {location}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__add_new_location__" className="text-blue-600">+ Add new location…</SelectItem>
+                        {showAddLocation && (
+                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
+                            <Input
+                              value={newLocation}
+                              onChange={e => setNewLocation(e.target.value)}
+                              placeholder="Enter new location name"
+                              className="flex-1 h-8 text-sm"
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                await handleAddLocation();
+                                setShowAddLocation(false);
+                              }}
+                              disabled={isSavingLocation || !newLocation.trim()}
+                              className="px-3"
+                            >
+                              {isSavingLocation ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.component_location && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>
+                    )}
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
+                    <Select
+                      open={showAddCategory || undefined}
+                      value={newComponent.component_category}
+                      onValueChange={(value) => {
+                        if (value === '__add_new__') {
+                          setShowAddCategory(true)
+                        } else {
+                          setNewComponent((prev) => ({ ...prev, component_category: value }))
+                          setShowAddCategory(false)
+                        }
+                      }}
+                    >
+                      <SelectTrigger className={`mt-1 w-full h-9 text-sm ${formErrors.component_category ? 'border-red-500' : ''}`}> 
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__add_new__" className="text-blue-600">+ Add new category…</SelectItem>
+                        {showAddCategory && (
+                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
+                            <Input
+                              value={newCategory}
+                              onChange={e => setNewCategory(e.target.value)}
+                              placeholder="Enter new category name"
+                              className="flex-1 h-8 text-sm"
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                await handleAddCategory();
+                                setShowAddCategory(false);
+                              }}
+                              disabled={isSavingCategory || !newCategory.trim()}
+                              className="px-3"
+                            >
+                              {isSavingCategory ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.component_category && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>
+                    )}
+                  </div>
+
+                  {/* Quantity */}
+                  <div>
+                    <Label htmlFor="quantity" className="text-sm font-medium">Quantity *</Label>
                     <Input
                       id="quantity"
                       type="number"
@@ -689,7 +815,7 @@ export function ManageLabComponents() {
                   </div>
                 </div>
                 {/* Basic Details Row - Location, Tag ID, Category */}
-                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
+                <div className="hidden">
                   <div className="flex-1 min-w-[180px] md:min-w-[220px]">
                     <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
                     <Select
