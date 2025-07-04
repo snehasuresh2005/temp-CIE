@@ -46,6 +46,8 @@ model Faculty {
   user_id             String             @unique
   image_id            String?
   image_path          String?            @default("profile-img")
+  resume_id           String?
+  resume_path         String?            @default("resumes")
   attendance_records  AttendanceRecord[]
   class_schedules     ClassSchedule[]
   component_approvals ComponentRequest[] @relation("ComponentApprovals")
@@ -67,6 +69,8 @@ model Student {
   advisor_id          String?
   student_id          String              @unique
   user_id             String              @unique
+  resume_id           String?
+  resume_path         String?            @default("resumes")
   component_requests  ComponentRequest[]
   enrollments         Enrollment[]
   project_requests    ProjectRequest[]
