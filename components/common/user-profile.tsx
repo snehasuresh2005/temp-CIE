@@ -2,9 +2,10 @@ import React from "react";
 import { useAuth } from "@/components/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, Phone, MapPin, BookOpen, Users, Calendar, BadgeIcon as IdCard, User as UserIcon, Camera, FilePlus, FileText } from "lucide-react";
+import { Mail, Phone, MapPin, BookOpen, Users, Calendar, BadgeIcon as IdCard, User as UserIcon, Camera, FilePlus, FileText, Download, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface BaseProfile {
   name: string;
@@ -94,7 +95,16 @@ function buildProfileData(user: any): ProfileData | null {
         advisor: "Dr. John Smith",
       };
     default:
-      return baseData;
+      return {
+        ...baseData,
+        role: "student" as const,
+        student_id: "Unknown",
+        program: "Unknown Program",
+        year: "Unknown Year",
+        section: "Unknown Section",
+        gpa: "0.0",
+        advisor: "Unknown Advisor",
+      };
   }
 }
 
@@ -113,8 +123,95 @@ export function UserProfile() {
   const resumeInputRef = React.useRef<HTMLInputElement | null>(null);
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
   const [resumeName, setResumeName] = React.useState<string | null>(null);
+  const [resumeUrl, setResumeUrl] = React.useState<string | null>(null);
+  const [isUploadingResume, setIsUploadingResume] = React.useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
   const profile = React.useMemo(() => buildProfileData(user), [user]);
+
+  // Load existing resume info on component mount
+  React.useEffect(() => {
+    if (user?.profileData?.resume_id) {
+      setResumeName(user.profileData.resume_id);
+      setResumeUrl(`/resumes/${user.profileData.resume_id}`);
+    }
+  }, [user]);
+
+  const handleResumeUpload = async (file: File) => {
+    if (!user) return;
+
+    setIsUploadingResume(true);
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      const endpoint = user.role === 'faculty' ? '/api/faculty/upload-resume' : '/api/student/upload-resume';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'x-user-id': user.id,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResumeName(data.resumeId);
+        setResumeUrl(data.resumeUrl);
+        toast({
+          title: "Success",
+          description: "Resume uploaded successfully",
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Resume upload error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload resume",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
+  const handleResumeDelete = async () => {
+    if (!user) return;
+
+    try {
+      const endpoint = user.role === 'faculty' ? '/api/faculty/upload-resume' : '/api/student/upload-resume';
+      
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'x-user-id': user.id,
+        },
+      });
+
+      if (response.ok) {
+        setResumeName(null);
+        setResumeUrl(null);
+        toast({
+          title: "Success",
+          description: "Resume deleted successfully",
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Delete failed');
+      }
+    } catch (error) {
+      console.error('Resume delete error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete resume",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!profile) {
     return (
@@ -226,32 +323,79 @@ export function UserProfile() {
             </>
           )}
 
-          <Separator className="my-6" />
-          {/* Resume upload section (common) */}
-          <div className="flex items-center gap-3">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            {resumeName ? (
-              <a href="#" className="text-blue-600 underline" download>{resumeName}</a>
-            ) : (
-              <span>No resume uploaded</span>
-            )}
-            <Button size="sm" className="ml-auto flex items-center gap-1" onClick={() => resumeInputRef.current?.click()}>
-              <FilePlus className="h-3 w-3" /> Upload
-            </Button>
-            <input
-              ref={resumeInputRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={(e)=>{
-                const file = e.target.files?.[0];
-                if(file){
-                  setResumeName(file.name);
-                  // TODO: send to backend
-                }
-              }}
-            />
-          </div>
+          {/* Resume upload section (common for faculty and students) */}
+          {(user?.role === 'faculty' || user?.role === 'student') && (
+            <>
+              <Separator className="sm:col-span-2" />
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Resume</p>
+                      {resumeName ? (
+                        <p className="text-sm text-muted-foreground">
+                          {resumeName.length > 50 ? `${resumeName.substring(0, 50)}...` : resumeName}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No resume uploaded</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {resumeUrl && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => window.open(resumeUrl, '_blank')}
+                        className="flex items-center gap-1"
+                      >
+                        <Download className="h-3 w-3" /> 
+                        View
+                      </Button>
+                    )}
+                    
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      disabled={isUploadingResume}
+                      onClick={() => resumeInputRef.current?.click()}
+                      className="flex items-center gap-1"
+                    >
+                      <FilePlus className="h-3 w-3" /> 
+                      {isUploadingResume ? 'Uploading...' : 'Upload'}
+                    </Button>
+                    
+                    {resumeName && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={handleResumeDelete}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" /> 
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <input
+                    ref={resumeInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleResumeUpload(file);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {isStudentProfile(profile) && (
             <>
