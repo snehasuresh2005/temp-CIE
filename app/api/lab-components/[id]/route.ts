@@ -117,6 +117,30 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       }
     }
 
+    // Check if there are any component requests for this component
+    const componentRequests = await prisma.componentRequest.findMany({
+      where: { component_id: id },
+      include: {
+        student: {
+          include: {
+            user: true
+          }
+        },
+        project: true
+      }
+    })
+
+    if (componentRequests.length > 0) {
+      console.log(`Found ${componentRequests.length} component requests for this component. Deleting them first.`)
+      
+      // Delete all related component requests first
+      await prisma.componentRequest.deleteMany({
+        where: { component_id: id }
+      })
+      
+      console.log(`Deleted ${componentRequests.length} component requests`)
+    }
+
     // Now, delete the component from the database
     await prisma.labComponent.delete({
       where: { id },
@@ -124,8 +148,17 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     console.log(`Component deleted from database: ${id}`)
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Delete component error:", error)
+    
+    // Handle foreign key constraint error specifically
+    if (error.code === 'P2003') {
+      return NextResponse.json({ 
+        error: "Cannot delete component",
+        details: "This component is being used by one or more component requests. Please resolve all requests before deleting."
+      }, { status: 400 })
+    }
+    
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
