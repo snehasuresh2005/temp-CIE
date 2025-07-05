@@ -28,6 +28,7 @@ import {
   MapPin,
   Calendar,
   Moon,
+  Settings,
   Sun,
 } from "lucide-react"
 import { useState } from "react"
@@ -230,164 +231,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-96" align="end" forceMount>
-              {/* Profile Header */}
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex items-center space-x-3 p-2">
-                  <Avatar className="h-16 w-16">
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xl font-bold">
-                      {profileData?.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-2">
-                    <p className="text-lg font-bold text-gray-900">{profileData?.name}</p>
-                    <Badge className={cn("text-xs font-medium", getRoleColor(profileData?.role || ""))}>
-                      <span className="capitalize">{profileData?.role}</span>
-                    </Badge>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-
-              <DropdownMenuSeparator />
-
-              {/* Basic Information */}
-              <div className="px-2 py-3">
-                <div className="space-y-4">
-                  {/* Email */}
-                  <div className="flex items-center space-x-3 px-2">
-                    <Mail className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs font-medium text-gray-700">Email</p>
-                      <p className="text-sm text-gray-900">{profileData?.email}</p>
-                    </div>
-                  </div>
-
-                  {/* Phone */}
-                  <div className="flex items-center space-x-3 px-2">
-                    <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs font-medium text-gray-700">Phone</p>
-                      <p className="text-sm text-gray-900">{profileData?.phone || "Not provided"}</p>
-                    </div>
-                  </div>
-
-                  {/* User ID */}
-                  {/* <div className="flex items-center space-x-3 px-2">
-                    <IdCard className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs font-medium text-gray-700">
-                        {profileData?.role === "student" ? "Student ID" : "User ID"}
-                      </p>
-                      <p className="text-sm text-gray-900">
-                        {isStudentProfile(profileData!) ? profileData.student_id : profileData?.id}
-                      </p>
-                    </div>
-                  </div> */}
-
-                  {/* Role-specific Information */}
-                  {isAdminProfile(profileData!) && (
-                    <>
-                      <div className="flex items-center space-x-3 px-2">
-                        <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Office</p>
-                          <p className="text-sm text-gray-900">{profileData.office}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start space-x-3 px-2">
-                        <User className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Permissions</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {profileData.permissions.map((permission: string) => (
-                              <Badge key={permission} variant="outline" className="text-xs">
-                                {permission}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {isFacultyProfile(profileData!) && (
-                    <>
-                      <div className="flex items-center space-x-3 px-2">
-                        <BookOpen className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Department</p>
-                          <p className="text-sm text-gray-900">{profileData.department}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 px-2">
-                        <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Office</p>
-                          <p className="text-sm text-gray-900">{profileData.office}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start space-x-3 px-2">
-                        <Users className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Assigned Courses</p>
-                          <div className="space-y-1 mt-1">
-                            {profileData.assigned_courses.map((className: string) => (
-                              <Badge key={className} variant="outline" className="text-xs block w-fit">
-                                {className}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 px-2">
-                        <Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Office Hours</p>
-                          <p className="text-sm text-gray-900">{profileData.office_hours}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {isStudentProfile(profileData!) && (
-                    <>
-                      <div className="flex items-center space-x-3 px-2">
-                        <BookOpen className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Program</p>
-                          <p className="text-sm text-gray-900">{profileData.program}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 px-2">
-                        <Users className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Year & Section</p>
-                          <p className="text-sm text-gray-900">
-                            {profileData.year} - {profileData.section}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 px-2">
-                        <User className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Academic Advisor</p>
-                          <p className="text-sm text-gray-900">{profileData.advisor}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 px-2">
-                        <IdCard className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">Current GPA</p>
-                          <p className="text-sm text-gray-900 font-semibold">{profileData.gpa}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <DropdownMenuSeparator />
-
+            <DropdownMenuContent align="end" forceMount>
               {/* Sign Out Button */}
               <DropdownMenuItem
                 onClick={handleSignOut}
@@ -500,9 +344,9 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                   onPageChange('profile');
                   setSidebarOpen(false);
                 }}
-                title={sidebarCollapsed ? "My Profile" : undefined}
+                title={sidebarCollapsed ? "Settings" : undefined}
               >
-                <User 
+                <Settings 
                   className={cn(
                     "h-5 w-5 transition-transform duration-300",
                     !sidebarCollapsed && "mr-3",
@@ -511,7 +355,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                 />
                 {!sidebarCollapsed && (
                   <span className="text-sm font-medium">
-                    My Profile
+                    Settings
                   </span>
                 )}
               </button>

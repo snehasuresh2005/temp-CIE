@@ -561,7 +561,7 @@ export function ManageLibrary() {
                 Add Item
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-9xl w-full max-h-[105vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingItem ? "Edit Library Item" : "Add New Library Item"}</DialogTitle>
               </DialogHeader>
@@ -569,16 +569,16 @@ export function ManageLibrary() {
                 {/* Left: Details and Images (2 columns) */}
                 <div className="md:col-span-2 space-y-6">
                   {/* Basic Details Row - Name, Tag ID, Quantity */}
-                  <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
+                  <div className="grid md:grid-cols-3 gap-6">
                     <div className="flex-1">
-                      <Label htmlFor="name" className="text-sm font-medium">Item Name *</Label>
+                      <Label htmlFor="name" className="text-sm font-medium">Book Name *</Label>
                       <Input
                         id="name"
                         value={editingItem ? editingItem.item_name : newItem.item_name}
                         onChange={(e) => editingItem
                           ? setEditingItem((prev) => prev && { ...prev, item_name: e.target.value })
                           : setNewItem((prev) => ({ ...prev, item_name: e.target.value }))}
-                        placeholder="NodeMCU ESP8266 Development Board"
+                        placeholder="Enter book name"
                         className={`mt-1 w-full h-9 text-sm ${formErrors.item_name ? 'border-red-500' : ''}`}
                       />
                       {formErrors.item_name && (
@@ -615,7 +615,7 @@ export function ManageLibrary() {
                     </div>
                   </div>
                   {/* Location, Category and Faculty Row */}
-                  <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
+                  <div className="grid md:grid-cols-3 gap-6">
                     <div className="flex-1 min-w-[180px] md:min-w-[220px]">
                       <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
                       <Select
@@ -686,16 +686,19 @@ export function ManageLibrary() {
                     </div>
                   </div>
                   {/* Description and Specification Row */}
-                  <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-4">
+                  <div className="grid md:grid-cols-2 gap-6">
                     <div className="flex-1">
-                      <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
+                        <Button variant="outline" size="sm" type="button" className="h-8 ml-2">gen</Button>
+                      </div>
                       <Textarea
                         id="description"
                         value={editingItem ? editingItem.item_description : newItem.item_description}
                         onChange={e => editingItem
                           ? setEditingItem((prev) => prev && { ...prev, item_description: e.target.value })
                           : setNewItem((prev) => ({ ...prev, item_description: e.target.value }))}
-                        placeholder="The NodeMCU is an open-source IoT platform..."
+                        placeholder="Enter book description"
                         className={`mt-1 w-full text-sm ${formErrors.item_description ? 'border-red-500' : ''}`}
                         rows={4}
                       />
@@ -719,7 +722,7 @@ export function ManageLibrary() {
                   </div>
                   {/* Component Images Section */}
                   <div>
-                    <div className="font-semibold mb-2">Component Images</div>
+                    <div className="font-semibold mb-2">Book Images</div>
                     <div className="flex flex-col md:flex-row gap-4">
                       <div className="flex-1">
                         <Label className="text-sm font-medium">Front Image *</Label>
@@ -1050,7 +1053,7 @@ export function ManageLibrary() {
                   <Package className="h-5 w-5" />
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Name</Label>
                     <div className="text-base font-medium text-gray-900">{itemToView.item_name}</div>
@@ -1093,7 +1096,7 @@ export function ManageLibrary() {
                   <Receipt className="h-5 w-5" />
                   Purchase Details
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
                     <div className="text-base text-gray-900">{itemToView.invoice_number || '-'}</div>
@@ -1122,7 +1125,7 @@ export function ManageLibrary() {
                   <History className="h-5 w-5" />
                   Audit Trail
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Created By</Label>
                     <div className="text-base text-gray-900">{itemToView.created_by || '-'}</div>

@@ -1,6 +1,6 @@
 import React from "react";
 import { useAuth } from "@/components/auth-provider";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Mail, Phone, MapPin, BookOpen, Users, Calendar, BadgeIcon as IdCard, User as UserIcon, Camera, FilePlus, FileText, Download, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -95,16 +95,7 @@ function buildProfileData(user: any): ProfileData | null {
         advisor: "Dr. John Smith",
       };
     default:
-      return {
-        ...baseData,
-        role: "student" as const,
-        student_id: "Unknown",
-        program: "Unknown Program",
-        year: "Unknown Year",
-        section: "Unknown Section",
-        gpa: "0.0",
-        advisor: "Unknown Advisor",
-      };
+      return null;
   }
 }
 
@@ -222,27 +213,27 @@ export function UserProfile() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto w-full">
-      <Card>
-        <CardHeader className="flex flex-col items-center gap-4">
+    <div className="p-8 max-w-4xl mx-auto w-full">
+      <Card className="bg-gradient-to-br from-white via-gray-50 to-blue-50 shadow-xl border-0 rounded-3xl overflow-hidden">
+        <CardHeader className="flex flex-col items-center gap-4 pb-0">
           <div className="relative">
-            <Avatar className="h-24 w-24">
-            <AvatarImage 
-              src={previewImage || user?.image || undefined} 
-              alt={user?.name || 'User avatar'} 
-            />
-            <AvatarFallback className="text-3xl font-semibold">
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
+            <Avatar className="h-28 w-28 ring-4 ring-blue-200 shadow-lg rounded-full">
+              <AvatarImage 
+                src={previewImage || user?.image || undefined} 
+                alt={user?.name || 'User avatar'} 
+              />
+              <AvatarFallback className="text-4xl font-bold bg-blue-100 text-blue-700">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
             {/* upload overlay */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
+              className="absolute bottom-2 right-2 bg-white border border-blue-100 rounded-full p-2 shadow-md hover:bg-blue-50 transition"
               title="Change avatar"
             >
-              <Camera className="h-4 w-4 text-gray-600" />
+              <Camera className="h-5 w-5 text-blue-600" />
             </button>
             <input
               ref={fileInputRef}
@@ -258,36 +249,40 @@ export function UserProfile() {
                 }
               }}
             />
-            </div>
-          <div className="text-center">
-            <CardTitle>{profile.name}</CardTitle>
-            <CardDescription className="capitalize mt-1">{profile.role}</CardDescription>
+          </div>
+          <div className="text-center mt-2">
+            <CardTitle className="text-2xl font-bold text-blue-800">{profile.name}</CardTitle>
+            <CardDescription className="capitalize mt-1 text-blue-500 font-medium tracking-wide">{profile.role}</CardDescription>
           </div>
         </CardHeader>
-        <Separator />
-        <CardContent className="grid gap-6 sm:grid-cols-2">
+        <Separator className="my-4" />
+        <CardContent className="grid md:grid-cols-2 gap-x-12 gap-y-8 text-base pb-8">
+
           <div className="flex items-center gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{profile.email}</span>
+            <Mail className="h-5 w-5 text-blue-400" />
+            <a href={`mailto:${profile.email}`} className="hover:underline text-blue-700 font-medium">{profile.email}</a>
           </div>
           {profile.phone && (
             <div className="flex items-center gap-3">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{profile.phone}</span>
+              <Phone className="h-5 w-5 text-blue-400" />
+              <a href={`tel:${profile.phone}`} className="hover:underline text-blue-700 font-medium">{profile.phone}</a>
             </div>
           )}
-          {/* Role specific information */}
+
+          {/* Admin Info */}
           {isAdminProfile(profile) && (
             <>
               <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.office}</span>
+                <MapPin className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">{profile.office}</span>
               </div>
               <div>
-                <p className="text-sm font-semibold mb-1 flex items-center gap-1"><UserIcon className="h-4 w-4 text-muted-foreground"/>Permissions</p>
+                <p className="text-base font-semibold mb-2 flex items-center gap-2 text-blue-700">
+                  <UserIcon className="h-5 w-5 text-blue-400"/>Permissions
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {profile.permissions.map((p: string) => (
-                    <span key={p} className="text-xs bg-gray-100 px-2 py-0.5 rounded-md">
+                    <span key={p} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-semibold">
                       {p}
                     </span>
                   ))}
@@ -296,34 +291,59 @@ export function UserProfile() {
             </>
           )}
 
+          {/* Faculty Info */}
           {isFacultyProfile(profile) && (
             <>
               <div className="flex items-center gap-3">
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.department}</span>
+                <BookOpen className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">{profile.department}</span>
               </div>
               <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.office}</span>
+                <MapPin className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">{profile.office}</span>
               </div>
               <div>
-                <p className="text-sm font-semibold mb-1 flex items-center gap-1"><Users className="h-4 w-4 text-muted-foreground"/>Assigned Courses</p>
+                <p className="text-base font-semibold mb-2 flex items-center gap-2 text-blue-700">
+                  <Users className="h-5 w-5 text-blue-400"/>Assigned Courses
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {profile.assigned_courses.map((c: string) => (
-                    <span key={c} className="text-xs bg-gray-100 px-2 py-0.5 rounded-md">
+                    <span key={c} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-md font-semibold">
                       {c}
                     </span>
                   ))}
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.office_hours}</span>
+                <Calendar className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">{profile.office_hours}</span>
               </div>
             </>
           )}
 
-          {/* Resume upload section (common for faculty and students) */}
+          {/* Student Info */}
+          {isStudentProfile(profile) && (
+            <>
+              <div className="flex items-center gap-3">
+                <BookOpen className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">{profile.program}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">{profile.year} - {profile.section}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <UserIcon className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">{profile.advisor}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <IdCard className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-gray-700">GPA: {profile.gpa}</span>
+              </div>
+            </>
+          )}
+
+          {/* Resume upload section (faculty and students only) */}
           {(user?.role === 'faculty' || user?.role === 'student') && (
             <>
               <Separator className="sm:col-span-2" />
@@ -342,7 +362,6 @@ export function UserProfile() {
                       )}
                     </div>
                   </div>
-                  
                   <div className="flex items-center gap-2">
                     {resumeUrl && (
                       <Button 
@@ -355,7 +374,6 @@ export function UserProfile() {
                         View
                       </Button>
                     )}
-                    
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -366,7 +384,6 @@ export function UserProfile() {
                       <FilePlus className="h-3 w-3" /> 
                       {isUploadingResume ? 'Uploading...' : 'Upload'}
                     </Button>
-                    
                     {resumeName && (
                       <Button 
                         size="sm" 
@@ -379,7 +396,6 @@ export function UserProfile() {
                       </Button>
                     )}
                   </div>
-                  
                   <input
                     ref={resumeInputRef}
                     type="file"
@@ -397,26 +413,6 @@ export function UserProfile() {
             </>
           )}
 
-          {isStudentProfile(profile) && (
-            <>
-              <div className="flex items-center gap-3">
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.program}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.year} - {profile.section}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.advisor}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <IdCard className="h-4 w-4 text-muted-foreground" />
-                <span>GPA: {profile.gpa}</span>
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
     </div>

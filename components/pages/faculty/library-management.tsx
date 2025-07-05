@@ -47,7 +47,7 @@ interface LibraryRequest {
   student?: {
     id: string
     user: {
-      full_name: string | null
+      name: string
       email: string | null
     }
   }
@@ -418,13 +418,13 @@ export function LibraryManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {(request.student?.user?.full_name || request.student_id).slice(0, 2).toUpperCase()}
+                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student?.user?.full_name ?? request.student_id}</h3>
+                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
                           {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student.user.email}</p>
+  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
 )}
                           <p className="text-xs text-gray-500">
                             Requested on: {new Date(request.request_date).toLocaleDateString()}
@@ -544,13 +544,13 @@ export function LibraryManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {(request.student?.user?.full_name || request.student_id).slice(0, 2).toUpperCase()}
+                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student?.user?.full_name ?? request.student_id}</h3>
+                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
                           {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student.user.email}</p>
+  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
 )}
                           <p className="text-xs text-gray-500">
                             Required by: {new Date(request.required_date).toLocaleDateString()}
@@ -609,13 +609,13 @@ export function LibraryManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {(request.student?.user?.full_name || request.student_id).slice(0, 2).toUpperCase()}
+                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student?.user?.full_name ?? request.student_id}</h3>
+                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
                           {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student.user.email}</p>
+  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
 )}
                           <p className="text-xs text-gray-500">
                             Required by: {new Date(request.required_date).toLocaleDateString()}
@@ -658,13 +658,13 @@ export function LibraryManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {(request.student?.user?.full_name || request.student_id).slice(0, 2).toUpperCase()}
+                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student?.user?.full_name ?? request.student_id}</h3>
+                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
                           {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student.user.email}</p>
+  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
 )}
                           <p className="text-xs text-gray-500">
                             Required by: {new Date(request.required_date).toLocaleDateString()}
