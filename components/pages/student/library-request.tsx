@@ -95,12 +95,20 @@ export function LibraryRequest() {
       const itemsArray = (itemsData.items || []).map((item: LibraryItem) => ({
           ...item,
           image_url: item.front_image_id ? `/library-images/${item.front_image_id}` : null,
-          back_image_url: item.back_image_id ? `/library-images/${item.back_image_id}` : null,
+          back_image_url: item.back_image_id ? `/library-images/${item.back_image_id}` : null
         }));
       setItems(itemsArray)
 
-      // Fetch user's library requests
-      const requestsResponse = await fetch(`/api/library-requests?student_id=${user.id}`)
+      // Fetch user's library requests based on role
+      let requestsResponse;
+      if (user.role === "STUDENT") {
+        requestsResponse = await fetch(`/api/library-requests?student_id=${user.id}`)
+      } else if (user.role === "FACULTY") {
+        requestsResponse = await fetch(`/api/library-requests?faculty_id=${user.id}`)
+      } else {
+        requestsResponse = await fetch(`/api/library-requests?student_id=${user.id}`)
+      }
+      
       const requestsData = await requestsResponse.json()
       // If API does not include item details, attach from items list
       const enriched = (requestsData.requests || []).map((req: any) => ({
@@ -163,25 +171,20 @@ export function LibraryRequest() {
       return
     }
 
-    if (!selectedItem || !newRequest.purpose || !newRequest.required_date) {
+    if (!selectedItem) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (newRequest.quantity > selectedItem.available_quantity) {
-      toast({
-        title: "Error",
-        description: "Requested quantity exceeds available quantity",
+        description: "No item selected",
         variant: "destructive",
       })
       return
     }
 
     try {
+      // Calculate return date (14 days from now)
+      const returnDate = new Date()
+      returnDate.setDate(returnDate.getDate() + 14)
+
       const response = await fetch("/api/library-requests", {
         method: "POST",
         headers: {
@@ -189,33 +192,19 @@ export function LibraryRequest() {
           "x-user-id": user.id
         },
         body: JSON.stringify({
-          student_id: user.id,
           item_id: selectedItem.id,
-          quantity: newRequest.quantity,
-          purpose: newRequest.purpose,
-          required_date: newRequest.required_date,
-          notes: "",
-        }),
+          quantity: 1, // Default to 1
+          purpose: "Library book request", // Default purpose
+          required_date: returnDate.toISOString(),
+        })
       })
-
       if (response.ok) {
         const data = await response.json()
         setRequests((prev) => [...prev, data.request])
 
-        // Update item availability
-        setItems((prev) =>
-          prev.map((itm) =>
-            itm.id === selectedItem.id
-              ? { ...itm, available_quantity: itm.available_quantity - newRequest.quantity }
-              : itm,
-          ),
-        )
+        // Don't update item availability here - it will be updated when faculty approves the request
+        // The quantity should only be decremented when the request is approved, not when it's submitted
 
-        setNewRequest({
-          quantity: 1,
-          purpose: "",
-          required_date: "",
-        })
         setSelectedItem(null)
         setIsRequestDialogOpen(false)
 
@@ -308,42 +297,49 @@ const handleReturnItem = async (requestId: string) => {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800"
-      case "approved":
-        return "bg-green-100 text-green-800"
-      case "rejected":
-        return "bg-red-100 text-red-800"
       case "collected":
-        return "bg-blue-100 text-blue-800"
-      case "pending_return":
-        return "bg-orange-100 text-orange-800"
-      case "returned":
-        return "bg-purple-100 text-purple-800"
+        return "bg-green-100 text-green-800"
+      case "approved":
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
-  
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case "pending":
-        return <Clock className="h-4 w-4" />
-      case "approved":
-        return <CheckCircle className="h-4 w-4" />
-      case "rejected":
-        return <XCircle className="h-4 w-4" />
       case "collected":
-        return <Package className="h-4 w-4" />
-      case "pending_return":
-        return <Clock className="h-4 w-4" />
-      case "returned":
-        return <CheckCircle className="h-4 w-4" />
+        return <CheckCircle className="h-3 w-3" />
+      case "approved":
+        return <XCircle className="h-3 w-3" />
       default:
-        return <Clock className="h-4 w-4" />
+        return <Clock className="h-3 w-3" />
     }
   }
+
+  const getStatusText = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "collected":
+        return "Collected"
+      case "approved":
+        return "Not Collected"
+      default:
+        return "Processing"
+    }
+  }
+
+  // Filter out expired requests (older than 30 days)
+  const filterActiveRequests = (requests: LibraryRequest[]) => {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    return requests.filter(request => {
+      const requestDate = new Date(request.request_date)
+      return requestDate > thirtyDaysAgo
+    })
+  }
+
+  const activeRequests = filterActiveRequests(requests)
 
   const getAvailabilityColor = (available: number, total: number) => {
     const percentage = (available / total) * 100
@@ -381,37 +377,37 @@ const handleReturnItem = async (requestId: string) => {
       <Tabs defaultValue="available" className="space-y-4">
         <TabsList>
           <TabsTrigger value="available">Available Items ({items.length})</TabsTrigger>
-          <TabsTrigger value="requests">My Requests ({requests.length})</TabsTrigger>
+          <TabsTrigger value="requests">My Requests ({activeRequests.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="available" className="space-y-4">
+        <TabsContent value="available" className="space-y-3">
           <div className="flex items-center space-x-4">
             <div className="w-80">
               <Input placeholder="Search items..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {filteredItems.map((item) => (
-              <Card key={item.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
-                <CardHeader>
+              <Card key={item.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+                <CardHeader className="p-3">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Package className="h-5 w-5" />
-                        <span>{item.item_name}</span>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center space-x-2 text-sm">
+                        <Package className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{item.item_name}</span>
                       </CardTitle>
-                      <CardDescription>{item.item_category}</CardDescription>
+                      <CardDescription className="text-xs">{item.item_category}</CardDescription>
                     </div>
-                    <Badge className={getAvailabilityColor(item.available_quantity, item.item_quantity)}>
+                    <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
                       {getAvailabilityText(item.available_quantity, item.item_quantity)}
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col">
-                  <div className="space-y-4 flex-grow">
-                    {/* Image Display with Fade Animation */}
+                <CardContent className="flex-grow flex flex-col p-3 pt-0">
+                  <div className="space-y-3 flex-grow">
+                    {/* Image Display */}
                     {(item.image_url || item.back_image_url) && (
-                      <div className="relative w-full h-48">
+                      <div className="relative w-full h-32">
                         {/* Front Image */}
                         <div 
                           className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
@@ -421,7 +417,7 @@ const handleReturnItem = async (requestId: string) => {
                           <img
                             src={item.image_url || '/placeholder.jpg'}
                             alt={`Front view of ${item.item_name}`}
-                            className="w-full h-full object-contain rounded-lg bg-gray-50"
+                            className="w-full h-full object-contain rounded-md bg-gray-50"
                             onError={(e) => {
                               e.currentTarget.src = "/placeholder.jpg"
                             }}
@@ -437,7 +433,7 @@ const handleReturnItem = async (requestId: string) => {
                             <img
                               src={item.back_image_url}
                               alt={`Back view of ${item.item_name}`}
-                              className="w-full h-full object-contain rounded-lg bg-gray-50"
+                              className="w-full h-full object-contain rounded-md bg-gray-50"
                               onError={(e) => {
                                 e.currentTarget.src = "/placeholder.jpg"
                               }}
@@ -447,49 +443,48 @@ const handleReturnItem = async (requestId: string) => {
                         {/* Navigation Buttons */}
                         {item.back_image_url && (
                           <>
-                            {/* Show right arrow when on front image */}
                             {!imageStates[item.id] && (
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
                                 onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
                               >
-                                <ChevronRight className="h-4 w-4" />
+                                <ChevronRight className="h-3 w-3" />
                               </Button>
                             )}
-                            {/* Show left arrow when on back image */}
                             {imageStates[item.id] && (
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
                                 onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
                               >
-                                <ChevronLeft className="h-4 w-4" />
+                                <ChevronLeft className="h-3 w-3" />
                               </Button>
                             )}
                           </>
                         )}
                       </div>
                     )}
-                    <div className="mb-2">
-                      <Label className="text-sm font-medium text-gray-500">Description</Label>
-                      <p className="text-sm text-gray-600 line-clamp-2">{item.item_description}</p>
-                    </div>
-                    {item.item_specification && (
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">Specifications</Label>
-                        <p className="text-sm text-gray-700">{item.item_specification}</p>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-600 line-clamp-2">{item.item_description}</p>
                       </div>
-                    )}
-                    <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
-                      <div><span className="font-semibold">Total:</span> {item.item_quantity}</div>
-                      <div><span className="font-semibold">Available:</span> {item.available_quantity}</div>
-                      <div><span className="font-semibold">Location:</span> {item.item_location}</div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                        <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
+                        <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
+                      </div>
+                      
+                      <div className="text-xs text-gray-500">
+                        <span className="font-medium">Location:</span> {item.item_location}
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-auto pt-4">
+                  
+                  <div className="mt-3">
                     <Dialog open={isRequestDialogOpen && selectedItem?.id === item.id} onOpenChange={(isOpen) => {
                       setIsRequestDialogOpen(isOpen)
                       if (!isOpen) {
@@ -499,70 +494,90 @@ const handleReturnItem = async (requestId: string) => {
                       <DialogTrigger asChild>
                         <Button
                           size="sm"
-                          className="w-full mt-2 py-2 text-sm"
-                          disabled={
-                            item.available_quantity === 0
-                          }
+                          className="w-full h-8 text-xs"
+                          disabled={item.available_quantity === 0}
                           onClick={() => setSelectedItem(item)}
                         >
-                          <Plus className="h-4 w-4 mr-2" />
-                          {item.available_quantity === 0
-                            ? "Out of Stock"
-                            : "Request Item"
-                          }
+                          <Plus className="h-3 w-3 mr-1" />
+                          {item.available_quantity === 0 ? "Out of Stock" : "Request"}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-lg">
                         {selectedItem && (
                           <>
                             <DialogHeader>
-                              <DialogTitle>Request Item</DialogTitle>
+                              <DialogTitle>Request Library Item</DialogTitle>
+                              <DialogDescription>
+                                Confirm your request for this library item
+                              </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-6 py-4">
-                              {/* Top row: Name and Quantity */}
-                              <div className="flex flex-col md:flex-row md:items-center md:space-x-6">
-                                <div className="flex-1 mb-2 md:mb-0">
-                                  <h2 className="text-xl font-bold text-gray-900">{selectedItem.item_name}</h2>
-                                  <p className="text-sm text-gray-500">{selectedItem.item_category}</p>
+                              {/* Item Details */}
+                              <div className="space-y-4">
+                                {/* Item Image */}
+                                {selectedItem.image_url && (
+                                  <div className="w-full h-48 flex justify-center">
+                                    <img
+                                      src={selectedItem.image_url}
+                                      alt={selectedItem.item_name}
+                                      className="h-full object-contain rounded-lg"
+                                      onError={(e) => {
+                                        e.currentTarget.src = "/placeholder.jpg"
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                
+                                {/* Item Info */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <h2 className="text-xl font-bold text-gray-900">{selectedItem.item_name}</h2>
+                                    <p className="text-sm text-gray-500">{selectedItem.item_category}</p>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                      <span className="text-sm font-medium text-gray-600">Available:</span>
+                                      <span className="text-sm font-semibold text-green-600">
+                                        {selectedItem.available_quantity} of {selectedItem.item_quantity}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-sm font-medium text-gray-600">Location:</span>
+                                      <span className="text-sm text-gray-900">{selectedItem.item_location}</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {selectedItem.item_description && (
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-600 mb-1">Description:</p>
+                                      <p className="text-sm text-gray-700">{selectedItem.item_description}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {selectedItem.item_specification && (
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-600 mb-1">Specifications:</p>
+                                      <p className="text-sm text-gray-700">{selectedItem.item_specification}</p>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                  <Label htmlFor="quantity" className="mb-0">Quantity *</Label>
-                                  <Input
-                                    id="quantity"
-                                    type="number"
-                                    value={newRequest.quantity}
-                                    onChange={(e) => setNewRequest((prev) => ({ ...prev, quantity: Number.parseInt(e.target.value) }))}
-                                    min="1"
-                                    max={selectedItem.available_quantity || 1}
-                                    className="w-20 px-2 py-1 text-sm"
-                                  />
-                                  <span className="text-xs text-gray-500 ml-2">Available: {selectedItem.available_quantity}</span>
+                                
+                                {/* Request Notice */}
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                  <div className="flex items-start space-x-2">
+                                    <Package className="h-5 w-5 text-blue-600 mt-0.5" />
+                                    <div>
+                                      <p className="text-sm font-medium text-blue-800">Request Information</p>
+                                      <p className="text-sm text-blue-600 mt-1">
+                                        Your request will be automatically approved and ready for collection. 
+                                        You'll receive notification once processed.
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                              {/* Purpose textarea */}
-                              <div className="space-y-2">
-                                <Label htmlFor="purpose">Purpose *</Label>
-                                <Textarea
-                                  id="purpose"
-                                  value={newRequest.purpose}
-                                  onChange={(e) => setNewRequest((prev) => ({ ...prev, purpose: e.target.value }))}
-                                  placeholder="Describe how you plan to use this item..."
-                                  rows={5}
-                                  className="w-full text-base p-3 min-h-[120px] resize-vertical border border-gray-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                />
-                              </div>
-                              {/* Required date */}
-                              <div className="space-y-2">
-                                <Label htmlFor="required_date">Return Date *</Label>
-                                <Input
-                                  id="required_date"
-                                  type="date"
-                                  value={newRequest.required_date}
-                                  onChange={(e) => setNewRequest((prev) => ({ ...prev, required_date: e.target.value }))}
-                                  min={new Date().toISOString().split("T")[0]}
-                                  className="text-base py-2 border-gray-200 rounded-lg"
-                                />
-                              </div>
+                              
                               {/* Action buttons */}
                               <div className="flex justify-end space-x-2 pt-4">
                                 <Button
@@ -574,30 +589,13 @@ const handleReturnItem = async (requestId: string) => {
                                 >
                                   Cancel
                                 </Button>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span tabIndex={0}>
-                                        <Button
-                                          onClick={handleRequestItem}
-                                          disabled={!isFormValid()}
-                                          className={!isFormValid() ? "opacity-50 cursor-not-allowed" : ""}
-                                        >
-                                          Submit Request
-                                        </Button>
-                                      </span>
-                                    </TooltipTrigger>
-                                    {(!isFormValid()) && (
-                                      <TooltipContent>
-                                        <div className="max-w-xs">
-                                          {!isFormValid() && (
-                                            <p>Please fill in all required fields (quantity, purpose, and required date)</p>
-                                          )}
-                                        </div>
-                                      </TooltipContent>
-                                    )}
-                                  </Tooltip>
-                                </TooltipProvider>
+                                <Button
+                                  onClick={handleRequestItem}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Confirm Request
+                                </Button>
                               </div>
                             </div>
                           </>
@@ -611,114 +609,40 @@ const handleReturnItem = async (requestId: string) => {
           </div>
         </TabsContent>
 
-        <TabsContent value="requests" className="space-y-4">
-          <div className="grid gap-4">
-            {requests.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No requests yet</h3>
-                  <p className="text-gray-600">Submit your first library item request to get started.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              requests.filter(Boolean).map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Package className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{request.item?.item_name ?? "Unknown Item"}</h3>
-                          <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
-                          <p className="text-xs text-gray-500">
-                            Requested: {new Date(request.request_date).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Return by: {new Date(request.required_date).toLocaleDateString()}
-                          </p>
-                          {request.purpose && (
-                            <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-                              <Label className="text-xs font-medium text-blue-700">Purpose:</Label>
-                              <p className="text-xs text-blue-600 mt-1">"{request.purpose}"</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right space-y-2">
-                        <Badge className={getStatusColor(request.status)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(request.status)}
-                            <span>{request.status}</span>
-                          </div>
-                        </Badge>
-                        {request.status === "APPROVED" && (
-                          <Button size="sm" variant="outline" onClick={() => handleMarkCollected(request.id)}>
-                            Mark Collected
-                          </Button>
-                        )}
-                        {request.status === "COLLECTED" && (
-                          <p className="text-xs text-blue-600">
-                            📦 In your possession
-                          </p>
-                        )}
-                        {request.status === "RETURNED" && (
-                          <p className="text-xs text-gray-600">
-                            ✅ Successfully returned
-                          </p>
-                        )}
-                        {request.status === "REJECTED" && (
-                          <p className="text-xs text-red-600">
-                            ❌ Request rejected
-                          </p>
-                        )}
+        <TabsContent value="requests" className="space-y-1">
+          {activeRequests.length === 0 ? (
+            <Card>
+              <CardContent className="p-4 text-center">
+                <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <h3 className="font-medium text-gray-900 mb-1">No active requests</h3>
+                <p className="text-sm text-gray-600">Submit a library item request to get started.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
+              {activeRequests.filter(Boolean).map((request) => (
+                <div key={request.id} className="bg-white border border-gray-200 rounded-md p-2 hover:shadow-sm transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 flex-1 min-w-0">
+                      <Package className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-xs text-gray-900 truncate">{request.item?.item_name ?? "Unknown"}</h4>
+                        <p className="text-xs text-gray-500">Due: {new Date(request.required_date).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <div className="mt-4 flex justify-end space-x-2">
-                      {request.status === "COLLECTED" && (
-                        <Dialog open={returnDialogOpen === request.id} onOpenChange={(open) => setReturnDialogOpen(open ? request.id : null)}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={isOverdue(request.required_date) ? "border-red-500 text-red-600 hover:bg-red-50" : ""}
-                            >
-                              {isOverdue(request.required_date) ? "⚠️ Return Overdue Item" : "Return Item"}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Confirm Return</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to mark this item as returned? This will notify the faculty for confirmation.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="flex justify-end space-x-2 mt-4">
-                              <Button variant="outline" onClick={() => setReturnDialogOpen(null)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={async () => {
-                                  await handleReturnItem(request.id)
-                                  setReturnDialogOpen(null)
-                                }}
-                              >
-                                Confirm Return
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                    <Badge className={`${getStatusColor(request.status)} text-xs px-1 py-0.5 ml-1 flex-shrink-0`}>
+                      <div className="flex items-center space-x-1">
+                        {getStatusIcon(request.status)}
+                        <span className="text-xs">{getStatusText(request.status)}</span>
+                      </div>
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
   )
-} 
+}

@@ -73,6 +73,15 @@ interface FacultyProfileData extends BaseProfileData {
   office_hours: string
 }
 
+interface ProfessorProfileData extends BaseProfileData {
+  role: "professor"
+  department: string
+  office: string
+  assigned_courses: string[]
+  specialization: string
+  office_hours: string
+}
+
 interface StudentProfileData extends BaseProfileData {
   role: "student"
   student_id: string
@@ -83,7 +92,7 @@ interface StudentProfileData extends BaseProfileData {
   advisor: string
 }
 
-type ProfileData = AdminProfileData | FacultyProfileData | StudentProfileData
+type ProfileData = AdminProfileData | FacultyProfileData | ProfessorProfileData | StudentProfileData
 
 // Type guards
 function isAdminProfile(data: ProfileData): data is AdminProfileData {
@@ -92,6 +101,10 @@ function isAdminProfile(data: ProfileData): data is AdminProfileData {
 
 function isFacultyProfile(data: ProfileData): data is FacultyProfileData {
   return data.role === "faculty"
+}
+
+function isProfessorProfile(data: ProfileData): data is ProfessorProfileData {
+  return data.role === "professor"
 }
 
 function isStudentProfile(data: ProfileData): data is StudentProfileData {
@@ -113,6 +126,8 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
         return "bg-red-100 text-red-800"
       case "faculty":
         return "bg-blue-100 text-blue-800"
+      case "professor":
+        return "bg-purple-100 text-purple-800"
       case "student":
         return "bg-green-100 text-green-800"
       default:
@@ -151,6 +166,16 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           assigned_courses: ["CS101 - Intro to Programming", "CS201 - Data Structures", "CS301 - Algorithms"],
           specialization: "Software Engineering",
           office_hours: "Mon-Wed-Fri: 2:00 PM - 4:00 PM",
+        }
+      case "professor":
+        return {
+          ...baseData,
+          role: "professor" as const,
+          department: "Computer Science",
+          office: "Engineering Building, Room 210",
+          assigned_courses: ["CS102 - Programming Fundamentals", "CS202 - Object Oriented Programming"],
+          specialization: "Database Systems",
+          office_hours: "Tue-Thu: 1:00 PM - 3:00 PM",
         }
       case "student":
         return {

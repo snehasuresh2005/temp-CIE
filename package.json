@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "db:seed": "ts-node prisma/seed.ts",
+    "db:seed": "npx tsx prisma/seed.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
     }
-
     const user = await getUserById(userId)
     if (!user || (user.role !== "faculty" && user.role !== "admin")) {
       return NextResponse.json({ error: "Access denied - Faculty or Admin only" }, { status: 403 })

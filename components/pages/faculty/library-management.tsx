@@ -3,20 +3,13 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { CheckCircle, Clock, AlertTriangle, Package, X, Check, RefreshCw } from "lucide-react"
+import { BookOpen, RotateCcw, Loader2 } from "lucide-react"
+import { CheckCircle, Clock, AlertTriangle, Package, X, Plus, ChevronRight, ChevronLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -35,16 +28,29 @@ interface LibraryItem {
   item_name: string
   item_description: string
   image_url: string | null
+  back_image_url?: string | null
+  front_image_id?: string | null
+  back_image_id?: string | null
   item_quantity: number
   available_quantity: number
   item_category: string
+  item_location: string
+  item_specification: string
   requests: LibraryRequest[]
 }
 
 interface LibraryRequest {
   id: string
-  student_id: string
+  student_id?: string
+  faculty_id?: string
   student?: {
+    id: string
+    user: {
+      name: string
+      email: string | null
+    }
+  }
+  faculty?: {
     id: string
     user: {
       name: string
@@ -60,15 +66,24 @@ interface LibraryRequest {
   status: string
   notes: string | null
   faculty_notes: string | null
+  purpose: string
   item?: LibraryItem
 }
 
 export function LibraryManagement() {
   const { user } = useAuth()
   const [items, setItems] = useState<LibraryItem[]>([])
+  const [allItems, setAllItems] = useState<LibraryItem[]>([])
   const [requests, setRequests] = useState<LibraryRequest[]>([])
-  const [loading, setLoading] = useState(true)
+  const [myRequests, setMyRequests] = useState<LibraryRequest[]>([])
+  const [requestDate, setRequestDate] = useState("")
   const [facultyNotes, setFacultyNotes] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null)
+  const [imageStates, setImageStates] = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -79,13 +94,32 @@ export function LibraryManagement() {
     if (!user) return;
     try {
       setLoading(true)
+      
+      // Fetch all library items for requesting
+      const allItemsResponse = await fetch(`/api/library-items`)
+      const allItemsData = await allItemsResponse.json()
+      const itemsArray = (allItemsData.items || []).map((item: LibraryItem) => ({
+        ...item,
+        image_url: item.front_image_id ? `/library-images/${item.front_image_id}` : null,
+        back_image_url: item.back_image_id ? `/library-images/${item.back_image_id}` : null
+      }))
+      setAllItems(itemsArray)
+
+      // Fetch items for management (if faculty has management permissions)
       const itemsResponse = await fetch(`/api/library-items?faculty_id=${user.id}`)
       const itemsData = await itemsResponse.json()
       setItems(itemsData.items || [])
 
+      // Fetch student requests for management
       const requestsResponse = await fetch(`/api/library-requests?faculty_id=${user.id}`)
       const requestsData = await requestsResponse.json()
       setRequests(requestsData.requests || [])
+
+      // Fetch my own requests as faculty
+      const myRequestsResponse = await fetch(`/api/library-requests?faculty_id=${user.id}&my_requests=true`)
+      const myRequestsData = await myRequestsResponse.json()
+      setMyRequests(myRequestsData.requests || [])
+
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({
@@ -98,11 +132,90 @@ export function LibraryManagement() {
     }
   }
 
+  // Filter available items for requesting
+  const filteredItems = allItems.filter(
+    (item) =>
+      item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.item_description.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  // Handle faculty making their own request
+  const handleRequestItem = async () => {
+    if (!user || !selectedItem) {
+      toast({
+        title: "Error",
+        description: "No item selected",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      // Calculate return date (14 days from now)
+      const returnDate = new Date()
+      returnDate.setDate(returnDate.getDate() + 14)
+
+      const response = await fetch("/api/library-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id
+        },
+        body: JSON.stringify({
+          item_id: selectedItem.id,
+          quantity: 1,
+          purpose: "Faculty library book request",
+          required_date: returnDate.toISOString(),
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMyRequests((prev) => [...prev, data.request])
+        setSelectedItem(null)
+        setIsRequestDialogOpen(false)
+        fetchData() // Refresh data
+
+        toast({
+          title: "Success",
+          description: "Library item request submitted successfully",
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to submit request")
+      }
+    } catch (error) {
+      console.error("Error submitting request:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit request",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const pendingRequests = requests.filter((req) => req.status === "PENDING")
   const activeRequests = requests.filter((req) => ["APPROVED", "COLLECTED"].includes(req.status))
   const pendingReturnRequests = requests.filter((req) => req.status === "PENDING_RETURN")
   const overdueRequests = requests.filter((req) => req.status === "COLLECTED" && isOverdue(req.required_date))
-  const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED"].includes(req.status))
+  const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED", "EXPIRED"].includes(req.status))
+
+  // Filter out expired requests (older than 30 days) for my requests
+  const filterActiveRequests = (requests: LibraryRequest[]) => {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    return requests.filter(request => {
+      const requestDate = new Date(request.request_date)
+      return requestDate > thirtyDaysAgo
+    })
+  }
+
+  const activeMyRequests = filterActiveRequests(myRequests)
 
   const handleApproveRequest = async (requestId: string, notes?: string) => {
     if (!user) return;
@@ -270,6 +383,41 @@ export function LibraryManagement() {
     }
   }
 
+  const handleExpireRequest = async (requestId: string) => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/library-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id
+        },
+        body: JSON.stringify({
+          status: "EXPIRED",
+        }),
+      })
+      if (response.ok) {
+        setRequests((prev) =>
+          prev.map((req) => (req.id === requestId ? { ...req, status: "EXPIRED" } : req)),
+        )
+        toast({
+          title: "Request Expired",
+          description: "The request has been marked as expired and books are available again",
+        })
+        fetchData() // Refresh to update inventory
+      } else {
+        throw new Error("Failed to expire request")
+      }
+    } catch (error) {
+      console.error("Error expiring request:", error)
+      toast({
+        title: "Error",
+        description: "Failed to expire request",
+        variant: "destructive",
+      })
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
@@ -285,6 +433,8 @@ export function LibraryManagement() {
       case "REJECTED":
         return "bg-red-100 text-red-800"
       case "OVERDUE":
+        return "bg-red-100 text-red-800"
+      case "EXPIRED":
         return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
@@ -307,6 +457,8 @@ export function LibraryManagement() {
         return <X className="h-4 w-4" />
       case "OVERDUE":
         return <AlertTriangle className="h-4 w-4" />
+      case "EXPIRED":
+        return <AlertTriangle className="h-4 w-4" />
       default:
         return <Clock className="h-4 w-4" />
     }
@@ -327,7 +479,7 @@ export function LibraryManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Library Items Management</h1>
         </div>
         <Button onClick={fetchData} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RotateCcw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
       </div>
@@ -392,166 +544,60 @@ export function LibraryManagement() {
         </Card>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-4">
+      <Tabs defaultValue="my-requests" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="pending">Pending Requests ({pendingRequests.length})</TabsTrigger>
-          <TabsTrigger value="active">Active Loans ({activeRequests.length})</TabsTrigger>
+          <TabsTrigger value="my-requests">My Requests ({activeMyRequests.length})</TabsTrigger>
+          <TabsTrigger value="request-item">Request New Item</TabsTrigger>
+          <TabsTrigger value="ready-collection">Ready for Collection ({activeRequests.filter(req => req.status === "APPROVED").length})</TabsTrigger>
+          <TabsTrigger value="active">Active Loans ({activeRequests.filter(req => req.status === "COLLECTED").length})</TabsTrigger>
           <TabsTrigger value="pending-returns">Pending Returns ({pendingReturnRequests.length})</TabsTrigger>
           <TabsTrigger value="completed">Completed ({completedRequests.length})</TabsTrigger>
           <TabsTrigger value="inventory">Inventory Status</TabsTrigger>
         </TabsList>
-        <TabsContent value="pending" className="space-y-4">
-          <div className="grid gap-4">
-            {pendingRequests.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No pending requests</h3>
-                  <p className="text-gray-600">All library item requests have been processed.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              pendingRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Avatar>
-                          <AvatarFallback>
-                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
-                          {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
-)}
-                          <p className="text-xs text-gray-500">
-                            Requested on: {new Date(request.request_date).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Required by: {new Date(request.required_date).toLocaleDateString()}
-                          </p>
-                          {request.notes && (
-                            <p className="text-xs text-gray-600 italic mt-1 bg-gray-50 p-2 rounded">
-                              "{request.notes}"
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="text-red-600">
-                              <X className="h-4 w-4 mr-1" />
-                              Reject
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Reject Request</DialogTitle>
-                              <DialogDescription>
-                                Provide a reason for rejecting this library item request
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label htmlFor="rejectNotes">Reason for rejection</Label>
-                                <Textarea
-                                  id="rejectNotes"
-                                  value={facultyNotes}
-                                  onChange={(e) => setFacultyNotes(e.target.value)}
-                                  placeholder="Please provide a reason for rejection..."
-                                  rows={3}
-                                />
-                              </div>
-                              <div className="flex justify-end space-x-2">
-                                <Button variant="outline" onClick={() => setFacultyNotes("")}>Cancel</Button>
-                                <Button
-                                  variant="destructive"
-                                  onClick={() => {
-                                    handleRejectRequest(request.id, facultyNotes)
-                                    setFacultyNotes("")
-                                  }}
-                                >
-                                  Reject Request
-                                </Button>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm">
-                              <Check className="h-4 w-4 mr-1" />
-                              Approve
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Approve Request</DialogTitle>
-                              <DialogDescription>Add any notes for the student (optional)</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label htmlFor="approveNotes">Notes for student (optional)</Label>
-                                <Textarea
-                                  id="approveNotes"
-                                  value={facultyNotes}
-                                  onChange={(e) => setFacultyNotes(e.target.value)}
-                                  placeholder="Any special instructions or notes..."
-                                  rows={3}
-                                />
-                              </div>
-                              <div className="flex justify-end space-x-2">
-                                <Button variant="outline" onClick={() => setFacultyNotes("")}>Cancel</Button>
-                                <Button
-                                  onClick={() => {
-                                    handleApproveRequest(request.id, facultyNotes)
-                                    setFacultyNotes("")
-                                  }}
-                                >
-                                  Approve Request
-                                </Button>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
 
-        <TabsContent value="active" className="space-y-4">
+        <TabsContent value="my-requests" className="space-y-4">
           <div className="grid gap-4">
-            {activeRequests.length === 0 ? (
+            {activeMyRequests.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No active loans</h3>
-                  <p className="text-gray-600">All library items have been returned.</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No active requests</h3>
+                  <p className="text-gray-600">You haven't made any library requests yet.</p>
+                  <Button 
+                    className="mt-4" 
+                    onClick={() => {
+                      const tabsList = document.querySelector('[role="tablist"]');
+                      const requestTab = tabsList?.querySelector('[value="request-item"]') as HTMLElement;
+                      requestTab?.click();
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Request Your First Item
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
-              activeRequests.map((request) => (
+              activeMyRequests.map((request) => (
                 <Card key={request.id} className={isOverdue(request.required_date) ? "border-red-200 bg-red-50" : ""}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <Avatar>
-                          <AvatarFallback>
-                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={request.item?.image_url || "/placeholder.jpg"}
+                            alt={request.item?.item_name || "Library Item"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "/placeholder.jpg"
+                            }}
+                          />
+                        </div>
                         <div>
-                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
-                          {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
-)}
+                          <h3 className="font-medium">{request.item?.item_name || "Unknown Item"}</h3>
+                          <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
+                          <p className="text-xs text-gray-500">
+                            Requested: {new Date(request.request_date).toLocaleDateString()}
+                          </p>
                           <p className="text-xs text-gray-500">
                             Required by: {new Date(request.required_date).toLocaleDateString()}
                           </p>
@@ -560,9 +606,19 @@ export function LibraryManagement() {
                               Collected: {new Date(request.collection_date).toLocaleDateString()}
                             </p>
                           )}
-                          {isOverdue(request.required_date) && (
+                          {request.return_date && (
+                            <p className="text-xs text-purple-600">
+                              Returned: {new Date(request.return_date).toLocaleDateString()}
+                            </p>
+                          )}
+                          {isOverdue(request.required_date) && request.status === "COLLECTED" && (
                             <p className="text-xs text-red-600 font-medium">
                               ⚠️ OVERDUE - {getOverdueDays(request.required_date)} days late
+                            </p>
+                          )}
+                          {request.faculty_notes && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              <strong>Faculty Notes:</strong> {request.faculty_notes}
                             </p>
                           )}
                         </div>
@@ -574,14 +630,237 @@ export function LibraryManagement() {
                             <span className="capitalize">{request.status.toLowerCase()}</span>
                           </div>
                         </Badge>
-                        {request.status === "APPROVED" && (
-                          <div className="text-right">
-                            <Button size="sm" onClick={() => handleMarkCollected(request.id)}>
-                              Mark Collected
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="request-item" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Plus className="h-5 w-5" />
+                <span>Request Library Items</span>
+              </CardTitle>
+              <CardDescription>
+                Browse available library items and submit requests for books you need.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex space-x-4">
+                  <Input
+                    placeholder="Search items by name, category, or description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredItems.length === 0 ? (
+                    <div className="col-span-full text-center py-8">
+                      <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
+                      <p className="text-gray-600">Try adjusting your search terms.</p>
+                    </div>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            {/* Item Image with flip functionality */}
+                            <div 
+                              className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden relative cursor-pointer"
+                              onClick={() => {
+                                if (item.back_image_url) {
+                                  setImageStates(prev => ({
+                                    ...prev,
+                                    [item.id]: !prev[item.id]
+                                  }))
+                                }
+                              }}
+                            >
+                              <img
+                                src={imageStates[item.id] && item.back_image_url ? item.back_image_url : (item.image_url || "/placeholder.jpg")}
+                                alt={item.item_name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = "/placeholder.jpg"
+                                }}
+                              />
+                              {item.back_image_url && (
+                                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded text-xs">
+                                  {imageStates[item.id] ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div>
+                              <h3 className="font-medium text-sm">{item.item_name}</h3>
+                              <p className="text-xs text-gray-600 mt-1">{item.item_category}</p>
+                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.item_description}</p>
+                            </div>
+                            
+                            <div className="flex justify-between items-center text-xs">
+                              <span className={`font-medium ${item.available_quantity > 0 ? "text-green-600" : "text-red-600"}`}>
+                                {item.available_quantity > 0 ? `${item.available_quantity} available` : "Out of stock"}
+                              </span>
+                              <span className="text-gray-500">Total: {item.item_quantity}</span>
+                            </div>
+                            
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              disabled={item.available_quantity === 0}
+                              onClick={() => {
+                                setSelectedItem(item)
+                                setIsRequestDialogOpen(true)
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Request Item
                             </Button>
                           </div>
-                        )}
-                        {request.status === "COLLECTED" && null}
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ready-collection" className="space-y-4">
+          <div className="grid gap-4">
+            {activeRequests.filter(req => req.status === "APPROVED").length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No items ready for collection</h3>
+                  <p className="text-gray-600">When items are approved, they'll appear here for collection.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              activeRequests.filter(req => req.status === "APPROVED").map((request) => (
+                <Card key={request.id} className="border-green-200 bg-green-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={request.item?.image_url || "/placeholder.jpg"}
+                            alt={request.item?.item_name || "Library Item"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "/placeholder.jpg"
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{request.item?.item_name || "Unknown Item"}</h3>
+                          <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
+                          <p className="text-xs text-gray-500">
+                            Approved: {new Date(request.approval_date || request.request_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Required by: {new Date(request.required_date).toLocaleDateString()}
+                          </p>
+                          {request.faculty_notes && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              <strong>Faculty Notes:</strong> {request.faculty_notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className="bg-green-100 text-green-800">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Ready for Collection
+                        </Badge>
+                        <Button
+                          size="sm"
+                          onClick={() => updateRequestStatus(request.id, "COLLECTED")}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Package className="h-3 w-3 mr-1" />
+                          Mark as Collected
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="active" className="space-y-4">
+          <div className="grid gap-4">
+            {activeRequests.filter(req => req.status === "COLLECTED").length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No active loans</h3>
+                  <p className="text-gray-600">Your collected items will appear here.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              activeRequests.filter(req => req.status === "COLLECTED").map((request) => (
+                <Card key={request.id} className={isOverdue(request.required_date) ? "border-red-200 bg-red-50" : "border-blue-200 bg-blue-50"}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={request.item?.image_url || "/placeholder.jpg"}
+                            alt={request.item?.item_name || "Library Item"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "/placeholder.jpg"
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{request.item?.item_name || "Unknown Item"}</h3>
+                          <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
+                          <p className="text-xs text-gray-500">
+                            Collected: {new Date(request.collection_date || request.request_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Due: {new Date(request.required_date).toLocaleDateString()}
+                          </p>
+                          {isOverdue(request.required_date) && (
+                            <p className="text-xs text-red-600 font-medium">
+                              ⚠️ OVERDUE - {getOverdueDays(request.required_date)} days late
+                            </p>
+                          )}
+                          {request.faculty_notes && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              <strong>Faculty Notes:</strong> {request.faculty_notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className={isOverdue(request.required_date) ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}>
+                          <BookOpen className="h-3 w-3 mr-1" />
+                          {isOverdue(request.required_date) ? "Overdue" : "On Loan"}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateRequestStatus(request.id, "RETURNED")}
+                          className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Return Item
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -596,40 +875,55 @@ export function LibraryManagement() {
             {pendingReturnRequests.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <RotateCcw className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No pending returns</h3>
-                  <p className="text-gray-600">All return requests have been processed.</p>
+                  <p className="text-gray-600">Items marked for return will appear here for faculty approval.</p>
                 </CardContent>
               </Card>
             ) : (
               pendingReturnRequests.map((request) => (
-                <Card key={request.id}>
+                <Card key={request.id} className="border-purple-200 bg-purple-50">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <Avatar>
-                          <AvatarFallback>
-                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={request.item?.image_url || "/placeholder.jpg"}
+                            alt={request.item?.item_name || "Library Item"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "/placeholder.jpg"
+                            }}
+                          />
+                        </div>
                         <div>
-                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
-                          {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
-)}
-                          <p className="text-xs text-gray-500">
-                            Required by: {new Date(request.required_date).toLocaleDateString()}
+                          <h3 className="font-medium">{request.item?.item_name || "Unknown Item"}</h3>
+                          <p className="text-sm text-gray-600">
+                            Requester: {request.student?.user?.name || request.faculty?.user?.name || "Unknown"}
                           </p>
-                          {request.collection_date && (
-                            <p className="text-xs text-green-600">
-                              Collected: {new Date(request.collection_date).toLocaleDateString()}
+                          <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
+                          <p className="text-xs text-gray-500">
+                            Return requested: {new Date(request.return_date || request.request_date).toLocaleDateString()}
+                          </p>
+                          {request.faculty_notes && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              <strong>Notes:</strong> {request.faculty_notes}
                             </p>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button size="sm" onClick={() => handleMarkReturned(request.id)}>
-                          Mark Returned
+                        <Badge className="bg-purple-100 text-purple-800">
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Return Pending
+                        </Badge>
+                        <Button
+                          size="sm"
+                          onClick={() => updateRequestStatus(request.id, "COMPLETED")}
+                          className="bg-purple-600 hover:bg-purple-700"
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Approve Return
                         </Button>
                       </div>
                     </div>
@@ -647,51 +941,45 @@ export function LibraryManagement() {
                 <CardContent className="p-8 text-center">
                   <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No completed requests</h3>
-                  <p className="text-gray-600">No completed or rejected requests yet.</p>
+                  <p className="text-gray-600">Completed library transactions will appear here.</p>
                 </CardContent>
               </Card>
             ) : (
               completedRequests.map((request) => (
-                <Card key={request.id}>
+                <Card key={request.id} className="border-gray-200 bg-gray-50">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <Avatar>
-                          <AvatarFallback>
-                            {(request.student?.user?.name || request.student_id).slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={request.item?.image_url || "/placeholder.jpg"}
+                            alt={request.item?.item_name || "Library Item"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "/placeholder.jpg"
+                            }}
+                          />
+                        </div>
                         <div>
-                          <h3 className="font-medium">{request.student?.user?.name ?? request.student_id}</h3>
-                          {request.student?.user?.email && (
-  <p className="text-sm text-gray-600">{request.student?.user?.email}</p>
-)}
-                          <p className="text-xs text-gray-500">
-                            Required by: {new Date(request.required_date).toLocaleDateString()}
+                          <h3 className="font-medium">{request.item?.item_name || "Unknown Item"}</h3>
+                          <p className="text-sm text-gray-600">
+                            Requester: {request.student?.user?.name || request.faculty?.user?.name || "Unknown"}
                           </p>
-                          {request.collection_date && (
-                            <p className="text-xs text-green-600">
-                              Collected: {new Date(request.collection_date).toLocaleDateString()}
-                            </p>
-                          )}
-                          {request.return_date && (
-                            <p className="text-xs text-purple-600">
-                              Returned: {new Date(request.return_date).toLocaleDateString()}
-                            </p>
-                          )}
-                          {request.status === "REJECTED" && (
-                            <p className="text-xs text-red-600 font-medium">
-                              ❌ Request rejected
+                          <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
+                          <p className="text-xs text-gray-500">
+                            Completed: {new Date(request.return_date || request.request_date).toLocaleDateString()}
+                          </p>
+                          {request.faculty_notes && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              <strong>Notes:</strong> {request.faculty_notes}
                             </p>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge className={getStatusColor(request.status)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(request.status)}
-                            <span className="capitalize">{request.status.toLowerCase()}</span>
-                          </div>
+                        <Badge className="bg-gray-100 text-gray-800">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Completed
                         </Badge>
                       </div>
                     </div>
@@ -703,7 +991,7 @@ export function LibraryManagement() {
         </TabsContent>
 
         <TabsContent value="inventory" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid gap-4">
             {items.map((item) => (
               <Card key={item.id}>
                 <CardHeader>
@@ -738,6 +1026,90 @@ export function LibraryManagement() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Request Dialog */}
+      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Request Library Item</DialogTitle>
+            <DialogDescription>
+              Submit a request for the selected library item.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedItem && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={selectedItem.image_url || "/placeholder.jpg"}
+                    alt={selectedItem.item_name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.jpg"
+                    }}
+                  />
+                </div>
+                <div>
+                  <h3 className="font-medium">{selectedItem.item_name}</h3>
+                  <p className="text-sm text-gray-600">{selectedItem.item_category}</p>
+                  <p className="text-sm text-green-600">{selectedItem.available_quantity} available</p>
+                </div>
+              </div>
+              
+              <form onSubmit={handleRequestItem} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Quantity</label>
+                  <Input
+                    type="number"
+                    value={1}
+                    min={1}
+                    readOnly
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Required Date</label>
+                  <Input
+                    type="date"
+                    value={requestDate}
+                    onChange={(e) => setRequestDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Purpose/Notes (Optional)</label>
+                  <Textarea
+                    value={facultyNotes}
+                    onChange={(e) => setFacultyNotes(e.target.value)}
+                    placeholder="Brief description of why you need this item..."
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setIsRequestDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Submit Request
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
-} 
+}

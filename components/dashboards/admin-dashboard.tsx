@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Home, Users, User as UserIcon, BookOpen, Wrench, MapPin, Calendar, Moon, Sun } from "lucide-react"
+import { Home, Users, User as UserIcon, BookOpen, Wrench, MapPin, Calendar, Building } from "lucide-react"
 import { AdminHome } from "@/components/pages/admin/admin-home"
 import { ManageFaculty } from "@/components/pages/admin/manage-faculty"
 import { ManageStudents } from "@/components/pages/admin/manage-students"
@@ -12,9 +12,11 @@ import { ManageLocations } from "@/components/pages/admin/manage-locations"
 import { ManageClassSchedules } from "@/components/pages/admin/manage-class-schedules"
 import { UserProfile } from "@/components/common/user-profile"
 import { ManageLibrary } from "@/components/pages/admin/manage-library"
+import { ManageDomains } from "@/components/pages/admin/manage-domains"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
+  { id: "domains", label: "Coordinators", icon: Building },
   { id: "faculty", label: "Faculty", icon: Users },
   { id: "students", label: "Students", icon: Users },
   { id: "courses", label: "Courses", icon: BookOpen },
@@ -32,6 +34,8 @@ export function AdminDashboard() {
     switch (currentPage) {
       case "home":
         return <AdminHome onPageChange={setCurrentPage} />
+      case "domains":
+        return <ManageDomains />
       case "faculty":
         return <ManageFaculty />
       case "students":

@@ -4,7 +4,19 @@ import { getUserById } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const domain_id = searchParams.get('domain_id')
+    
+    let whereClause = {}
+    if (domain_id) {
+      whereClause = { domain_id }
+    }
+
     const components = await prisma.labComponent.findMany({
+      where: whereClause,
+      include: {
+        domain: true
+      },
       orderBy: {
         created_at: "desc",
       },
@@ -178,4 +190,4 @@ export async function POST(request: NextRequest) {
     console.error("Create lab component error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-} 
+}
