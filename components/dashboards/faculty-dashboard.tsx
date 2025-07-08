@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Home, Users, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench } from "lucide-react"
+import { Home, Users, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench, BookOpen } from "lucide-react"
 import { FacultyHome } from "@/components/pages/faculty/faculty-home"
 import { LabComponentsManagement } from "@/components/pages/faculty/lab-components-management"
 import { FacultyCalendar } from "@/components/pages/faculty/faculty-calendar"
@@ -10,6 +10,7 @@ import { FacultyViewCourses } from "@/components/pages/faculty/view-courses"
 import { ProjectManagement } from "@/components/pages/faculty/project-management"
 import { AttendanceManagement } from "@/components/pages/faculty/attendance-management"
 import { LocationBooking } from "@/components/pages/faculty/location-booking"
+import { useRouter } from 'next/navigation'
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -17,12 +18,14 @@ const menuItems = [
   { id: "locations", label: "Book Locations", icon: MapPin },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "projects", label: "Projects", icon: FolderOpen },
+  { id: "internships", label: "Internships", icon: BookOpen },
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
 ]
 
 export function FacultyDashboard() {
   const [currentPage, setCurrentPage] = useState("home")
+  const router = useRouter()
 
   const renderPage = () => {
     switch (currentPage) {
@@ -36,6 +39,9 @@ export function FacultyDashboard() {
         return <FacultyCalendar />
       case "projects":
         return <ProjectManagement />
+      case "internships":
+        router.push('/faculty/internships')
+        return null
       case "attendance":
         return <AttendanceManagement />
       case "lab-components":

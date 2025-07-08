@@ -10,6 +10,8 @@ import { ManageCourses } from "@/components/pages/admin/manage-courses"
 import { ManageLabComponents } from "@/components/pages/admin/manage-lab-components"
 import { ManageLocations } from "@/components/pages/admin/manage-locations"
 import { ManageClassSchedules } from "@/components/pages/admin/manage-class-schedules"
+import { ManageProjects } from "@/components/pages/admin/manage-projects"
+import AdminInternshipManager from '@/components/internships/AdminInternshipManager'
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -19,6 +21,8 @@ const menuItems = [
   { id: "schedules", label: "Class Schedules", icon: Calendar },
   { id: "locations", label: "Locations", icon: MapPin },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
+  { id: "projects", label: "Projects", icon: BookOpen },
+  { id: "internships", label: "Internships", icon: BookOpen },
 ]
 
 export function AdminDashboard() {
@@ -40,6 +44,10 @@ export function AdminDashboard() {
         return <ManageLocations />
       case "lab-components":
         return <ManageLabComponents />
+      case "projects":
+        return <ManageProjects />
+      case "internships":
+        return <AdminInternshipManager />
       default:
         return <AdminHome onPageChange={setCurrentPage} />
     }

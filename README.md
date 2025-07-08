@@ -53,7 +53,7 @@ NODE_ENV="development"
 ### 4. Prisma setup
 ```bash
 pnpm prisma generate
-pnpm prisma migrate dev --name init
+pnpm prisma migrate dev --name init ### write the last file in migrattions
 pnpm prisma db seed
 ```
 

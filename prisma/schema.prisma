@@ -8,18 +8,20 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  name       String
-  password   String
-  role       UserRole
-  phone      String?
-  created_at DateTime @default(now())
-  join_date  DateTime @default(now())
-  updated_at DateTime @updatedAt
-  admin      Admin?
-  faculty    Faculty?
-  student    Student?
+  id                  String              @id @default(cuid())
+  email               String              @unique
+  name                String
+  password            String
+  role                UserRole
+  phone               String?
+  created_at          DateTime            @default(now())
+  join_date           DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
+  admin               Admin?
+  faculty             Faculty?
+  student             Student?
+  facultyProjects     InternshipProject[] @relation("FacultyProjects")
+  studentApplications Application[]       @relation("StudentApplications")
 
   @@map("users")
 }
@@ -41,7 +43,7 @@ model Faculty {
   department          String
   office              String
   specialization      String
-  faculty_id         String             @unique
+  faculty_id          String             @unique
   office_hours        String
   user_id             String             @unique
   image_id            String?
@@ -157,6 +159,11 @@ model Project {
   component_requests       ComponentRequest[]
   project_requests         ProjectRequest[]
   submissions              ProjectSubmission[]
+  mentor                   String? // mentor email
+  studentsRequired         Int                 @default(1)
+  startDate                DateTime?
+  endDate                  DateTime?
+  department               String?
 
   @@map("projects")
 }
@@ -308,9 +315,41 @@ model LocationBooking {
   @@map("location_bookings")
 }
 
+model InternshipProject {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  duration    String
+  skills      String[]
+  faculty     User          @relation("FacultyProjects", fields: [facultyId], references: [id])
+  facultyId   String
+  isAccepted  Boolean       @default(false)
+  applicants  Application[]
+  slots       Int?
+  startDate   DateTime
+  endDate     DateTime
+
+  @@index([facultyId])
+}
+
+model Application {
+  id           String            @id @default(cuid())
+  student      User              @relation("StudentApplications", fields: [studentId], references: [id])
+  studentId    String
+  internship   InternshipProject @relation(fields: [internshipId], references: [id])
+  internshipId String
+  resumeUrl    String
+  status       ApplicationStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+
+  @@index([studentId])
+  @@index([internshipId])
+}
+
 enum UserRole {
   ADMIN
   FACULTY
+  MENTOR
   STUDENT
 }
 
@@ -370,5 +409,11 @@ enum ProjectType {
 enum ProjectRequestStatus {
   PENDING
   APPROVED
+  REJECTED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
   REJECTED
 }

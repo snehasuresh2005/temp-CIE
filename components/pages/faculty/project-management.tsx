@@ -47,6 +47,8 @@ interface Project {
   type: string
   submissions?: ProjectSubmission[]
   project_requests?: ProjectRequest[]
+  mentor?: string
+  mentor_email?: string
 }
 
 interface ProjectSubmission {
@@ -413,6 +415,17 @@ export function ProjectManagement() {
     }
   }
 
+  // Filter projects where the faculty is the mentor (assuming mentor email is stored in accepted_by or similar field)
+  const myMentorProjects = projects.filter(
+    (project) => project.mentor === user?.email || project.accepted_by === user?.id || project.mentor_email === user?.email
+  );
+
+  // Helper to get applicants for a project
+  const getApplicants = (projectId: string) =>
+    projectRequests.filter(
+      (req) => req.project_id === projectId && ["PENDING", "APPROVED"].includes(req.status)
+    );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -538,14 +551,14 @@ export function ProjectManagement() {
 
       <Tabs defaultValue="projects" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="projects">My Projects</TabsTrigger>
+          <TabsTrigger value="projects">My Allotted Projects</TabsTrigger>
           <TabsTrigger value="requests">Student Projects</TabsTrigger>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="projects" className="space-y-4">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
+            {myMentorProjects.map((project) => (
               <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
                 <CardHeader className="pb-4">
                   <div className="space-y-3">
@@ -570,6 +583,31 @@ export function ProjectManagement() {
                     <div className="space-y-2">
                       <Label className="text-sm font-bold text-gray-700 tracking-wide">Description</Label>
                       <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{project.description}</p>
+                    </div>
+
+                    {/* Applicants Section */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-bold text-gray-700 tracking-wide">Applicants</Label>
+                      {getApplicants(project.id).length === 0 ? (
+                        <p className="text-sm text-gray-500">No students have applied yet.</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {getApplicants(project.id).map((req) => (
+                            <li key={req.id} className="flex items-center justify-between bg-gray-50 rounded p-2">
+                              <span>{req.student.user.name} ({req.student.user.email})</span>
+                              <span className="flex gap-2">
+                                {req.status === "PENDING" && (
+                                  <>
+                                    <Button size="sm" className="bg-green-600 text-white hover:bg-green-700" onClick={() => handleApproveRequest(req.id, "APPROVED")}>Approve</Button>
+                                    <Button size="sm" className="bg-red-600 text-white hover:bg-red-700" onClick={() => handleApproveRequest(req.id, "REJECTED")}>Reject</Button>
+                                  </>
+                                )}
+                                {req.status === "APPROVED" && <Badge className="bg-green-100 text-green-800">Selected</Badge>}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
 
                     {/* Timeline and Submissions */}
