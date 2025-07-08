@@ -19,7 +19,6 @@ model User {
   updated_at DateTime @updatedAt
   admin      Admin?
   faculty    Faculty?
-  professor  Professor?
   student    Student?
 
   @@map("users")
@@ -142,11 +141,9 @@ model ClassSchedule {
   day_of_week String
   end_time    String
   faculty_id  String?
-  professor_id String?
   start_time  String
   course      Course     @relation(fields: [course_id], references: [id])
   faculty     Faculty?   @relation(fields: [faculty_id], references: [id])
-  professor   Professor? @relation(fields: [professor_id], references: [id])
 
   @@map("class_schedules")
 }
@@ -215,9 +212,7 @@ model AttendanceRecord {
   course_id          String
   created_at         DateTime            @default(now())
   faculty_id         String?
-  professor_id       String?
   faculty            Faculty?            @relation(fields: [faculty_id], references: [id])
-  professor          Professor?          @relation(fields: [professor_id], references: [id])
   student_attendance StudentAttendance[]
 
   @@map("attendance_records")
@@ -342,7 +337,6 @@ model LocationBooking {
   id          String     @id @default(cuid())
   location_id String
   faculty_id  String?
-  professor_id String?
   start_time  DateTime
   end_time    DateTime
   purpose     String
@@ -351,7 +345,6 @@ model LocationBooking {
   created_at  DateTime   @default(now())
   updated_at  DateTime   @updatedAt
   faculty     Faculty?   @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
-  professor   Professor? @relation(fields: [professor_id], references: [id], onDelete: Cascade)
   location    Location   @relation(fields: [location_id], references: [id], onDelete: Cascade)
 
   @@map("location_bookings")
@@ -394,7 +387,6 @@ model LibraryItem {
 enum UserRole {
   ADMIN
   FACULTY
-  PROFESSOR
   STUDENT
 }
 
@@ -437,7 +429,7 @@ enum RequestStatus {
 
 model LibraryRequest {
   id             String        @id @default(cuid())
-  student_id     String?       // Make optional so faculty/professors can make requests
+  student_id     String?       // Make optional so faculty can make requests
   item_id        String
   quantity       Int
   purpose        String?
@@ -449,7 +441,6 @@ model LibraryRequest {
   notes          String?
   faculty_notes  String?
   faculty_id     String?
-  professor_id   String?
   due_date           DateTime?
   fine_amount        Decimal?           @db.Decimal(10, 2)
   fine_paid          Boolean            @default(false)
@@ -458,7 +449,6 @@ model LibraryRequest {
   item    LibraryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
   student Student?    @relation(fields: [student_id], references: [id])  // Make optional
   faculty Faculty?    @relation(fields: [faculty_id], references: [id])
-  professor Professor? @relation(fields: [professor_id], references: [id])
 
   @@map("library_requests")
 }
@@ -486,25 +476,4 @@ enum ProjectRequestStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-model Professor {
-  id                  String             @id @default(cuid())
-  department          String
-  office              String
-  specialization      String
-  professor_id        String             @unique
-  office_hours        String
-  user_id             String             @unique
-  image_id            String?
-  image_path          String?            @default("profile-img")
-  resume_id           String?
-  resume_path         String?            @default("resumes")
-  attendance_records  AttendanceRecord[]
-  class_schedules     ClassSchedule[]
-  user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  location_bookings   LocationBooking[]
-  library_requests    LibraryRequest[]
-
-  @@map("professors")
 }

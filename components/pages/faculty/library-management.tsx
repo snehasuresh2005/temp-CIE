@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { BookOpen, RotateCcw, Loader2 } from "lucide-react"
 import { CheckCircle, Clock, AlertTriangle, Package, X, Plus, ChevronRight, ChevronLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -216,6 +217,53 @@ export function LibraryManagement() {
   }
 
   const activeMyRequests = filterActiveRequests(myRequests)
+
+  // Add the missing updateRequestStatus function
+  const updateRequestStatus = async (requestId: string, status: string) => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/library-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id
+        },
+        body: JSON.stringify({
+          status: status,
+          ...(status === "COLLECTED" && { collection_date: new Date().toISOString() }),
+          ...(status === "RETURNED" && { return_date: new Date().toISOString() }),
+        }),
+      })
+      if (response.ok) {
+        setRequests((prev) =>
+          prev.map((req) => 
+            req.id === requestId 
+              ? { 
+                  ...req, 
+                  status,
+                  ...(status === "COLLECTED" && { collection_date: new Date().toISOString() }),
+                  ...(status === "RETURNED" && { return_date: new Date().toISOString() }),
+                } 
+              : req
+          ),
+        )
+        toast({
+          title: "Status Updated",
+          description: `Request has been marked as ${status.toLowerCase()}`,
+        })
+        fetchData() // Refresh data to update inventory if needed
+      } else {
+        throw new Error(`Failed to update status to ${status}`)
+      }
+    } catch (error) {
+      console.error(`Error updating status to ${status}:`, error)
+      toast({
+        title: "Error",
+        description: `Failed to update status to ${status}`,
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleApproveRequest = async (requestId: string, notes?: string) => {
     if (!user) return;

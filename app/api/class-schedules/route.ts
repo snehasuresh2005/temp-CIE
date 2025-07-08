@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const facultyId = searchParams.get("facultyId")
-    const professorId = searchParams.get("professorId")
     const courseId = searchParams.get("courseId")
     const studentId = searchParams.get("studentId")
 
@@ -30,44 +29,6 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          professor: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-        },
-      })
-    } else if (professorId) {
-      // Get schedules for a specific professor
-      schedules = await prisma.classSchedule.findMany({
-        where: { professor_id: professorId },
-        include: {
-          course: true,
-          faculty: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          professor: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
         },
       })
     } else if (courseId) {
@@ -77,16 +38,6 @@ export async function GET(request: NextRequest) {
         include: {
           course: true,
           faculty: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          professor: {
             include: {
               user: {
                 select: {
@@ -126,16 +77,6 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          professor: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
         },
       })
     } else {
@@ -144,16 +85,6 @@ export async function GET(request: NextRequest) {
         include: {
           course: true,
           faculty: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-          professor: {
             include: {
               user: {
                 select: {
@@ -188,13 +119,7 @@ export async function POST(request: NextRequest) {
       start_time: data.startTime,
       end_time: data.endTime,
       section: data.section,
-    }
-
-    // Set either faculty_id or professor_id, but not both
-    if (data.facultyId) {
-      scheduleData.faculty_id = data.facultyId
-    } else if (data.professorId) {
-      scheduleData.professor_id = data.professorId
+      faculty_id: data.facultyId,
     }
 
     const schedule = await prisma.classSchedule.create({
@@ -202,11 +127,6 @@ export async function POST(request: NextRequest) {
       include: {
         course: true,
         faculty: {
-          include: {
-            user: true,
-          },
-        },
-        professor: {
           include: {
             user: true,
           },
