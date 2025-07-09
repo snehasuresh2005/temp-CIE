@@ -703,7 +703,9 @@ export function ManageLabComponents() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Component Images</h3>
-                      <Button variant="outline" size="sm" type="button" className="h-8">gen</Button>
+                      <Button variant="outline" size="sm" type="button" className="h-8">
+                        <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
+                      </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
