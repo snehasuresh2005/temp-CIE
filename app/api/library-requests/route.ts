@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 
     let where: any = {};
 
-    // Handle user's own requests
+    // Handle user's own requests - this takes priority over other parameters
     if (userId && my_requests) {
       const user = await getUserById(userId)
       if (user?.role === "STUDENT") {
@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
         if (faculty) where.faculty_id = faculty.id
       }
     } else {
+      // Only process other parameters if NOT fetching personal requests
       // If student_id is actually a user_id, resolve to real student id
       if (student_id) {
         const studentRecord = await prisma.student.findFirst({ 
@@ -177,39 +178,56 @@ export async function POST(req: NextRequest) {
       if (!faculty) {
         return NextResponse.json({ error: "Faculty profile not found" }, { status: 404 })
       }
+      
+      // Set faculty_id for proper attribution
       requestData.faculty_id = faculty.id
       
-      // WORKAROUND: Since the database has a NOT NULL constraint on student_id,
-      // we need to find or create a special "faculty placeholder" student record
-      let facultyPlaceholderStudent = await prisma.student.findFirst({
-        where: { student_id: "FACULTY_PLACEHOLDER" }
+      // Due to database constraint on student_id NOT NULL, we need to use a system placeholder
+      // Find or create a single system-wide faculty placeholder student
+      let systemPlaceholderStudent = await prisma.student.findFirst({
+        where: { student_id: 'FACULTY_SYSTEM_PLACEHOLDER' }
       })
       
-      if (!facultyPlaceholderStudent) {
-        // Create a placeholder student record for faculty requests
+      if (!systemPlaceholderStudent) {
+        // Create a single system-wide placeholder student for all faculty requests
         try {
-          facultyPlaceholderStudent = await prisma.student.create({
+          const placeholderUser = await prisma.user.create({
             data: {
-              student_id: "FACULTY_PLACEHOLDER",
-              program: "Faculty Program",
+              email: 'faculty.system@internal.placeholder',
+              name: 'Faculty System Placeholder',
+              password: 'system_placeholder_hash',
+              role: "STUDENT",
+              phone: "+91-0000000000",
+            }
+          })
+
+          systemPlaceholderStudent = await prisma.student.create({
+            data: {
+              student_id: 'FACULTY_SYSTEM_PLACEHOLDER',
+              program: 'System Placeholder for Faculty Requests',
               year: "N/A",
               section: "N/A",
               gpa: null,
-              user_id: userId, // Temporarily use faculty user_id
+              user_id: placeholderUser.id,
             }
           })
         } catch (error) {
-          // If creation fails due to user_id constraint, find any existing student and use their ID
-          const anyStudent = await prisma.student.findFirst()
-          if (anyStudent) {
-            facultyPlaceholderStudent = anyStudent
+          console.error("Error creating system placeholder student:", error)
+          // If creation fails, try to use an existing placeholder
+          const anyPlaceholder = await prisma.student.findFirst({
+            where: { 
+              student_id: { contains: 'FACULTY_' }
+            }
+          })
+          if (anyPlaceholder) {
+            systemPlaceholderStudent = anyPlaceholder
           } else {
-            return NextResponse.json({ error: "Unable to process faculty request - no student records available" }, { status: 500 })
+            return NextResponse.json({ error: "Unable to process faculty request - database configuration issue" }, { status: 500 })
           }
         }
       }
       
-      requestData.student_id = facultyPlaceholderStudent.id
+      requestData.student_id = systemPlaceholderStudent.id
     }
 
     // Create transaction to update item availability and create request atomically

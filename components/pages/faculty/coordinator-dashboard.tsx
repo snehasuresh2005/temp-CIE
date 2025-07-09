@@ -514,15 +514,16 @@ export function CoordinatorDashboard() {
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <User className="h-4 w-4 text-gray-500" />
-                        <span className="font-medium">{request.student.user.name}</span>
+                        <span className="font-medium">
+                          {request.student?.user?.name || request.faculty?.user?.name || "Unknown User"}
+                        </span>
                       </div>
-                      {/* Only show SRN for students, not faculty */}
-                      {request.student.student_id && !request.student.student_id.includes('FACULTY') && (
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">SRN: {request.student.student_id}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">
+                          {request.student?.student_id ? `SRN: ${request.student.student_id}` : "Faculty Request"}
+                        </span>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">

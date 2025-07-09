@@ -137,8 +137,12 @@ export function LibraryDashboard() {
       }))
       setItems(itemsArray)
 
-      // Fetch user's requests - simplified approach for both students and faculty
-      const requestsResponse = await fetch(`/api/library-requests?my_requests=true`, {
+      // Fetch user's requests - fix the endpoint for faculty
+      const endpoint = (user.role as any) === "STUDENT" 
+        ? `/api/library-requests?student_id=${user.id}`
+        : `/api/library-requests?my_requests=true`
+      
+      const requestsResponse = await fetch(endpoint, {
         headers: { "x-user-id": user.id }
       })
       const requestsData = await requestsResponse.json()

@@ -114,7 +114,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       let updateData: any = {
         status: body.status,
         faculty_notes: body.faculty_notes || null,
-        faculty_id: faculty.id
+        // Don't overwrite faculty_id - it should remain as the original requester
+        // faculty_id: faculty.id  // REMOVED - this was causing the issue
       }
 
       // Handle different status transitions
@@ -273,6 +274,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         include: {
           item: { include: { domain: true } },
           student: { include: { user: true } },
+          faculty: { include: { user: true } }
         },
       })
 

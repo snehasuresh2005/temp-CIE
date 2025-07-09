@@ -116,8 +116,12 @@ export function LibraryManagement() {
       const requestsData = await requestsResponse.json()
       setRequests(requestsData.requests || [])
 
-      // Fetch my own requests as faculty
-      const myRequestsResponse = await fetch(`/api/library-requests?faculty_id=${user.id}&my_requests=true`)
+      // Fetch my own requests as faculty - use my_requests=true to get personal requests
+      const myRequestsResponse = await fetch(`/api/library-requests?my_requests=true`, {
+        headers: {
+          "x-user-id": user.id
+        }
+      })
       const myRequestsData = await myRequestsResponse.json()
       setMyRequests(myRequestsData.requests || [])
 
@@ -235,6 +239,7 @@ export function LibraryManagement() {
         }),
       })
       if (response.ok) {
+        // Update both requests and myRequests states
         setRequests((prev) =>
           prev.map((req) => 
             req.id === requestId 
@@ -247,11 +252,28 @@ export function LibraryManagement() {
               : req
           ),
         )
+        
+        // Also update myRequests if this is a faculty's own request
+        setMyRequests((prev) =>
+          prev.map((req) => 
+            req.id === requestId 
+              ? { 
+                  ...req, 
+                  status,
+                  ...(status === "COLLECTED" && { collection_date: new Date().toISOString() }),
+                  ...(status === "RETURNED" && { return_date: new Date().toISOString() }),
+                } 
+              : req
+          ),
+        )
+        
         toast({
           title: "Status Updated",
           description: `Request has been marked as ${status.toLowerCase()}`,
         })
-        fetchData() // Refresh data to update inventory if needed
+        
+        // Refresh data to ensure consistency
+        await fetchData()
       } else {
         throw new Error(`Failed to update status to ${status}`)
       }
