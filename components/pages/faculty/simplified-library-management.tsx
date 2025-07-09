@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { CheckCircle, XCircle, Package, Search, User, Calendar } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Search, User, Calendar, Package, BookOpen, CheckCircle, XCircle } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
 interface LibraryRequest {
@@ -121,125 +121,80 @@ export function SimplifiedLibraryManagement() {
         />
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Completed Transactions Table */}
+      {filteredRequests.length === 0 ? (
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Completed</p>
-                <p className="text-2xl font-bold">{requests.length}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
+          <CardContent className="p-8 text-center">
+            <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No completed transactions</h3>
+            <p className="text-gray-600">No completed or rejected requests yet.</p>
           </CardContent>
         </Card>
-        
+      ) : (
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Returned</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {requests.filter(req => req.status === "RETURNED").length}
-                </p>
-              </div>
-              <Package className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Rejected</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {requests.filter(req => req.status === "REJECTED").length}
-                </p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Completed Transactions */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Transaction History</h3>
-        
-        {filteredRequests.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No completed transactions</h3>
-              <p className="text-gray-600">No completed or rejected requests yet.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredRequests.map((request) => {
-            const requester = getRequesterInfo(request)
-            
-            return (
-              <Card key={request.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {requester.name.split(" ").map((n) => n[0]).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-medium">{requester.name}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            {requester.type}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600">{requester.email}</p>
-                        {/* Only show ID for students, not faculty */}
-                        {requester.id && requester.type === "Student" && (
-                          <p className="text-xs text-gray-500">SRN: {requester.id}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Package className="h-4 w-4 text-gray-500" />
-                        <span className="font-medium">{request.item?.item_name || "Unknown Item"}</span>
-                      </div>
-                      {getStatusBadge(request.status)}
-                    </div>
-                  </div>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[250px]">Requester</TableHead>
+                  <TableHead className="w-[200px]">Item</TableHead>
+                  <TableHead className="w-[80px]">Qty</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[100px]">Requested</TableHead>
+                  <TableHead className="w-[100px]">Collected</TableHead>
+                  <TableHead className="w-[100px]">Returned</TableHead>
+                  <TableHead className="w-[200px]">Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRequests.map((request) => {
+                  const requester = getRequesterInfo(request)
                   
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>Requested: {new Date(request.request_date).toLocaleDateString()}</span>
-                    </div>
-                    
-                    {request.collection_date && (
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>Collected: {new Date(request.collection_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    
-                    {request.return_date && (
-                      <div className="flex items-center space-x-2">
-                        <Package className="h-4 w-4 text-green-600" />
-                        <span>Returned: {new Date(request.return_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
-      </div>
+                  return (
+                    <TableRow key={request.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-sm">{requester.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {requester.type === "Student" ? `SRN: ${requester.id}` : requester.type}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-sm">{request.item?.item_name || "Unknown Item"}</div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium">{request.quantity}</span>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(request.status)}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{new Date(request.request_date).toLocaleDateString()}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {request.return_date ? new Date(request.return_date).toLocaleDateString() : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-gray-600">
+                          {request.faculty_notes ? request.faculty_notes.substring(0, 50) + (request.faculty_notes.length > 50 ? "..." : "") : "-"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
