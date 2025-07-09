@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react"
+import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -84,6 +84,10 @@ export function LibraryRequest() {
 
   const [returnDialogOpen, setReturnDialogOpen] = useState<string | null>(null)
 
+  // State for tracking viewed expired requests
+  const [viewedExpiredRequests, setViewedExpiredRequests] = useState<Set<string>>(new Set())
+  const [expiredRequestsToShow, setExpiredRequestsToShow] = useState<LibraryRequest[]>([])
+
   const fetchData = async () => {
     if (!user) return
     try {
@@ -101,9 +105,9 @@ export function LibraryRequest() {
 
       // Fetch user's library requests based on role
       let requestsResponse;
-      if (user.role === "STUDENT") {
+      if (user.role === "STUDENT" as any) {
         requestsResponse = await fetch(`/api/library-requests?student_id=${user.id}`)
-      } else if (user.role === "FACULTY") {
+      } else if (user.role === "FACULTY" as any) {
         requestsResponse = await fetch(`/api/library-requests?faculty_id=${user.id}`)
       } else {
         requestsResponse = await fetch(`/api/library-requests?student_id=${user.id}`)
@@ -227,43 +231,64 @@ export function LibraryRequest() {
   }
 
   const handleMarkCollected = async (requestId: string) => {
-  if (!user) return;
-  try {
-    const response = await fetch(`/api/library-requests/${requestId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": user.id,
-      },
-      body: JSON.stringify({
-        status: "COLLECTED",
-        collection_date: new Date().toISOString(),
-      }),
-    })
-
-    if (response.ok) {
-      fetchData()
-      toast({
-        title: "Item Collected",
-        description: "Marked as collected. Remember to return on time!",
-      })
-    } else {
-      throw new Error("Failed to mark as collected")
-    }
-  } catch (error) {
-    console.error("Error marking as collected:", error)
-    toast({
-      title: "Error",
-      description: "Failed to mark as collected",
-      variant: "destructive",
-    })
-  }
-}
-
-// Existing return handler
-const handleReturnItem = async (requestId: string) => {
     if (!user) return;
+    
     try {
+      // Optimistic update - update local state immediately
+      setRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { ...req, status: "COLLECTED", collection_date: new Date().toISOString() } 
+          : req
+      ))
+
+      const response = await fetch(`/api/library-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id,
+        },
+        body: JSON.stringify({
+          status: "COLLECTED",
+          collection_date: new Date().toISOString(),
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Item Collected",
+          description: "Marked as collected. Remember to return on time!",
+        })
+      } else {
+        // Revert optimistic update on error
+        setRequests(prev => prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: "APPROVED", collection_date: null } 
+            : req
+        ))
+        throw new Error("Failed to mark as collected")
+      }
+    } catch (error) {
+      console.error("Error marking as collected:", error)
+      toast({
+        title: "Error",
+        description: "Failed to mark as collected",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Existing return handler
+  const handleReturnItem = async (requestId: string) => {
+    if (!user) return;
+    
+    try {
+      // Optimistic update - update local state immediately
+      setRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { ...req, status: "PENDING_RETURN", return_date: new Date().toISOString() } 
+          : req
+      ))
+
       const response = await fetch(`/api/library-requests/${requestId}`, {
         method: "PATCH",
         headers: {
@@ -277,12 +302,17 @@ const handleReturnItem = async (requestId: string) => {
       })
 
       if (response.ok) {
-        fetchData()
         toast({
           title: "Return Request Submitted",
           description: "Your return request has been submitted and is pending faculty approval",
         })
       } else {
+        // Revert optimistic update on error
+        setRequests(prev => prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: "COLLECTED", return_date: null } 
+            : req
+        ))
         throw new Error("Failed to submit return request")
       }
     } catch (error) {
@@ -328,12 +358,14 @@ const handleReturnItem = async (requestId: string) => {
     }
   }
 
-  // Filter out expired requests (older than 30 days)
+  // Don't filter out expired requests - let them show in the requests section
   const filterActiveRequests = (requests: LibraryRequest[]) => {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     
     return requests.filter(request => {
+      // Keep expired requests in the list so they can be dismissed manually
+      // Only filter by date for very old requests
       const requestDate = new Date(request.request_date)
       return requestDate > thirtyDaysAgo
     })
@@ -354,6 +386,65 @@ const handleReturnItem = async (requestId: string) => {
     return "Available"
   }
 
+  // Effect to handle showing expired requests notifications
+  useEffect(() => {
+    // Filter for OVERDUE status requests that haven't been viewed yet
+    const expiredRequests = requests.filter(req => 
+      req.status === "OVERDUE" && !viewedExpiredRequests.has(req.id)
+    )
+    setExpiredRequestsToShow(expiredRequests)
+  }, [requests, viewedExpiredRequests])
+
+  const handleViewExpiredRequests = () => {
+    // Mark all expired requests as viewed so they disappear
+    const expiredRequestIds = expiredRequestsToShow.map(req => req.id)
+    setViewedExpiredRequests(new Set([...viewedExpiredRequests, ...expiredRequestIds]))
+    
+    // Clear the notification
+    setExpiredRequestsToShow([])
+    
+    toast({
+      title: "Expired Reservations",
+      description: "Your reservations have expired and were not collected in time. The items are now available for others to reserve.",
+      variant: "destructive",
+    })
+  }
+
+  // Function to dismiss an expired request
+  const handleDismissExpiredRequest = async (requestId: string) => {
+    if (!user) return;
+    
+    try {
+      const response = await fetch(`/api/library-requests/${requestId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id
+        },
+      })
+
+      if (response.ok) {
+        // Remove the expired request from the local state
+        setRequests(prev => prev.filter(req => req.id !== requestId))
+        
+        toast({
+          title: "Request Dismissed",
+          description: "Expired request has been permanently removed.",
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to dismiss request")
+      }
+    } catch (error) {
+      console.error("Error dismissing expired request:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to dismiss request",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -366,7 +457,7 @@ const handleReturnItem = async (requestId: string) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Library Item Request</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Library</h1>
         </div>
         <Button onClick={fetchData} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -621,21 +712,38 @@ const handleReturnItem = async (requestId: string) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
               {activeRequests.filter(Boolean).map((request) => (
-                <div key={request.id} className="bg-white border border-gray-200 rounded-md p-2 hover:shadow-sm transition-shadow">
+                <div key={request.id} className={`bg-white border rounded-md p-2 hover:shadow-sm transition-shadow ${
+                  request.status === "OVERDUE" ? "border-red-300 bg-red-50" : "border-gray-200"
+                }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
                       <Package className="h-3 w-3 text-blue-600 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-xs text-gray-900 truncate">{request.item?.item_name ?? "Unknown"}</h4>
                         <p className="text-xs text-gray-500">Due: {new Date(request.required_date).toLocaleDateString()}</p>
+                        {request.status === "OVERDUE" && (
+                          <p className="text-xs text-red-600 font-medium">Reservation expired - not collected in time</p>
+                        )}
                       </div>
                     </div>
-                    <Badge className={`${getStatusColor(request.status)} text-xs px-1 py-0.5 ml-1 flex-shrink-0`}>
-                      <div className="flex items-center space-x-1">
-                        {getStatusIcon(request.status)}
-                        <span className="text-xs">{getStatusText(request.status)}</span>
-                      </div>
-                    </Badge>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <Badge className={`${getStatusColor(request.status)} text-xs px-1 py-0.5`}>
+                        <div className="flex items-center space-x-1">
+                          {getStatusIcon(request.status)}
+                          <span className="text-xs">{request.status === "OVERDUE" ? "Expired" : getStatusText(request.status)}</span>
+                        </div>
+                      </Badge>
+                      {request.status === "OVERDUE" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs border-red-300 text-red-700 hover:bg-red-100"
+                          onClick={() => handleDismissExpiredRequest(request.id)}
+                        >
+                          Dismiss
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

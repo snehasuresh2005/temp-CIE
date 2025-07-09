@@ -10,7 +10,7 @@ import { ViewCourses } from "@/components/pages/student/view-courses"
 import { ViewProjects } from "@/components/pages/student/view-projects"
 import { ViewAttendance } from "@/components/pages/student/view-attendance"
 import { UserProfile } from "@/components/common/user-profile"
-import { LibraryRequest } from "@/components/pages/student/library-request"
+import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { StudentRequestHistory } from "@/components/pages/student/request-history"
 
 const menuItems = [
@@ -54,7 +54,7 @@ export function StudentDashboard() {
       case "profile":
         return <UserProfile />
       case "library":
-        return <LibraryRequest />
+        return <LibraryDashboard />
       default:
         return <StudentHome onPageChange={setCurrentPage} />
     }

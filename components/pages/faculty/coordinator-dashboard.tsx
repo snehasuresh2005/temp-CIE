@@ -296,12 +296,30 @@ export function CoordinatorDashboard() {
     }
   }
 
+  // Filter out expired requests from collection views
+  const filterActiveRequests = (requests: any[]) => {
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
+    return requests.filter(request => {
+      // If status is already EXPIRED, definitely filter out
+      if (request.status === "EXPIRED") return false
+      
+      // If status is APPROVED, check if it should be expired
+      if (request.status === "APPROVED") {
+        // Check updatedAt or fall back to request_date
+        const checkDate = new Date(request.updatedAt || request.request_date)
+        return checkDate > twoMinutesAgo
+      }
+      
+      return true
+    })
+  }
+
   const pendingComponentRequests = componentRequests.filter(req => req.status === "PENDING")
-  const collectionComponentRequests = componentRequests.filter(req => req.status === "APPROVED")
+  const collectionComponentRequests = filterActiveRequests(componentRequests.filter(req => req.status === "APPROVED"))
   const returnComponentRequests = componentRequests.filter(req => ["COLLECTED", "PENDING_RETURN"].includes(req.status))
   
   const pendingLibraryRequests = libraryRequests.filter(req => req.status === "PENDING")
-  const collectionLibraryRequests = libraryRequests.filter(req => req.status === "APPROVED")
+  const collectionLibraryRequests = filterActiveRequests(libraryRequests.filter(req => req.status === "APPROVED"))
   const returnLibraryRequests = libraryRequests.filter(req => ["COLLECTED", "PENDING_RETURN"].includes(req.status))
 
   const getItemName = (request: RequestUnion): string => {

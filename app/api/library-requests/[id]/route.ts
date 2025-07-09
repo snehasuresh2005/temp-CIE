@@ -29,33 +29,66 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: "Request not found" }, { status: 404 })
     }
 
-    // STUDENT: Allow return request with payment proof if overdue
-    if (user.role === "STUDENT" && body.status === "PENDING_RETURN") {
+    // STUDENT: Allow return request with payment proof if overdue OR allow expiring their own time-expired reservations
+    if (user.role === "STUDENT") {
       const student = await prisma.student.findUnique({ where: { user_id: userId } })
       if (!student || currentRequest.student_id !== student.id) {
         return NextResponse.json({ error: "Access denied - Not your request" }, { status: 403 })
       }
 
-      // Calculate fine if overdue
-      let fineAmount = 0
-      if (currentRequest.due_date && new Date() > currentRequest.due_date) {
-        const daysOverdue = Math.ceil((new Date().getTime() - currentRequest.due_date.getTime()) / (1000 * 60 * 60 * 24))
-        fineAmount = daysOverdue * 5 // ₹5 per day
+      // Allow students to expire their own time-expired APPROVED reservations
+      if (body.status === "OVERDUE" && currentRequest.status === "APPROVED") {
+        // Check if the reservation has actually expired (2 minutes for testing)
+        const reservationTime = new Date(currentRequest.request_date)
+        const expiryTime = new Date(reservationTime.getTime() + 2 * 60 * 1000) // Add 2 minutes for testing
+        const now = new Date()
+        
+        if (now > expiryTime) {
+          // Return the reserved quantity back to available inventory
+          await prisma.libraryItem.update({
+            where: { id: currentRequest.item_id },
+            data: { available_quantity: { increment: currentRequest.quantity } },
+          });
+
+          const updatedRequest = await prisma.libraryRequest.update({
+            where: { id: requestId },
+            data: { status: "OVERDUE" },
+            include: {
+              item: { include: { domain: true } },
+              student: { include: { user: true } },
+            },
+          })
+          return NextResponse.json({ request: updatedRequest })
+        } else {
+          return NextResponse.json({ error: "Cannot expire reservation that hasn't expired yet" }, { status: 400 })
+        }
       }
 
-      const updatedRequest = await prisma.libraryRequest.update({
-        where: { id: requestId },
-        data: {
-          status: "PENDING_RETURN",
-          fine_amount: fineAmount > 0 ? fineAmount : null,
-          payment_proof: body.payment_proof || null,
-        },
-        include: {
-          item: { include: { domain: true } },
-          student: { include: { user: true } },
-        },
-      })
-      return NextResponse.json({ request: updatedRequest })
+      // Allow return request with payment proof if overdue
+      if (body.status === "PENDING_RETURN") {
+        // Calculate fine if overdue
+        let fineAmount = 0
+        if (currentRequest.due_date && new Date() > currentRequest.due_date) {
+          const daysOverdue = Math.ceil((new Date().getTime() - currentRequest.due_date.getTime()) / (1000 * 60 * 60 * 24))
+          fineAmount = daysOverdue * 5 // ₹5 per day
+        }
+
+        const updatedRequest = await prisma.libraryRequest.update({
+          where: { id: requestId },
+          data: {
+            status: "PENDING_RETURN",
+            fine_amount: fineAmount > 0 ? fineAmount : null,
+            payment_proof: body.payment_proof || null,
+          },
+          include: {
+            item: { include: { domain: true } },
+            student: { include: { user: true } },
+          },
+        })
+        return NextResponse.json({ request: updatedRequest })
+      }
+
+      return NextResponse.json({ error: "Students can only update to PENDING_RETURN or expire time-expired reservations" }, { status: 403 })
     }
 
     // FACULTY/COORDINATOR: Check domain permissions
@@ -135,8 +168,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           });
           break
 
-        case "EXPIRED":
-          // Mark request as expired (coordinator can manually expire uncollected requests)
+        case "OVERDUE":
+          // Mark request as overdue (coordinator can manually expire uncollected requests)
           if (currentRequest.status !== "APPROVED") {
             return NextResponse.json({ error: "Can only expire approved requests" }, { status: 400 })
           }
@@ -213,7 +246,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           }
           break
 
-        case "EXPIRED":
+        case "OVERDUE":
           if (currentRequest.status === "APPROVED") {
             // Return the reserved quantity back to available inventory
             await prisma.libraryItem.update({
@@ -341,5 +374,83 @@ export async function GET(
       { error: 'Failed to fetch library request' },
       { status: 500 }
     )
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const requestId = params.id;
+  try {
+    const userId = req.headers.get("x-user-id")
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
+
+    const user = await getUserById(userId)
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
+    }
+
+    const currentRequest = await prisma.libraryRequest.findUnique({
+      where: { id: requestId },
+      include: { 
+        student: { include: { user: true } }
+      },
+    })
+
+    if (!currentRequest) {
+      return NextResponse.json({ error: "Request not found" }, { status: 404 })
+    }
+
+    // Only allow students to delete their own expired requests
+    if (user.role === "STUDENT") {
+      const student = await prisma.student.findUnique({ where: { user_id: userId } })
+      if (!student || currentRequest.student_id !== student.id) {
+        return NextResponse.json({ error: "Access denied - Not your request" }, { status: 403 })
+      }
+
+      // Check if request is expired or can be expired
+      let canDelete = false;
+      
+      if (currentRequest.status === "OVERDUE") {
+        // Already marked as overdue, can delete
+        canDelete = true;
+      } else if (currentRequest.status === "APPROVED") {
+        // Check if the reservation has actually expired (2 minutes for testing)
+        const reservationTime = new Date(currentRequest.request_date)
+        const expiryTime = new Date(reservationTime.getTime() + 2 * 60 * 1000) // Add 2 minutes for testing
+        const now = new Date()
+        
+        if (now > expiryTime) {
+          // First expire the request, then allow deletion
+          await prisma.libraryItem.update({
+            where: { id: currentRequest.item_id },
+            data: { available_quantity: { increment: currentRequest.quantity } },
+          });
+          
+          await prisma.libraryRequest.update({
+            where: { id: requestId },
+            data: { status: "OVERDUE" },
+          })
+          
+          canDelete = true;
+        }
+      }
+
+      if (!canDelete) {
+        return NextResponse.json({ error: "Can only delete expired/overdue requests" }, { status: 400 })
+      }
+
+      // Delete the expired request
+      await prisma.libraryRequest.delete({
+        where: { id: requestId }
+      })
+
+      return NextResponse.json({ message: "Expired request deleted successfully" })
+    }
+
+    return NextResponse.json({ error: "Access denied" }, { status: 403 })
+  } catch (error) {
+    console.error("Error deleting library request:", error);
+    return NextResponse.json({ error: "Failed to delete request" }, { status: 500 });
   }
 }

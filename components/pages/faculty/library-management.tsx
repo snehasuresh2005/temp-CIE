@@ -203,7 +203,7 @@ export function LibraryManagement() {
   const activeRequests = requests.filter((req) => ["APPROVED", "COLLECTED"].includes(req.status))
   const pendingReturnRequests = requests.filter((req) => req.status === "PENDING_RETURN")
   const overdueRequests = requests.filter((req) => req.status === "COLLECTED" && isOverdue(req.required_date))
-  const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED", "EXPIRED"].includes(req.status))
+  const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED", "OVERDUE"].includes(req.status))
 
   // Filter out expired requests (older than 30 days) for my requests
   const filterActiveRequests = (requests: LibraryRequest[]) => {
@@ -441,12 +441,12 @@ export function LibraryManagement() {
           "x-user-id": user.id
         },
         body: JSON.stringify({
-          status: "EXPIRED",
+          status: "OVERDUE",
         }),
       })
       if (response.ok) {
         setRequests((prev) =>
-          prev.map((req) => (req.id === requestId ? { ...req, status: "EXPIRED" } : req)),
+          prev.map((req) => (req.id === requestId ? { ...req, status: "OVERDUE" } : req)),
         )
         toast({
           title: "Request Expired",
@@ -524,7 +524,7 @@ export function LibraryManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Library Items Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Library</h1>
         </div>
         <Button onClick={fetchData} variant="outline">
           <RotateCcw className="h-4 w-4 mr-2" />
@@ -814,7 +814,7 @@ export function LibraryManagement() {
                           <h3 className="font-medium">{request.item?.item_name || "Unknown Item"}</h3>
                           <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
                           <p className="text-xs text-gray-500">
-                            Approved: {new Date(request.approval_date || request.request_date).toLocaleDateString()}
+                            Approved: {new Date(request.request_date).toLocaleDateString()}
                           </p>
                           <p className="text-xs text-gray-500">
                             Required by: {new Date(request.required_date).toLocaleDateString()}

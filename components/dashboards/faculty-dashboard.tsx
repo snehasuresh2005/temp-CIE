@@ -11,7 +11,7 @@ import { ProjectManagement } from "@/components/pages/faculty/project-management
 import { AttendanceManagement } from "@/components/pages/faculty/attendance-management"
 import { LocationBooking } from "@/components/pages/faculty/location-booking"
 import { UserProfile } from "@/components/common/user-profile"
-import { LibraryManagement } from "@/components/pages/faculty/library-management"
+import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { CoordinatorDashboard } from "@/components/pages/faculty/coordinator-dashboard"
 import { useAuth } from "@/components/auth-provider"
 
@@ -81,7 +81,7 @@ export function FacultyDashboard() {
       case "profile":
         return <UserProfile />
       case "library":
-        return <LibraryManagement />
+        return <LibraryDashboard />
       default:
         return <FacultyHome onPageChange={setCurrentPage} />
     }
