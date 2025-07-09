@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing file or facultyId' }, { status: 400 });
   }
 
-  // Get faculty record to get the facultyId (employee_id field)
+  // Get faculty record to get the facultyId (faculty_id field)
   const faculty = await prisma.faculty.findUnique({
     where: { id: facultyId }
   });
@@ -32,9 +32,8 @@ export async function POST(request: NextRequest) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
   
-  // Use the faculty's employee_id (which stores the faculty ID) as filename
-  const facultyAny = faculty as any;
-  const actualFacultyId = facultyAny.faculty_id || faculty.employee_id;
+  // Use the faculty's faculty_id as filename
+  const actualFacultyId = faculty.faculty_id;
   const fileName = `${actualFacultyId}${fileExtension}`;
   const filePath = path.join(process.cwd(), 'public', 'profile-img', fileName);
 
@@ -58,4 +57,4 @@ export async function POST(request: NextRequest) {
     facultyId: actualFacultyId,
     message: `Profile image saved as ${fileName}`
   });
-} 
+}

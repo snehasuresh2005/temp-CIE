@@ -410,34 +410,34 @@ export function LabComponentsRequest() {
           <TabsTrigger value="requests">My Requests ({requests.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="available" className="space-y-4">
+        <TabsContent value="available" className="space-y-3">
           <div className="flex items-center space-x-4">
             <div className="w-80">
               <Input placeholder="Search components..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {filteredComponents.map((component) => (
-              <Card key={component.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
-                <CardHeader>
+              <Card key={component.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+                <CardHeader className="p-3">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Package className="h-5 w-5" />
-                        <span>{component.component_name}</span>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center space-x-2 text-sm">
+                        <Package className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{component.component_name}</span>
                       </CardTitle>
-                      <CardDescription>{component.component_category}</CardDescription>
+                      <CardDescription className="text-xs">{component.component_category}</CardDescription>
                     </div>
-                    <Badge className={getAvailabilityColor(component.available_quantity, component.component_quantity)}>
+                    <Badge className={`${getAvailabilityColor(component.available_quantity, component.component_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
                       {getAvailabilityText(component.available_quantity, component.component_quantity)}
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col">
-                  <div className="space-y-4 flex-grow">
-                    {/* Image Display with Fade Animation */}
+                <CardContent className="flex-grow flex flex-col p-3 pt-0">
+                  <div className="space-y-3 flex-grow">
+                    {/* Image Display */}
                     {(component.image_url || component.back_image_url) && (
-                      <div className="relative w-full h-48">
+                      <div className="relative w-full h-32">
                         {/* Front Image */}
                         <div 
                           className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
@@ -447,7 +447,7 @@ export function LabComponentsRequest() {
                           <img
                             src={component.image_url || '/placeholder.jpg'}
                             alt={`Front view of ${component.component_name}`}
-                            className="w-full h-full object-contain rounded-lg bg-gray-50"
+                            className="w-full h-full object-contain rounded-md bg-gray-50"
                             onError={(e) => {
                               e.currentTarget.src = "/placeholder.jpg"
                             }}
@@ -464,7 +464,7 @@ export function LabComponentsRequest() {
                             <img
                               src={component.back_image_url}
                               alt={`Back view of ${component.component_name}`}
-                              className="w-full h-full object-contain rounded-lg bg-gray-50"
+                              className="w-full h-full object-contain rounded-md bg-gray-50"
                               onError={(e) => {
                                 e.currentTarget.src = "/placeholder.jpg"
                               }}
@@ -475,26 +475,24 @@ export function LabComponentsRequest() {
                         {/* Navigation Buttons */}
                         {component.back_image_url && (
                           <>
-                            {/* Show right arrow when on front image */}
                             {!imageStates[component.id] && (
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
                                 onClick={() => setImageStates(prev => ({ ...prev, [component.id]: true }))}
                               >
-                                <ChevronRight className="h-4 w-4" />
+                                <ChevronRight className="h-3 w-3" />
                               </Button>
                             )}
-                            {/* Show left arrow when on back image */}
                             {imageStates[component.id] && (
                               <Button
                                 variant="secondary"
                                 size="icon"
-                                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                                className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
                                 onClick={() => setImageStates(prev => ({ ...prev, [component.id]: false }))}
                               >
-                                <ChevronLeft className="h-4 w-4" />
+                                <ChevronLeft className="h-3 w-3" />
                               </Button>
                             )}
                           </>
@@ -502,14 +500,14 @@ export function LabComponentsRequest() {
 
                         {/* Image Indicator */}
                         {component.back_image_url && (
-                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
                             <div 
-                              className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                              className={`w-1 h-1 rounded-full transition-colors duration-300 ${
                                 !imageStates[component.id] ? 'bg-white' : 'bg-white/50'
                               }`}
                             />
                             <div 
-                              className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                              className={`w-1 h-1 rounded-full transition-colors duration-300 ${
                                 imageStates[component.id] ? 'bg-white' : 'bg-white/50'
                               }`}
                             />
@@ -518,24 +516,23 @@ export function LabComponentsRequest() {
                       </div>
                     )}
                     
-                    <div className="mb-2">
-                      <Label className="text-sm font-medium text-gray-500">Description</Label>
-                      <p className="text-sm text-gray-600 line-clamp-2">{component.component_description}</p>
-                    </div>
-                    {component.component_specification && (
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">Specifications</Label>
-                        <p className="text-sm text-gray-700">{component.component_specification}</p>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-600 line-clamp-2">{component.component_description}</p>
                       </div>
-                    )}
-                    <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
-                      <div><span className="font-semibold">Total:</span> {component.component_quantity}</div>
-                      <div><span className="font-semibold">Available:</span> {component.available_quantity}</div>
-                      <div><span className="font-semibold">Location:</span> {component.component_location}</div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                        <div><span className="font-medium">Available:</span> {component.available_quantity}</div>
+                        <div><span className="font-medium">Total:</span> {component.component_quantity}</div>
+                      </div>
+                      
+                      <div className="text-xs text-gray-500">
+                        <span className="font-medium">Location:</span> {component.component_location}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-4">
+                  <div className="mt-3">
                     <Dialog open={isRequestDialogOpen && selectedComponent?.id === component.id} onOpenChange={(isOpen) => {
                       setIsRequestDialogOpen(isOpen)
                       if (!isOpen) {
@@ -545,18 +542,18 @@ export function LabComponentsRequest() {
                       <DialogTrigger asChild>
                         <Button
                           size="sm"
-                          className="w-full mt-2 py-2 text-sm"
+                          className="w-full h-8 text-xs"
                           disabled={
                             component.available_quantity === 0 || !hasApprovedProject(component)
                           }
                           onClick={() => setSelectedComponent(component)}
                         >
-                          <Plus className="h-4 w-4 mr-2" />
+                          <Plus className="h-3 w-3 mr-1" />
                           {component.available_quantity === 0
                             ? "Out of Stock"
                             : !hasApprovedProject(component)
                               ? "No Approved Projects"
-                              : "Request Component"
+                              : "Request"
                           }
                         </Button>
                       </DialogTrigger>
@@ -710,121 +707,86 @@ export function LabComponentsRequest() {
           </div>
         </TabsContent>
 
-        <TabsContent value="requests" className="space-y-4">
-          <div className="grid gap-4">
+        <TabsContent value="requests" className="space-y-2">
+          <div className="grid gap-2">
             {requests.length === 0 ? (
               <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No requests yet</h3>
-                  <p className="text-gray-600">Submit your first component request to get started.</p>
+                <CardContent className="p-4 text-center">
+                  <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <h3 className="font-medium text-gray-900 mb-1">No requests yet</h3>
+                  <p className="text-sm text-gray-600">Submit your first component request to get started.</p>
                 </CardContent>
               </Card>
             ) : (
               requests.map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-4">
+                <Card key={request.id} className="border-l-4 border-l-orange-400">
+                  <CardContent className="p-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Package className="h-6 w-6 text-blue-600" />
+                      <div className="flex items-center space-x-3 flex-1">
+                        <div className="w-8 h-8 bg-orange-100 rounded-md flex items-center justify-center flex-shrink-0">
+                          <Package className="h-4 w-4 text-orange-600" />
                         </div>
-                        <div>
-                          <h3 className="font-medium">{request.component.component_name}</h3>
-                          <p className="text-sm text-gray-600">Quantity: {request.quantity}</p>
-                          <p className="text-xs text-gray-500">
-                            Requested: {new Date(request.request_date).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Return by: {new Date(request.required_date).toLocaleDateString()}
-                          </p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 truncate text-sm">{request.component.component_name}</h3>
+                          <div className="flex items-center space-x-3 text-xs text-gray-500 mt-0.5">
+                            <span>Qty: {request.quantity}</span>
+                            <span>Requested: {new Date(request.request_date).toLocaleDateString()}</span>
+                            <span className={isOverdue(request.required_date) ? "text-red-600 font-medium" : ""}>
+                              Due: {new Date(request.required_date).toLocaleDateString()}
+                            </span>
+                          </div>
                           {request.project_id && (
-                            <div className="space-y-1">
-                              <p className="text-xs text-blue-600">
+                            <div className="mt-1">
+                              <p className="text-xs text-orange-600">
                                 Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
                               </p>
-                              <p className={`text-xs ${getProjectStatusColor(request.project_id)}`}>
-                                Status: {getProjectStatusText(request.project_id)}
-                              </p>
-                            </div>
-                          )}
-                          {request.status === "COLLECTED" && isOverdue(request.required_date) && (
-                            <p className="text-xs text-red-600 font-medium">
-                              ⚠️ OVERDUE - Please return immediately
-                            </p>
-                          )}
-                          {request.purpose && (
-                            <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-                              <Label className="text-xs font-medium text-blue-700">Purpose:</Label>
-                              <p className="text-xs text-blue-600 mt-1">"{request.purpose}"</p>
                             </div>
                           )}
                         </div>
                       </div>
-                      <div className="text-right space-y-2">
-                        <Badge className={getStatusColor(request.status)}>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Badge className={`${getStatusColor(request.status)} text-xs px-2 py-1`}>
                           <div className="flex items-center space-x-1">
                             {getStatusIcon(request.status)}
                             <span>{request.status}</span>
                           </div>
                         </Badge>
-                        {request.status === "APPROVED" && (
-                          <p className="text-xs text-green-600">
-                            ✓ Ready for collection
-                          </p>
-                        )}
-                        {request.status === "COLLECTED" && (
-                          <p className="text-xs text-blue-600">
-                            📦 In your possession
-                          </p>
-                        )}
-                        {request.status === "RETURNED" && (
-                          <p className="text-xs text-gray-600">
-                            ✅ Successfully returned
-                          </p>
-                        )}
-                        {request.status === "REJECTED" && (
-                          <p className="text-xs text-red-600">
-                            ❌ Request rejected
-                          </p>
-                        )}
+                        
+                        {/* Status-specific messages - more compact */}
+                        <div className="text-right min-w-0">
+                          {request.status === "COLLECTED" && (
+                            <p className="text-xs text-blue-600">
+                              📦 In possession
+                            </p>
+                          )}
+                          
+                          {request.status === "RETURNED" && (
+                            <p className="text-xs text-green-600">
+                              ✅ Returned
+                            </p>
+                          )}
+                          
+                          {request.status === "REJECTED" && (
+                            <p className="text-xs text-red-600">
+                              ❌ Rejected
+                            </p>
+                          )}
+
+                          {request.status === "PENDING_RETURN" && (
+                            <p className="text-xs text-orange-600">
+                              ⏳ Pending return
+                            </p>
+                          )}
+
+                          {/* Show overdue warning for collected items */}
+                          {request.status === "COLLECTED" && isOverdue(request.required_date) && (
+                            <p className="text-xs text-red-600 font-medium">
+                              ⚠️ {getOverdueDays(request.required_date)}d overdue
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-4 flex justify-end space-x-2">
-                      {request.status === "COLLECTED" && (
-                        <Dialog open={returnDialogOpen === request.id} onOpenChange={(open) => setReturnDialogOpen(open ? request.id : null)}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={isOverdue(request.required_date) ? "border-red-500 text-red-600 hover:bg-red-50" : ""}
-                            >
-                              {isOverdue(request.required_date) ? "⚠️ Return Overdue Item" : "Return Component"}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Confirm Return</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to mark this component as returned? This will notify the faculty for confirmation.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="flex justify-end space-x-2 mt-4">
-                              <Button variant="outline" onClick={() => setReturnDialogOpen(null)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={async () => {
-                                  await handleReturnComponent(request.id)
-                                  setReturnDialogOpen(null)
-                                }}
-                              >
-                                Confirm Return
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
                     </div>
                   </CardContent>
                 </Card>

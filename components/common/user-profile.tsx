@@ -109,6 +109,20 @@ function isStudentProfile(data: ProfileData): data is StudentProfile {
   return data?.role === "student";
 }
 
+const ProfileRow: React.FC<{
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ElementType;
+}> = ({ label, value, icon: Icon }) => (
+  <tr className="border-b border-gray-200 last:border-b-0">
+    <th className="text-left font-medium text-gray-500 p-4 flex items-center gap-3 w-1/3">
+      {Icon && <Icon className="h-5 w-5 text-blue-400" />}
+      <span>{label}</span>
+    </th>
+    <td className="p-4 text-gray-800 font-medium">{value}</td>
+  </tr>
+);
+
 export function UserProfile() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const resumeInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -252,96 +266,58 @@ export function UserProfile() {
           </div>
           <div className="text-center mt-2">
             <CardTitle className="text-2xl font-bold text-blue-800">{profile.name}</CardTitle>
-            <CardDescription className="capitalize mt-1 text-blue-500 font-medium tracking-wide">{profile.role}</CardDescription>
+            <CardDescription className="mt-1 text-blue-500 font-medium tracking-wide">
+              {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
+            </CardDescription>
           </div>
         </CardHeader>
-        <Separator className="my-4" />
-        <CardContent className="grid md:grid-cols-2 gap-x-12 gap-y-8 text-base pb-8">
+        <CardContent className="px-2 sm:px-6 pb-8 pt-4">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[400px]">
+              <tbody>
+                <ProfileRow label="Email" icon={Mail} value={<a href={`mailto:${profile.email}`} className="hover:underline text-blue-600">{profile.email}</a>} />
+                {profile.phone && <ProfileRow label="Phone" icon={Phone} value={<a href={`tel:${profile.phone}`} className="hover:underline text-blue-600">{profile.phone}</a>} />}
+                
+                {/* Role-specific rows */}
+                {isAdminProfile(profile) && (
+                  <>
+                    <ProfileRow label="Office" icon={MapPin} value={profile.office} />
+                    <ProfileRow label="Permissions" icon={UserIcon} value={
+                      <div className="flex flex-wrap gap-2">
+                        {profile.permissions.map((p) => (
+                          <span key={p} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-semibold">{p}</span>
+                        ))}
+                      </div>
+                    } />
+                  </>
+                )}
 
-          <div className="flex items-center gap-3">
-            <Mail className="h-5 w-5 text-blue-400" />
-            <a href={`mailto:${profile.email}`} className="hover:underline text-blue-700 font-medium">{profile.email}</a>
+                {isFacultyProfile(profile) && (
+                    <>
+                        <ProfileRow label="Department" icon={BookOpen} value={profile.department} />
+                        <ProfileRow label="Office" icon={MapPin} value={profile.office} />
+                        <ProfileRow label="Office Hours" icon={Calendar} value={profile.office_hours} />
+                        <ProfileRow label="Assigned Courses" icon={Users} value={
+                            <div className="flex flex-wrap gap-2">
+                                {profile.assigned_courses.map((c) => (
+                                    <span key={c} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-md font-semibold">{c}</span>
+                                ))}
+                            </div>
+                        } />
+                    </>
+                )}
+
+                {isStudentProfile(profile) && (
+                    <>
+                        <ProfileRow label="Program" icon={BookOpen} value={profile.program} />
+                        <ProfileRow label="Year & Section" icon={Users} value={`${profile.year} - ${profile.section}`} />
+                        <ProfileRow label="Advisor" icon={UserIcon} value={profile.advisor} />
+                        <ProfileRow label="GPA" icon={IdCard} value={profile.gpa} />
+                    </>
+                )}
+              </tbody>
+            </table>
           </div>
-          {profile.phone && (
-            <div className="flex items-center gap-3">
-              <Phone className="h-5 w-5 text-blue-400" />
-              <a href={`tel:${profile.phone}`} className="hover:underline text-blue-700 font-medium">{profile.phone}</a>
-            </div>
-          )}
-
-          {/* Admin Info */}
-          {isAdminProfile(profile) && (
-            <>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">{profile.office}</span>
-              </div>
-              <div>
-                <p className="text-base font-semibold mb-2 flex items-center gap-2 text-blue-700">
-                  <UserIcon className="h-5 w-5 text-blue-400"/>Permissions
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {profile.permissions.map((p: string) => (
-                    <span key={p} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-semibold">
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Faculty Info */}
-          {isFacultyProfile(profile) && (
-            <>
-              <div className="flex items-center gap-3">
-                <BookOpen className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">{profile.department}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">{profile.office}</span>
-              </div>
-              <div>
-                <p className="text-base font-semibold mb-2 flex items-center gap-2 text-blue-700">
-                  <Users className="h-5 w-5 text-blue-400"/>Assigned Courses
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {profile.assigned_courses.map((c: string) => (
-                    <span key={c} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-md font-semibold">
-                      {c}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">{profile.office_hours}</span>
-              </div>
-            </>
-          )}
-
-          {/* Student Info */}
-          {isStudentProfile(profile) && (
-            <>
-              <div className="flex items-center gap-3">
-                <BookOpen className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">{profile.program}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">{profile.year} - {profile.section}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <UserIcon className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">{profile.advisor}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <IdCard className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-gray-700">GPA: {profile.gpa}</span>
-              </div>
-            </>
-          )}
 
           {/* Resume upload section (faculty and students only) */}
           {(user?.role === 'faculty' || user?.role === 'student') && (

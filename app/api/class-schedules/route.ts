@@ -112,16 +112,18 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json()
 
+    const scheduleData: any = {
+      course_id: data.courseId,
+      room: data.room,
+      day_of_week: data.dayOfWeek,
+      start_time: data.startTime,
+      end_time: data.endTime,
+      section: data.section,
+      faculty_id: data.facultyId,
+    }
+
     const schedule = await prisma.classSchedule.create({
-      data: {
-        course_id: data.courseId,
-        faculty_id: data.facultyId,
-        room: data.room,
-        day_of_week: data.dayOfWeek,
-        start_time: data.startTime,
-        end_time: data.endTime,
-        section: data.section,
-      },
+      data: scheduleData,
       include: {
         course: true,
         faculty: {

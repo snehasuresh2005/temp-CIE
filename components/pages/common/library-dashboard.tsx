@@ -1,0 +1,923 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useAuth } from "@/components/auth-provider"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
+import { 
+  BookOpen, 
+  Package, 
+  AlertTriangle, 
+  Clock, 
+  Search,
+  Plus,
+  RefreshCw,
+  CheckCircle
+} from "lucide-react"
+
+// Utility functions
+export function isOverdue(dueDate: string): boolean {
+  return new Date(dueDate) < new Date()
+}
+
+export function getOverdueDays(dueDate: string): number {
+  const diffMs = new Date().getTime() - new Date(dueDate).getTime()
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+}
+
+export function getTimeUntilExpiry(requestDate: string): { expired: boolean, timeLeft: string, minutesLeft: number } {
+  const reservationTime = new Date(requestDate)
+  const expiryTime = new Date(reservationTime.getTime() + 120 * 1000) // Add 2 hours
+  const now = new Date()
+  const timeLeft = expiryTime.getTime() - now.getTime()
+  
+  if (timeLeft <= 0) {
+    return { expired: true, timeLeft: "Expired", minutesLeft: 0 }
+  }
+  
+  const hours = Math.floor(timeLeft / (1000 * 60 * 60))
+  const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+  const totalMinutes = Math.floor(timeLeft / (1000 * 60))
+  
+  if (hours > 0) {
+    return { expired: false, timeLeft: `${hours}h ${minutes}m`, minutesLeft: totalMinutes }
+  } else {
+    return { expired: false, timeLeft: `${minutes}m`, minutesLeft: totalMinutes }
+  }
+}
+
+interface LibraryItem {
+  id: string
+  item_name: string
+  item_description: string
+  item_category: string
+  item_quantity: number
+  available_quantity: number
+  item_location: string
+  image_url: string | null
+  back_image_url?: string | null
+  front_image_id?: string | null
+  back_image_id?: string | null
+}
+
+interface LibraryRequest {
+  id: string
+  item_id: string
+  quantity: number
+  purpose?: string
+  request_date: string
+  required_date: string
+  status: string
+  collection_date?: string
+  return_date?: string
+  due_date?: string
+  notes?: string
+  faculty_notes?: string
+  fine_amount?: number
+  fine_paid?: boolean
+  item?: LibraryItem
+  student?: {
+    user: {
+      name: string
+      email: string
+    }
+  }
+  faculty?: {
+    user: {
+      name: string
+      email: string
+    }
+  }
+}
+
+type ViewType = 'browse' | 'reserved' | 'active' | 'overdue'
+
+export function LibraryDashboard() {
+  const { user } = useAuth()
+  const [items, setItems] = useState<LibraryItem[]>([])
+  const [requests, setRequests] = useState<LibraryRequest[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null)
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [currentView, setCurrentView] = useState<ViewType>('browse')
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const { toast } = useToast()
+
+  // Update time every minute for countdown display
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [user])
+
+  const fetchData = async () => {
+    if (!user) return
+    try {
+      setLoading(true)
+      
+      // Fetch available library items
+      const itemsResponse = await fetch(`/api/library-items`)
+      const itemsData = await itemsResponse.json()
+      const itemsArray = (itemsData.items || []).map((item: LibraryItem) => ({
+        ...item,
+        image_url: item.front_image_id ? `/library-images/${item.front_image_id}` : null,
+        back_image_url: item.back_image_id ? `/library-images/${item.back_image_id}` : null
+      }))
+      setItems(itemsArray)
+
+      // Fetch user's requests - fix the endpoint for faculty
+      const endpoint = (user.role as any) === "STUDENT" 
+        ? `/api/library-requests?student_id=${user.id}`
+        : `/api/library-requests?my_requests=true`
+      
+      const requestsResponse = await fetch(endpoint, {
+        headers: { "x-user-id": user.id }
+      })
+      const requestsData = await requestsResponse.json()
+      
+      // Map image URLs to requests based on items data
+      const enrichedRequests = (requestsData.requests || []).map((request: LibraryRequest) => {
+        const matchingItem = itemsArray.find((item: LibraryItem) => item.id === request.item_id)
+        if (matchingItem && request.item) {
+          request.item.image_url = matchingItem.image_url
+          request.item.back_image_url = matchingItem.back_image_url
+        }
+        return request
+      })
+      
+      setRequests(enrichedRequests)
+
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load library data",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRequestItem = async () => {
+    if (!user || !selectedItem) return
+
+    try {
+      setIsSubmitting(true)
+      // Calculate return date (14 days from now)
+      const returnDate = new Date()
+      returnDate.setDate(returnDate.getDate() + 14)
+
+      const response = await fetch("/api/library-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id
+        },
+        body: JSON.stringify({
+          item_id: selectedItem.id,
+          quantity: 1,
+          purpose: `${(user.role as any) === "STUDENT" ? "Student" : "Faculty"} library request`,
+          required_date: returnDate.toISOString(),
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setRequests((prev) => [...prev, data.request])
+        setSelectedItem(null)
+        setIsRequestDialogOpen(false)
+        fetchData() // Refresh data
+        
+        toast({
+          title: "Success",
+          description: "Item reserved successfully! It will appear in your Reserved section.",
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to submit request")
+      }
+    } catch (error) {
+      console.error("Error submitting request:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit request",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Function to dismiss an expired request
+  const handleDismissExpiredRequest = async (requestId: string) => {
+    if (!user) return;
+    
+    try {
+      console.log('Starting dismiss process for request:', requestId);
+      
+      // First, update the status to EXPIRED before deletion
+      const updateResponse = await fetch(`/api/library-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id
+        },
+        body: JSON.stringify({
+          status: "EXPIRED"
+        })
+      })
+
+      console.log('Update response status:', updateResponse.status);
+      
+      if (updateResponse.ok) {
+        console.log('Status updated successfully, now deleting...');
+        
+        // Now delete the expired request
+        const deleteResponse = await fetch(`/api/library-requests/${requestId}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": user.id
+          },
+        })
+
+        console.log('Delete response status:', deleteResponse.status);
+
+        if (deleteResponse.ok) {
+          // Remove the expired request from the local state
+          setRequests(prev => prev.filter(req => req.id !== requestId))
+          
+          toast({
+            title: "Request Dismissed",
+            description: "Expired reservation has been permanently removed.",
+          })
+        } else {
+          const errorData = await deleteResponse.json()
+          console.error('Delete error data:', errorData);
+          throw new Error(errorData.error || "Failed to delete request")
+        }
+      } else {
+        const errorData = await updateResponse.json()
+        console.error('Update error data:', errorData);
+        throw new Error(errorData.error || "Failed to update request status")
+      }
+    } catch (error) {
+      console.error("Error dismissing expired request:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to dismiss request",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Filter requests by status
+  const reservedItems = requests.filter((req) => req.status === "APPROVED")
+  const activeLoans = requests.filter((req) => req.status === "COLLECTED")
+  const overdueItems = activeLoans.filter((req) => req.due_date && isOverdue(req.due_date))
+
+  // Get list of book IDs that user has already borrowed (reserved, active, or overdue)
+  const reservedBookIds = new Set(
+    requests
+      .filter((req) => req.status === "APPROVED")
+      .map((req) => req.item_id)
+  )
+  
+  const borrowedBookIds = new Set(
+    requests
+      .filter((req) => req.status === "COLLECTED")
+      .map((req) => req.item_id)
+  )
+
+  // Filter available items for requesting
+  const filteredItems = items.filter(
+    (item) =>
+      item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.item_description.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  // Check if user can borrow a specific book
+  const canBorrowBook = (item: LibraryItem) => {
+    return item.available_quantity > 0 && !reservedBookIds.has(item.id) && !borrowedBookIds.has(item.id)
+  }
+
+  const getStatusBadge = (status: string, overdue?: boolean) => {
+    if (status === "COLLECTED" && overdue) {
+      return <Badge className="bg-red-100 text-red-800">Overdue</Badge>
+    }
+    
+    switch (status) {
+      case "APPROVED":
+        return <Badge className="bg-blue-100 text-blue-800">Reserved</Badge>
+      case "COLLECTED":
+        return <Badge className="bg-green-100 text-green-800">Active Loan</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
+  const renderContent = () => {
+    switch (currentView) {
+      case 'reserved':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Reserved Items</h2>
+            {reservedItems.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No reserved items</h3>
+                  <p className="text-gray-600">Items you reserve will appear here, ready for collection.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {reservedItems.map((request) => {
+                  const expiryInfo = getTimeUntilExpiry(request.request_date)
+                  const isUrgent = expiryInfo.minutesLeft <= 30 && !expiryInfo.expired
+                  
+                  return (
+                    <Card key={request.id} className={`hover:shadow-md transition-shadow ${
+                      expiryInfo.expired 
+                        ? 'border-red-300 bg-red-50' 
+                        : isUrgent 
+                          ? 'border-orange-300 bg-orange-50' 
+                          : ''
+                    }`}>
+                      <CardContent className="p-3">
+                        <div className="space-y-3">
+                          {/* Book cover */}
+                          <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden relative">
+                            <img
+                              src={request.item?.image_url || "/placeholder.jpg"}
+                              alt={request.item?.item_name || "Library Item"}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = "/placeholder.jpg"
+                              }}
+                            />
+                            {expiryInfo.expired && (
+                              <div className="absolute inset-0 bg-red-600 bg-opacity-75 flex items-center justify-center">
+                                <Badge className="bg-red-100 text-red-800 text-xs">
+                                  EXPIRED
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+                              {request.item?.item_name || "Unknown Item"}
+                            </h3>
+                            <div className="flex items-center space-x-1">
+                              <Clock className={`h-3 w-3 ${
+                                expiryInfo.expired 
+                                  ? 'text-red-600' 
+                                  : isUrgent 
+                                    ? 'text-orange-600' 
+                                    : 'text-blue-600'
+                              }`} />
+                              <p className={`text-xs font-medium ${
+                                expiryInfo.expired 
+                                  ? 'text-red-600' 
+                                  : isUrgent 
+                                    ? 'text-orange-600' 
+                                    : 'text-blue-600'
+                              }`}>
+                                {expiryInfo.expired 
+                                  ? 'Expired' 
+                                  : `${expiryInfo.timeLeft} left`
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1 text-xs text-gray-600">
+                            <p>Reserved: {new Date(request.request_date).toLocaleDateString()}</p>
+                            <p className="font-medium text-gray-700">
+                              Due: {new Date(request.required_date).toLocaleDateString()}
+                            </p>
+                            {expiryInfo.expired && (
+                              <p className="text-red-600 font-medium text-xs">
+                                ⚠️ This reservation has expired and will be removed
+                              </p>
+                            )}
+                            {isUrgent && !expiryInfo.expired && (
+                              <p className="text-orange-600 font-medium text-xs">
+                                ⏰ Collect soon! Expires in {expiryInfo.timeLeft}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {expiryInfo.expired && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full h-8 text-xs border-red-300 text-red-700 hover:bg-red-100"
+                              onClick={() => handleDismissExpiredRequest(request.id)}
+                            >
+                              Dismiss
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+
+      case 'active':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Active Loans</h2>
+            {activeLoans.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No active loans</h3>
+                  <p className="text-gray-600">Items you collect will appear here.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {activeLoans.map((request) => {
+                  const overdue = request.due_date && isOverdue(request.due_date)
+                  const daysOverdue = request.due_date ? getOverdueDays(request.due_date) : 0
+                  
+                  return (
+                    <Card key={request.id} className={overdue ? "border-red-200 bg-red-50 hover:shadow-md transition-shadow" : "hover:shadow-md transition-shadow"}>
+                      <CardContent className="p-3">
+                        <div className="space-y-3">
+                          {/* Book cover */}
+                          <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
+                            <img
+                              src={request.item?.image_url || "/placeholder.jpg"}
+                              alt={request.item?.item_name || "Library Item"}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = "/placeholder.jpg"
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+                              {request.item?.item_name || "Unknown Item"}
+                            </h3>
+                            <p className={`text-xs font-medium ${
+                              overdue ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {overdue ? `${daysOverdue} days overdue` : 'Currently reading'}
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-1 text-xs text-gray-600">
+                            <p>Collected: {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "N/A"}</p>
+                            <p className={`font-medium ${overdue ? 'text-red-600' : 'text-gray-700'}`}>
+                              Due: {request.due_date ? new Date(request.due_date).toLocaleDateString() : "N/A"}
+                            </p>
+                            {overdue && (
+                              <p className="text-red-600 font-medium">
+                                Fine: ₹{daysOverdue * 5} (₹5/day)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+
+      case 'overdue':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Overdue Items</h2>
+            {overdueItems.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No overdue items</h3>
+                  <p className="text-gray-600">Keep up the good work! Return items on time.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {overdueItems.map((request) => {
+                  const daysOverdue = request.due_date ? getOverdueDays(request.due_date) : 0
+                  const fineAmount = daysOverdue * 5 // ₹5 per day
+                  
+                  return (
+                    <Card key={request.id} className="border-red-300 bg-red-50 hover:shadow-md transition-shadow">
+                      <CardContent className="p-3">
+                        <div className="space-y-3">
+                          {/* Book cover */}
+                          <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
+                            <img
+                              src={request.item?.image_url || "/placeholder.jpg"}
+                              alt={request.item?.item_name || "Library Item"}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = "/placeholder.jpg"
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+                              {request.item?.item_name || "Unknown Item"}
+                            </h3>
+                            <p className="text-xs text-red-600 font-medium">
+                              {daysOverdue} days overdue
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-1 text-xs text-gray-600">
+                            <p>Due: {request.due_date ? new Date(request.due_date).toLocaleDateString() : "N/A"}</p>
+                            <p className="font-medium text-red-600">
+                              Fine: ₹{fineAmount} (₹5/day)
+                            </p>
+                            <p className="text-gray-500">
+                              Collected: {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+
+      default: // 'browse'
+        return (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Search className="h-5 w-5" />
+                  <span>Library Items</span>
+                </CardTitle>
+                <CardDescription>
+                  Reserved items will be ready for collection. Do collect within 2 hours of reserving the book.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Search items by name, category, or description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {filteredItems.length === 0 ? (
+                      <div className="col-span-full text-center py-8">
+                        <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
+                        <p className="text-gray-600">Try adjusting your search terms.</p>
+                      </div>
+                    ) : (
+                      filteredItems.map((item) => {
+                        const isReserved = reservedBookIds.has(item.id)
+                        const isBorrowed = borrowedBookIds.has(item.id)
+                        const isOutOfStock = item.available_quantity === 0
+                        const canBorrow = canBorrowBook(item)
+                        const isUnavailable = isReserved || isBorrowed || isOutOfStock
+                        
+                        return (
+                          <Card 
+                            key={item.id} 
+                            className={`cursor-pointer transition-shadow ${
+                              isUnavailable
+                                ? 'opacity-60 bg-gray-50 border-gray-200' 
+                                : 'hover:shadow-md'
+                            }`}
+                          >
+                            <CardContent className="p-3">
+                              <div className="space-y-3">
+                                {/* Book cover with proper aspect ratio */}
+                                <div className={`w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden relative ${
+                                  isUnavailable ? 'filter grayscale' : ''
+                                }`}>
+                                  <img
+                                    src={item.image_url || "/placeholder.jpg"}
+                                    alt={item.item_name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.src = "/placeholder.jpg"
+                                    }}
+                                  />
+                                  {isUnavailable && (
+                                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                                      <Badge className={`text-xs ${
+                                        isReserved 
+                                          ? 'bg-blue-100 text-blue-800' 
+                                          : isBorrowed
+                                            ? 'bg-red-100 text-red-800'
+                                            : 'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {isReserved 
+                                          ? 'Reserved' 
+                                          : isBorrowed
+                                            ? 'Already Borrowed'
+                                            : 'Out of Stock'
+                                        }
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="space-y-1">
+                                  <h3 className={`font-medium text-sm line-clamp-2 leading-tight ${
+                                    isUnavailable ? 'text-gray-500' : ''
+                                  }`}>
+                                    {item.item_name}
+                                  </h3>
+                                  <p className={`text-xs ${
+                                    isUnavailable ? 'text-gray-400' : 'text-gray-600'
+                                  }`}>
+                                    {item.item_category}
+                                  </p>
+                                  <p className={`text-xs line-clamp-2 ${
+                                    isUnavailable ? 'text-gray-400' : 'text-gray-500'
+                                  }`}>
+                                    {item.item_description}
+                                  </p>
+                                </div>
+                                
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className={`font-medium ${
+                                    isUnavailable
+                                      ? 'text-gray-400' 
+                                      : item.available_quantity > 0 
+                                        ? 'text-green-600' 
+                                        : 'text-red-600'
+                                  }`}>
+                                    {isReserved 
+                                      ? 'Reserved' 
+                                      : isBorrowed
+                                        ? 'Already borrowed'
+                                        : item.available_quantity > 0 
+                                          ? `${item.available_quantity} available` 
+                                          : 'Out of stock'
+                                    }
+                                  </span>
+                                  <span className={`${
+                                    isUnavailable ? 'text-gray-400' : 'text-gray-500'
+                                  }`}>
+                                    Total: {item.item_quantity}
+                                  </span>
+                                </div>
+                                
+                                <Button
+                                  size="sm"
+                                  className={`w-full h-8 text-xs ${
+                                    isUnavailable
+                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' 
+                                      : ''
+                                  }`}
+                                  disabled={!canBorrow}
+                                  onClick={() => {
+                                    if (canBorrow) {
+                                      setSelectedItem(item)
+                                      setIsRequestDialogOpen(true)
+                                    }
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  {isReserved 
+                                    ? 'Reserved' 
+                                    : isBorrowed
+                                      ? 'Already Borrowed'
+                                      : item.available_quantity === 0 
+                                        ? 'Out of Stock' 
+                                        : 'Reserve'
+                                  }
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading library...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Library</h1>
+          <p className="text-gray-600 mt-1">Reserve and manage your library items</p>
+        </div>
+        <Button onClick={fetchData} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Clickable Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-purple-100 hover:border-purple-300 ${
+            currentView === 'browse' ? 'ring-2 ring-purple-500 bg-purple-50 border-purple-200' : 'hover:ring-1 hover:ring-purple-200'
+          }`}
+          onClick={() => setCurrentView('browse')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Search className={`h-5 w-5 transition-colors duration-200 ${
+                currentView === 'browse' ? 'text-purple-600' : 'text-purple-500 group-hover:text-purple-700'
+              }`} />
+              <div>
+                <p className={`text-2xl font-bold transition-colors duration-200 ${
+                  currentView === 'browse' ? 'text-purple-700' : 'text-gray-900'
+                }`}>
+                  {items.reduce((sum, item) => sum + item.available_quantity, 0)}
+                </p>
+                <p className={`text-sm transition-colors duration-200 ${
+                  currentView === 'browse' ? 'text-purple-600' : 'text-gray-600'
+                }`}>Available Books</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-100 hover:border-blue-300 ${
+            currentView === 'reserved' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' : 'hover:ring-1 hover:ring-blue-200'
+          }`}
+          onClick={() => setCurrentView('reserved')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <BookOpen className={`h-5 w-5 transition-colors duration-200 ${
+                currentView === 'reserved' ? 'text-blue-600' : 'text-blue-500 group-hover:text-blue-700'
+              }`} />
+              <div>
+                <p className={`text-2xl font-bold transition-colors duration-200 ${
+                  currentView === 'reserved' ? 'text-blue-700' : 'text-gray-900'
+                }`}>{reservedItems.length}</p>
+                <p className={`text-sm transition-colors duration-200 ${
+                  currentView === 'reserved' ? 'text-blue-600' : 'text-gray-600'
+                }`}>Reserved</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-yellow-100 hover:border-yellow-300 ${
+            currentView === 'active' ? 'ring-2 ring-yellow-500 bg-yellow-50 border-yellow-200' : 'hover:ring-1 hover:ring-yellow-200'
+          }`}
+          onClick={() => setCurrentView('active')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Package className={`h-5 w-5 transition-colors duration-200 ${
+                currentView === 'active' ? 'text-yellow-600' : 'text-yellow-500 group-hover:text-yellow-700'
+              }`} />
+              <div>
+                <p className={`text-2xl font-bold transition-colors duration-200 ${
+                  currentView === 'active' ? 'text-yellow-700' : 'text-gray-900'
+                }`}>{activeLoans.length}</p>
+                <p className={`text-sm transition-colors duration-200 ${
+                  currentView === 'active' ? 'text-yellow-600' : 'text-gray-600'
+                }`}>Active Loans</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-red-100 hover:border-red-300 ${
+            currentView === 'overdue' ? 'ring-2 ring-red-500 bg-red-50 border-red-200' : 'hover:ring-1 hover:ring-red-200'
+          }`}
+          onClick={() => setCurrentView('overdue')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className={`h-5 w-5 transition-colors duration-200 ${
+                currentView === 'overdue' ? 'text-red-600' : 'text-red-500 group-hover:text-red-700'
+              }`} />
+              <div>
+                <p className={`text-2xl font-bold transition-colors duration-200 ${
+                  currentView === 'overdue' ? 'text-red-700' : 'text-gray-900'
+                }`}>{overdueItems.length}</p>
+                <p className={`text-sm transition-colors duration-200 ${
+                  currentView === 'overdue' ? 'text-red-600' : 'text-gray-600'
+                }`}>Overdue Items</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Dynamic Content Based on Selected View */}
+      {renderContent()}
+
+      {/* Reserve Item Dialog */}
+      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Reserve Library Item</DialogTitle>
+            <DialogDescription>
+              Reserve this item for collection. It will be held for you.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedItem && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={selectedItem.image_url || "/placeholder.jpg"}
+                    alt={selectedItem.item_name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.jpg"
+                    }}
+                  />
+                </div>
+                <div>
+                  <h3 className="font-medium">{selectedItem.item_name}</h3>
+                  <p className="text-sm text-gray-600">{selectedItem.item_category}</p>
+                  <p className="text-sm text-green-600">{selectedItem.available_quantity} available</p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Reservation Policy</p>
+                    <p className="text-sm text-blue-600 mt-1">
+                      Your reservation will be held for <strong>2 hours</strong> from the time of booking. 
+                      Please collect within this time or the reservation will automatically expire.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsRequestDialogOpen(false)
+                    setSelectedItem(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRequestItem}
+                  disabled={isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {isSubmitting ? "Reserving..." : "Reserve Item"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

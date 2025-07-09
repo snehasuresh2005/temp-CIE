@@ -3,9 +3,24 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
 // GET: List all library items
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url)
+    const domain_id = searchParams.get('domain_id')
+    
+    let whereClause = {}
+    if (domain_id) {
+      whereClause = { domain_id }
+    }
+
     const items = await prisma.libraryItem.findMany({
+      where: whereClause,
+      include: {
+        domain: true,
+        faculty: {
+          include: { user: true }
+        }
+      },
       orderBy: { created_at: 'desc' },
     });
     return NextResponse.json({ items });
@@ -62,4 +77,4 @@ export async function POST(req: NextRequest) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-} 
+}
