@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { 
@@ -29,7 +30,12 @@ import {
   Mail,
   FileText,
   IndianRupee,
-  Settings
+  Settings,
+  BarChart3,
+  TrendingUp,
+  RefreshCw,
+  Filter,
+  Search
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
@@ -37,6 +43,12 @@ import { LibraryManagement } from "@/components/pages/faculty/library-management
 import { LibraryInventoryStatus } from "@/components/pages/faculty/library-inventory-status"
 import { LabInventoryStatus } from "@/components/pages/faculty/lab-inventory-status"
 import { SimplifiedLibraryManagement } from "@/components/pages/faculty/simplified-library-management"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface ComponentRequest {
   id: string
@@ -106,7 +118,10 @@ export function CoordinatorDashboard() {
   const [libraryRequests, setLibraryRequests] = useState<LibraryRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [facultyNotes, setFacultyNotes] = useState("")
-  const [activeTab, setActiveTab] = useState("pending")
+  const [activeTab, setActiveTab] = useState("analytics")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "due" | "not-due">("all")
+
   // Add coordinator domains state with enhanced type
   const [coordinatorDomains, setCoordinatorDomains] = useState<Array<{
     id: string; 
@@ -115,6 +130,9 @@ export function CoordinatorDashboard() {
     hasLibraryItems?: boolean;
     hasLabComponents?: boolean;
   }>>([])
+
+  // New state for selected domain
+  const [selectedDomain, setSelectedDomain] = useState(coordinatorDomains[0])
 
   useEffect(() => {
     fetchRequests()
@@ -159,6 +177,7 @@ export function CoordinatorDashboard() {
       )
       
       setCoordinatorDomains(enhancedDomains)
+      setSelectedDomain(enhancedDomains[0]) // Set default selected domain
     } catch (error) {
       console.error("Error fetching coordinator domains:", error)
     }
@@ -274,6 +293,43 @@ export function CoordinatorDashboard() {
     }
   }
 
+  // Add renewal functionality
+  const handleRenewRequest = async (requestId: string) => {
+    try {
+      const newDueDate = new Date()
+      newDueDate.setDate(newDueDate.getDate() + 14) // Extend by 14 days
+      
+      const response = await fetch(`/api/library-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || ""
+        },
+        body: JSON.stringify({ 
+          due_date: newDueDate.toISOString(),
+          faculty_notes: `Renewed for 14 days by coordinator on ${new Date().toLocaleDateString()}`
+        })
+      })
+
+      if (response.ok) {
+        await fetchRequests()
+        toast({
+          title: "Item Renewed",
+          description: `Due date extended to ${newDueDate.toLocaleDateString()}`
+        })
+      } else {
+        const error = await response.json()
+        throw new Error(error.error)
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to renew item",
+        variant: "destructive",
+      })
+    }
+  }
+
   const getStatusBadge = (status: string, isOverdueItem?: boolean) => {
     const baseClass = "font-medium"
     switch (status) {
@@ -363,387 +419,515 @@ export function CoordinatorDashboard() {
     )
   }
 
+  // Filtered active loans based on search term and status filter
+  const filteredActiveLoans = [...returnComponentRequests, ...returnLibraryRequests].filter(request => {
+    const borrowerName = request.student?.user?.name?.toLowerCase() || ""
+    const srn = request.student?.student_id?.toLowerCase() || ""
+    const itemName = getItemName(request).toLowerCase()
+    const searchTermLower = searchTerm.toLowerCase()
+    
+    // Search filter (borrower name, SRN, or book name)
+    const matchesSearch = borrowerName.includes(searchTermLower) || 
+                         srn.includes(searchTermLower) || 
+                         itemName.includes(searchTermLower)
+    
+    // Status filter
+    if (statusFilter === "all") {
+      return matchesSearch
+    } else if (statusFilter === "due") {
+      return matchesSearch && isOverdue(request.due_date)
+    } else if (statusFilter === "not-due") {
+      return matchesSearch && !isOverdue(request.due_date)
+    }
+    
+    return matchesSearch
+  })
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">CIE Team Coordinator Dashboard</h1>
-        <p className="text-gray-600 mt-2">
-          Manage requests for your assigned domains
-          {coordinatorDomains.length > 0 && (
-            <span className="ml-2 text-sm">
-              ({getAssignedDomainNames()})
+      </div>
+
+      {/* Domain Selection Tabs */}
+      {coordinatorDomains.length > 1 && (
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {coordinatorDomains.map((domain) => (
+              <button
+                key={domain.id}
+                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  selectedDomain?.id === domain.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                onClick={() => setSelectedDomain(domain)}
+              >
+                <div className="flex items-center space-x-2">
+                  {domain.hasLibraryItems && <BookOpen className="h-4 w-4" />}
+                  {domain.hasLabComponents && <Package className="h-4 w-4" />}
+                  <span>{domain.name}</span>
+                </div>
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
+
+      {/* Show current domain info for single domain or selected domain */}
+      {(coordinatorDomains.length === 1 || selectedDomain) && (
+        <div className="text-sm text-gray-600">
+          Coordinating: {selectedDomain?.name || coordinatorDomains[0]?.name}
+          {(selectedDomain?.hasLibraryItems || coordinatorDomains[0]?.hasLibraryItems) && 
+           (selectedDomain?.hasLabComponents || coordinatorDomains[0]?.hasLabComponents) && (
+            <span className="ml-2">
+              (Library & Lab)
             </span>
           )}
-        </p>
+        </div>
+      )}
+
+      {/* Clickable Summary Cards with Hover Effects */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-purple-100 hover:border-purple-300 ${
+            activeTab === 'analytics' ? 'ring-2 ring-purple-500 bg-purple-50 border-purple-200' : 'hover:ring-1 hover:ring-purple-200'
+          }`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center space-x-2">
+              <BarChart3 className={`h-5 w-5 transition-colors duration-200 ${
+                activeTab === 'analytics' ? 'text-purple-600' : 'text-purple-500 group-hover:text-purple-700'
+              }`} />
+              <p className={`text-lg font-medium transition-colors duration-200 ${
+                activeTab === 'analytics' ? 'text-purple-600' : 'text-gray-600'
+              }`}>Analytics</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-100 hover:border-blue-300 ${
+            activeTab === 'collection' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' : 'hover:ring-1 hover:ring-blue-200'
+          }`}
+          onClick={() => setActiveTab('collection')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center space-x-2">
+              <CheckCircle className={`h-5 w-5 transition-colors duration-200 ${
+                activeTab === 'collection' ? 'text-blue-600' : 'text-blue-500 group-hover:text-blue-700'
+              }`} />
+              <p className={`text-lg font-medium transition-colors duration-200 ${
+                activeTab === 'collection' ? 'text-blue-600' : 'text-gray-600'
+              }`}>Awaiting Collection</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-green-100 hover:border-green-300 ${
+            activeTab === 'returns' ? 'ring-2 ring-green-500 bg-green-50 border-green-200' : 'hover:ring-1 hover:ring-green-200'
+          }`}
+          onClick={() => setActiveTab('returns')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center space-x-2">
+              <Package className={`h-5 w-5 transition-colors duration-200 ${
+                activeTab === 'returns' ? 'text-green-600' : 'text-green-500 group-hover:text-green-700'
+              }`} />
+              <p className={`text-lg font-medium transition-colors duration-200 ${
+                activeTab === 'returns' ? 'text-green-600' : 'text-gray-600'
+              }`}>Active Loans</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-orange-100 hover:border-orange-300 ${
+            activeTab === 'history' ? 'ring-2 ring-orange-500 bg-orange-50 border-orange-200' : 'hover:ring-1 hover:ring-orange-200'
+          }`}
+          onClick={() => setActiveTab('history')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center space-x-2">
+              <Clock className={`h-5 w-5 transition-colors duration-200 ${
+                activeTab === 'history' ? 'text-orange-600' : 'text-orange-500 group-hover:text-orange-700'
+              }`} />
+              <p className={`text-lg font-medium transition-colors duration-200 ${
+                activeTab === 'history' ? 'text-orange-600' : 'text-gray-600'
+              }`}>History</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Clock className="h-8 w-8 text-yellow-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Reviews</p>
-                <p className="text-2xl font-bold">{pendingComponentRequests.length + pendingLibraryRequests.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Awaiting Collection</p>
-                <p className="text-2xl font-bold">{collectionComponentRequests.length + collectionLibraryRequests.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Package className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Loans</p>
-                <p className="text-2xl font-bold">{returnComponentRequests.length + returnLibraryRequests.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Overdue Items</p>
-                <p className="text-2xl font-bold">
-                  {[...returnComponentRequests, ...returnLibraryRequests].filter(req => isOverdue(req.due_date)).length}
+      {/* Dynamic Content Based on Selected Tab */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
+          <p className="text-gray-600">Insights and statistics for your coordinator domains</p>
+          
+          {/* Analytics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{componentRequests.length + libraryRequests.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  Library: {libraryRequests.length} | Lab: {componentRequests.length}
                 </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="inventory">Inventory Status</TabsTrigger>
-          <TabsTrigger value="collection">Collection Verification</TabsTrigger>
-          <TabsTrigger value="returns">Return Management</TabsTrigger>
-          <TabsTrigger value="library-management">Library Management</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="inventory" className="space-y-4">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Inventory Status</h2>
-            <p className="text-gray-600">Overview of available items in your assigned domains</p>
+              </CardContent>
+            </Card>
             
-            {/* Show Library Inventory if any assigned domain has library items */}
-            {shouldShowLibraryInventory() && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2" />
-                  Library Inventory
-                  <span className="ml-2 text-sm text-gray-500">
-                    ({getLibraryDomains().map(d => d.name).join(', ')})
-                  </span>
-                </h3>
-                <LibraryInventoryStatus />
-              </div>
-            )}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Items</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{returnComponentRequests.length + returnLibraryRequests.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  Currently borrowed items
+                </p>
+              </CardContent>
+            </Card>
             
-            {/* Show Lab Components Inventory if any assigned domain has lab components */}
-            {shouldShowLabInventory() && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Lab Components Inventory
-                  <span className="ml-2 text-sm text-gray-500">
-                    ({getLabDomains().map(d => d.name).join(', ')})
-                  </span>
-                </h3>
-                <LabInventoryStatus />
-              </div>
-            )}
-
-            {/* Show message if no domains assigned or no inventory in assigned domains */}
-            {!shouldShowLibraryInventory() && !shouldShowLabInventory() && (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {coordinatorDomains.length === 0 ? "No Domains Assigned" : "No Inventory in Assigned Domains"}
-                  </h3>
-                  <p className="text-gray-600">
-                    {coordinatorDomains.length === 0 
-                      ? "You are not currently assigned to any domains. Please contact the administrator to get domain assignments."
-                      : `Your assigned domains (${getAssignedDomainNames()}) don't currently have any inventory items. Items will appear here once they are added to your domains.`
-                    }
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Overdue Items</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {[...returnComponentRequests, ...returnLibraryRequests].filter(req => isOverdue(req.due_date)).length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Items past due date
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </TabsContent>
 
-        <TabsContent value="collection" className="space-y-4">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Collection Verification</h2>
-            <p className="text-gray-600">Verify if students have collected their approved items</p>
-            
-            {[...collectionComponentRequests, ...collectionLibraryRequests].map((request) => (
-              <Card key={request.id} className="border-l-4 border-l-blue-400">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      {getItemName(request)}
-                    </CardTitle>
-                    {getStatusBadge(request.status)}
-                  </div>
-                  <CardDescription>
-                    Domain: {getDomainName(request)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <User className="h-4 w-4 text-gray-500" />
-                        <span className="font-medium">{request.student.user.name}</span>
-                      </div>
-                      {/* Only show SRN for students, not faculty */}
-                      {request.student.student_id && !request.student.student_id.includes('FACULTY') && (
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">SRN: {request.student.student_id}</span>
-                        </div>
-                      )}
+          {/* Request Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Request Status Overview</CardTitle>
+              <CardDescription>Distribution of all requests by status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[
+                  { status: 'PENDING', count: pendingComponentRequests.length + pendingLibraryRequests.length, color: 'bg-yellow-500' },
+                  { status: 'APPROVED', count: collectionComponentRequests.length + collectionLibraryRequests.length, color: 'bg-blue-500' },
+                  { status: 'COLLECTED', count: returnComponentRequests.length + returnLibraryRequests.length, color: 'bg-green-500' },
+                  { status: 'RETURNED', count: [...componentRequests, ...libraryRequests].filter(req => req.status === "RETURNED").length, color: 'bg-gray-500' },
+                  { status: 'REJECTED', count: [...componentRequests, ...libraryRequests].filter(req => req.status === "REJECTED").length, color: 'bg-red-500' },
+                ].map(({ status, count, color }) => (
+                  <div key={status} className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-gray-700 capitalize">{status}</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mx-3">
+                      <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${(count / (componentRequests.length + libraryRequests.length)) * 100}%` }}></div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Package className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">Quantity: {request.quantity}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">Required: {new Date(request.required_date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+                    <div className="text-sm font-medium text-gray-700">{count}</div>
                   </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-                  <div className="flex space-x-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-red-600"
-                      onClick={() => {
-                        if (isComponentRequest(request)) {
-                          handleUpdateComponentRequest(request.id, "REJECTED", "Student did not collect item")
-                        } else {
-                          handleUpdateLibraryRequest(request.id, "REJECTED", "Student did not collect item")
-                        }
-                      }}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Not Collected
+      {activeTab === 'collection' && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Collection Management</h2>
+          <p className="text-gray-600">Verify if students have collected their approved items</p>
+          
+          {[...collectionComponentRequests, ...collectionLibraryRequests].map((request) => (
+            <Card key={request.id} className="border-l-4 border-l-blue-400">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    {getItemName(request)}
+                  </CardTitle>
+                  {getStatusBadge(request.status)}
+                </div>
+                <CardDescription>
+                  Domain: {getDomainName(request)}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium">
+                        {request.student?.user?.name || request.faculty?.user?.name || "Unknown User"}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        {request.student?.student_id ? `SRN: ${request.student.student_id}` : "Faculty Request"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">Quantity: {request.quantity}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">Required: {new Date(request.required_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-red-600"
+                    onClick={() => {
+                      if (isComponentRequest(request)) {
+                        handleUpdateComponentRequest(request.id, "REJECTED", "Student did not collect item")
+                      } else {
+                        handleUpdateLibraryRequest(request.id, "REJECTED", "Student did not collect item")
+                      }
+                    }}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Not Collected
+                  </Button>
+                  
+                  <Button 
+                    size="sm"
+                    onClick={() => {
+                      if (isComponentRequest(request)) {
+                        handleUpdateComponentRequest(request.id, "COLLECTED")
+                      } else {
+                        handleUpdateLibraryRequest(request.id, "COLLECTED")
+                      }
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Collected
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {collectionComponentRequests.length === 0 && collectionLibraryRequests.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No items awaiting collection</h3>
+                <p className="text-gray-600">All approved items have been collected.</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'returns' && (
+        <div className="space-y-4">
+          {[...returnComponentRequests, ...returnLibraryRequests].length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No active loans</h3>
+                <p className="text-gray-600">All items have been returned.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {/* Search and Filter Bar */}
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Search className="h-4 w-4 text-gray-500" />
+                  <Input
+                    placeholder="Search by borrower name, SRN, or book name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                      <Filter className="h-4 w-4" />
+                      <span>
+                        {statusFilter === "all" ? "All Status" : 
+                         statusFilter === "due" ? "Due Only" : 
+                         "Not Due Only"}
+                      </span>
                     </Button>
-                    
-                    <Button 
-                      size="sm"
-                      onClick={() => {
-                        if (isComponentRequest(request)) {
-                          handleUpdateComponentRequest(request.id, "COLLECTED")
-                        } else {
-                          handleUpdateLibraryRequest(request.id, "COLLECTED")
-                        }
-                      }}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem 
+                      onClick={() => setStatusFilter("all")}
+                      className={statusFilter === "all" ? "bg-gray-100" : ""}
                     >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Collected
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      All Status
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setStatusFilter("due")}
+                      className={statusFilter === "due" ? "bg-gray-100" : ""}
+                    >
+                      Due Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setStatusFilter("not-due")}
+                      className={statusFilter === "not-due" ? "bg-gray-100" : ""}
+                    >
+                      Not Due Only
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-            {collectionComponentRequests.length === 0 && collectionLibraryRequests.length === 0 && (
               <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No items awaiting collection</h3>
-                  <p className="text-gray-600">All approved items have been collected.</p>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[250px]">Borrower</TableHead>
+                        <TableHead className="w-[200px]">Item</TableHead>
+                        <TableHead className="w-[80px]">Qty</TableHead>
+                        <TableHead className="w-[120px]">Status</TableHead>
+                        <TableHead className="w-[100px]">Collected</TableHead>
+                        <TableHead className="w-[100px]">Due Date</TableHead>
+                        <TableHead className="w-[100px]">Fine</TableHead>
+                        <TableHead className="w-[200px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredActiveLoans.map((request) => {
+                        const overdue = isOverdue(request.due_date)
+                        const daysOverdue = getDaysOverdue(request.due_date)
+                        const borrower = request.student?.user?.name || request.faculty?.user?.name || "Unknown"
+                        const borrowerId = request.student?.student_id || "Faculty"
+                        
+                        return (
+                          <TableRow key={request.id} className="hover:bg-gray-50">
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-sm">{borrower}</div>
+                                <div className="text-xs text-gray-500">
+                                  {request.student ? `SRN: ${borrowerId}` : 'Faculty'}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium text-sm">{getItemName(request)}</div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm font-medium">{request.quantity}</span>
+                            </TableCell>
+                            <TableCell>
+                              {overdue ? (
+                                <Badge className="bg-red-100 text-red-800 font-medium">
+                                  Due
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-yellow-100 text-yellow-800 font-medium">
+                                  Not Due
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">
+                                {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "-"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className={`text-sm ${overdue ? 'text-red-600 font-medium' : ''}`}>
+                                {request.due_date ? new Date(request.due_date).toLocaleDateString() : "-"}
+                              </span>
+                              {overdue && (
+                                <div className="text-xs text-red-600">
+                                  {daysOverdue} days late
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {request.fine_amount && request.fine_amount > 0 ? (
+                                <div className="text-sm">
+                                  <span className="text-red-600">₹{request.fine_amount}</span>
+                                  <div className="text-xs text-gray-500">
+                                    {request.fine_paid ? "Paid" : "Pending"}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-1">
+                                <Button 
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => handleRenewRequest(request.id)}
+                                >
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  Renew
+                                </Button>
+                                
+                                {request.status === "PENDING_RETURN" && request.fine_amount && request.fine_amount > 0 ? (
+                                  <Button 
+                                    size="sm"
+                                    onClick={() => {
+                                      if (isComponentRequest(request)) {
+                                        handleUpdateComponentRequest(request.id, "RETURNED", undefined, true)
+                                      } else {
+                                        handleUpdateLibraryRequest(request.id, "RETURNED", undefined, true)
+                                      }
+                                    }}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Return
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    size="sm"
+                                    onClick={() => {
+                                      if (isComponentRequest(request)) {
+                                        handleUpdateComponentRequest(request.id, "RETURNED")
+                                      } else {
+                                        handleUpdateLibraryRequest(request.id, "RETURNED")
+                                      }
+                                    }}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Return
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="returns" className="space-y-4">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Return Management</h2>
-            <p className="text-gray-600">Manage item returns and verify fine payments</p>
-            
-            {[...returnComponentRequests, ...returnLibraryRequests].map((request) => {
-              const overdue = isOverdue(request.due_date)
-              const daysOverdue = getDaysOverdue(request.due_date)
-              
-              return (
-                <Card key={request.id} className={`border-l-4 ${overdue ? 'border-l-red-400' : 'border-l-green-400'}`}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">
-                        {getItemName(request)}
-                      </CardTitle>
-                      {getStatusBadge(request.status, overdue)}
-                    </div>
-                    <CardDescription>
-                      Domain: {getDomainName(request)}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">{request.student.user.name}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">SRN: {request.student.student_id}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm">
-                            Collected: {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <span className={`text-sm ${overdue ? 'text-red-600 font-medium' : ''}`}>
-                            Due: {request.due_date ? new Date(request.due_date).toLocaleDateString() : "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {overdue && (
-                      <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                        <div className="flex items-center space-x-2">
-                          <AlertTriangle className="h-4 w-4 text-red-600" />
-                          <span className="text-sm font-medium text-red-700">
-                            Overdue by {daysOverdue} day{daysOverdue !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        {request.fine_amount && (
-                          <div className="flex items-center space-x-2 mt-1">
-                            <IndianRupee className="h-4 w-4 text-red-600" />
-                            <span className="text-sm text-red-600">
-                              Fine: ₹{request.fine_amount} {request.fine_paid ? "(Paid)" : "(Pending)"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {request.status === "PENDING_RETURN" && (
-                      <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                        <Label className="text-sm font-medium text-orange-700">Student has requested return</Label>
-                        {request.payment_proof && (
-                          <div className="mt-2">
-                            <Label className="text-xs text-orange-600">Payment proof provided</Label>
-                            <Button size="sm" variant="outline" className="ml-2">
-                              <FileText className="h-3 w-3 mr-1" />
-                              View Proof
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex space-x-2">
-                      {request.status === "PENDING_RETURN" && request.fine_amount && request.fine_amount > 0 ? (
-                        <>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="text-red-600"
-                            onClick={() => {
-                              if (isComponentRequest(request)) {
-                                handleUpdateComponentRequest(request.id, "COLLECTED", "Payment verification failed")
-                              } else {
-                                handleUpdateLibraryRequest(request.id, "COLLECTED", "Payment verification failed")
-                              }
-                            }}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Reject Payment
-                          </Button>
-                          
-                          <Button 
-                            size="sm"
-                            onClick={() => {
-                              if (isComponentRequest(request)) {
-                                handleUpdateComponentRequest(request.id, "RETURNED", undefined, true)
-                              } else {
-                                handleUpdateLibraryRequest(request.id, "RETURNED", undefined, true)
-                              }
-                            }}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Verify & Return
-                          </Button>
-                        </>
-                      ) : (
-                        <Button 
-                          size="sm"
-                          onClick={() => {
-                            if (isComponentRequest(request)) {
-                              handleUpdateComponentRequest(request.id, "RETURNED")
-                            } else {
-                              handleUpdateLibraryRequest(request.id, "RETURNED")
-                            }
-                          }}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Mark Returned
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-
-            {returnComponentRequests.length === 0 && returnLibraryRequests.length === 0 && (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No active loans</h3>
-                  <p className="text-gray-600">All items have been returned.</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="library-management" className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Settings className="h-6 w-6 text-blue-600" />
-              <h2 className="text-xl font-semibold">Library Management System</h2>
             </div>
-            <p className="text-gray-600">Complete transaction records and system operations</p>
-            <SimplifiedLibraryManagement />
-          </div>
-        </TabsContent>
-      </Tabs>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'history' && (
+        <div className="space-y-4">
+          <SimplifiedLibraryManagement />
+        </div>
+      )}
     </div>
   )
 }

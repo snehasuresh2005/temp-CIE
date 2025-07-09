@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Prepare request data based on user role
-    let requestData: any = {
+    const requestData: any = {
       item_id,
       quantity,
       purpose: purpose || `${user.role === "STUDENT" ? "Student" : "Faculty"} library request`,
@@ -178,38 +178,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Faculty profile not found" }, { status: 404 })
       }
       requestData.faculty_id = faculty.id
-      
-      // WORKAROUND: Since the database has a NOT NULL constraint on student_id,
-      // we need to find or create a special "faculty placeholder" student record
-      let facultyPlaceholderStudent = await prisma.student.findFirst({
-        where: { student_id: "FACULTY_PLACEHOLDER" }
-      })
-      
-      if (!facultyPlaceholderStudent) {
-        // Create a placeholder student record for faculty requests
-        try {
-          facultyPlaceholderStudent = await prisma.student.create({
-            data: {
-              student_id: "FACULTY_PLACEHOLDER",
-              program: "Faculty Program",
-              year: "N/A",
-              section: "N/A",
-              gpa: null,
-              user_id: userId, // Temporarily use faculty user_id
-            }
-          })
-        } catch (error) {
-          // If creation fails due to user_id constraint, find any existing student and use their ID
-          const anyStudent = await prisma.student.findFirst()
-          if (anyStudent) {
-            facultyPlaceholderStudent = anyStudent
-          } else {
-            return NextResponse.json({ error: "Unable to process faculty request - no student records available" }, { status: 500 })
-          }
-        }
-      }
-      
-      requestData.student_id = facultyPlaceholderStudent.id
+      requestData.student_id = null
     }
 
     // Create transaction to update item availability and create request atomically

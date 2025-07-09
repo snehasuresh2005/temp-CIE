@@ -22,7 +22,6 @@ const menuItems = [
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
   { id: "library", label: "Library", icon: BookOpen },
-  { id: "profile", label: "Profile", icon: UserIcon },
 ]
 
 export function StudentDashboard() {

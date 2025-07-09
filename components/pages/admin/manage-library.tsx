@@ -96,7 +96,6 @@ export function ManageLibrary() {
     purchase_date: "",
     purchase_value: "",
     purchase_currency: "INR",
-    faculty_id: "",
   })
 
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null)
@@ -349,7 +348,6 @@ export function ManageLibrary() {
       purchase_date: "",
       purchase_value: "",
       purchase_currency: "INR",
-      faculty_id: "",
     })
     setFrontImageFile(null)
     setBackImageFile(null)
@@ -372,21 +370,56 @@ export function ManageLibrary() {
   const validateForm = () => {
     const errors: Record<string, string> = {}
 
-    if (!newItem.item_name) errors.item_name = "Item name is required"
-    if (!newItem.item_category) errors.item_category = "Item category is required"
-    if (!newItem.item_location) errors.item_location = "Item location is required"
-    if (!newItem.item_quantity) errors.item_quantity = "Item quantity is required"
-    if (!newItem.item_specification) errors.item_specification = "Item specification is required"
-    if (!newItem.item_tag_id) errors.item_tag_id = "Item tag ID is required"
-    if (!newItem.invoice_number) errors.invoice_number = "Invoice number is required"
-    if (!newItem.purchase_value) errors.purchase_value = "Purchase value is required"
-    if (!newItem.purchase_currency) errors.purchase_currency = "Purchase currency is required"
-    if (!newItem.purchase_date) errors.purchase_date = "Purchase date is required"
-    if (!newItem.purchased_from) errors.purchased_from = "Purchased from is required"
-    if (!newItem.faculty_id) errors.faculty_id = "Faculty is required"
+    // Required fields validation
+    if (!newItem.item_name?.trim()) {
+      errors.item_name = "Book name is required"
+    }
 
-  setFormErrors(errors)
-  return Object.keys(errors).length === 0
+    if (!newItem.item_description?.trim()) {
+      errors.item_description = "Description is required"
+    }
+
+    if (!newItem.item_category?.trim()) {
+      errors.item_category = "Category is required"
+    }
+
+    if (!newItem.item_location?.trim()) {
+      errors.item_location = "Location is required"
+    }
+
+    if (newItem.item_quantity <= 0) {
+      errors.item_quantity = "Quantity must be greater than 0"
+    }
+
+
+
+    if (!frontImageFile) {
+      errors.frontImage = "Front image is required"
+    }
+
+    if (!backImageFile) {
+      errors.backImage = "Back image is required"
+    }
+
+    // Purchase details validation (optional but if one is filled, others should be too)
+    const hasPurchaseDetails = newItem.invoice_number || newItem.purchased_from || newItem.purchase_date || newItem.purchase_value
+    if (hasPurchaseDetails) {
+      if (!newItem.invoice_number?.trim()) {
+        errors.invoice_number = "Invoice number is required when providing purchase details"
+      }
+      if (!newItem.purchased_from?.trim()) {
+        errors.purchased_from = "Purchased from is required when providing purchase details"
+      }
+      if (!newItem.purchase_date) {
+        errors.purchase_date = "Purchase date is required when providing purchase details"
+      }
+      if (!newItem.purchase_value) {
+        errors.purchase_value = "Purchase value is required when providing purchase details"
+      }
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const handleEditItem = async () => {
@@ -486,13 +519,15 @@ export function ManageLibrary() {
     return (
       (editingItem
         ? editingItem.item_name?.trim() &&
+          editingItem.item_description?.trim() &&
           editingItem.item_category?.trim() &&
           editingItem.item_location?.trim() &&
           editingItem.item_quantity > 0
         : newItem.item_name?.trim() &&
+          newItem.item_description?.trim() &&
           newItem.item_category?.trim() &&
           newItem.item_location?.trim() &&
-          (newItem.item_quantity > 0 && newItem.faculty_id)
+          newItem.item_quantity > 0
       ) &&
       frontImageFile &&
       backImageFile
@@ -561,174 +596,113 @@ export function ManageLibrary() {
                 Add Item
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-9xl w-full max-h-[105vh] overflow-y-auto">
+            <DialogContent className="max-w-7xl w-full max-h-[98vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>{editingItem ? "Edit Library Item" : "Add New Library Item"}</DialogTitle>
               </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                {/* Left: Details and Images (2 columns) */}
-                <div className="md:col-span-2 space-y-6">
-                  {/* Basic Details Row - Name, Tag ID, Quantity */}
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="flex-1">
-                      <Label htmlFor="name" className="text-sm font-medium">Book Name *</Label>
-                      <Input
-                        id="name"
-                        value={editingItem ? editingItem.item_name : newItem.item_name}
-                        onChange={(e) => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_name: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, item_name: e.target.value }))}
-                        placeholder="Enter book name"
-                        className={`mt-1 w-full h-9 text-sm ${formErrors.item_name ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.item_name && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.item_name}</p>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
-                      <Input
-                        id="tagId"
-                        value={editingItem ? editingItem.item_tag_id : newItem.item_tag_id}
-                        onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_tag_id: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, item_tag_id: e.target.value }))}
-                        placeholder="845"
-                        className="mt-1 w-full h-9 text-sm"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label htmlFor="quantity" className="text-sm font-medium">Quantity *</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        value={editingItem ? editingItem.item_quantity : newItem.item_quantity}
-                        onChange={(e) => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_quantity: Number.parseInt(e.target.value) })
-                          : setNewItem((prev) => ({ ...prev, item_quantity: Number.parseInt(e.target.value) }))}
-                        min="1"
-                        className={`mt-1 w-full h-9 text-sm ${formErrors.item_quantity ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.item_quantity && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.item_quantity}</p>
-                      )}
-                    </div>
-                  </div>
-                  {/* Location, Category and Faculty Row */}
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                      <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
-                      <Select
-                        value={editingItem ? editingItem.item_location : newItem.item_location}
-                        onValueChange={(value) => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_location: value })
-                          : setNewItem((prev) => ({ ...prev, item_location: value }))}
-                      >
-                        <SelectTrigger className={`mt-1 ${formErrors.item_location ? 'border-red-500' : ''}`}>
-                          <SelectValue placeholder="Select location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locationOptions.map((location) => (
-                            <SelectItem key={location} value={location}>
-                              {location}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {formErrors.item_location && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.item_location}</p>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                      <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
-                      <Select
-                        value={editingItem ? editingItem.item_category : newItem.item_category}
-                        onValueChange={(value) => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_category: value })
-                          : setNewItem((prev) => ({ ...prev, item_category: value }))}
-                      >
-                        <SelectTrigger className={`mt-1 ${formErrors.item_category ? 'border-red-500' : ''}`}>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoryOptions.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {formErrors.item_category && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.item_category}</p>
-                      )}
-                    </div>
-                    {/* Faculty select */}
-                    <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                      <Label htmlFor="faculty" className="text-sm font-medium">Faculty *</Label>
-                      <Select
-                        value={editingItem ? (editingItem as any).faculty_id : newItem.faculty_id}
-                        onValueChange={(value) => editingItem
-                          ? setEditingItem((prev) => prev && ({ ...(prev as any), faculty_id: value }))
-                          : setNewItem((prev) => ({ ...prev, faculty_id: value }))}
-                      >
-                        <SelectTrigger className={`mt-1 ${formErrors.faculty_id ? 'border-red-500' : ''}`}>
-                          <SelectValue placeholder="Select faculty" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {facultyOptions.map((fac) => (
-                            <SelectItem key={fac.id} value={fac.id}>{fac.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {formErrors.faculty_id && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.faculty_id}</p>
-                      )}
-                    </div>
-                  </div>
-                  {/* Description and Specification Row */}
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
-                        <Button variant="outline" size="sm" type="button" className="h-8 ml-2">gen</Button>
+              <form className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
+                {/* Left Column: Basic Info & Images */}
+                <div className="space-y-6 pr-3 pl-3">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <Label htmlFor="name">Book Name *</Label>
+                        <Input 
+                          id="name" 
+                          value={editingItem ? editingItem.item_name : newItem.item_name} 
+                          onChange={(e) => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, item_name: e.target.value })
+                            : setNewItem((prev) => ({ ...prev, item_name: e.target.value }))}
+                          className={`mt-1 ${formErrors.item_name ? 'border-red-500' : ''}`} 
+                        />
+                        {formErrors.item_name && <p className="text-red-500 text-xs mt-1">{formErrors.item_name}</p>}
                       </div>
-                      <Textarea
-                        id="description"
-                        value={editingItem ? editingItem.item_description : newItem.item_description}
-                        onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_description: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, item_description: e.target.value }))}
-                        placeholder="Enter book description"
-                        className={`mt-1 w-full text-sm ${formErrors.item_description ? 'border-red-500' : ''}`}
-                        rows={4}
-                      />
-                      {formErrors.item_description && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.item_description}</p>
-                      )}
+                      <div className="col-span-1">
+                        <Label htmlFor="tagId">Tag ID (optional)</Label>
+                        <Input 
+                          id="tagId" 
+                          value={editingItem ? editingItem.item_tag_id : newItem.item_tag_id} 
+                          onChange={e => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, item_tag_id: e.target.value })
+                            : setNewItem((prev) => ({ ...prev, item_tag_id: e.target.value }))}
+                          className="mt-1" 
+                        />
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <Label htmlFor="specification" className="text-sm font-medium">Specifications</Label>
-                      <Textarea
-                        id="specification"
-                        value={editingItem ? editingItem.item_specification : newItem.item_specification}
-                        onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_specification: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, item_specification: e.target.value }))}
-                        placeholder=""
-                        className="mt-1 w-full text-sm"
-                        rows={4}
-                      />
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1">
+                        <Label htmlFor="location">Location *</Label>
+                        <Select 
+                          value={editingItem ? editingItem.item_location : newItem.item_location} 
+                          onValueChange={(value) => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, item_location: value })
+                            : setNewItem((prev) => ({ ...prev, item_location: value }))}
+                        >
+                          <SelectTrigger className={`mt-1 ${formErrors.item_location ? 'border-red-500' : ''}`}>
+                            <SelectValue placeholder="Select location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locationOptions.map((location) => (
+                              <SelectItem key={location} value={location}>
+                                {location}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.item_location && <p className="text-red-500 text-xs mt-1">{formErrors.item_location}</p>}
+                      </div>
+                      <div className="flex-1">
+                        <Label htmlFor="category">Category *</Label>
+                        <Select 
+                          value={editingItem ? editingItem.item_category : newItem.item_category} 
+                          onValueChange={(value) => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, item_category: value })
+                            : setNewItem((prev) => ({ ...prev, item_category: value }))}
+                        >
+                          <SelectTrigger className={`mt-1 ${formErrors.item_category ? 'border-red-500' : ''}`}>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categoryOptions.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.item_category && <p className="text-red-500 text-xs mt-1">{formErrors.item_category}</p>}
+                      </div>
+                      <div className="w-20">
+                        <Label htmlFor="quantity">Quantity *</Label>
+                        <Input 
+                          id="quantity" 
+                          type="number" 
+                          value={editingItem ? editingItem.item_quantity : newItem.item_quantity} 
+                          onChange={(e) => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, item_quantity: Number.parseInt(e.target.value) })
+                            : setNewItem((prev) => ({ ...prev, item_quantity: Number.parseInt(e.target.value) }))}
+                          min="1" 
+                          className={`mt-1 ${formErrors.item_quantity ? 'border-red-500' : ''}`} 
+                        />
+                        {formErrors.item_quantity && <p className="text-red-500 text-xs mt-1">{formErrors.item_quantity}</p>}
+                      </div>
                     </div>
                   </div>
-                  {/* Component Images Section */}
-                  <div>
-                    <div className="font-semibold mb-2">Book Images</div>
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium">Front Image *</Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Book Images</h3>
+                      <Button variant="outline" size="sm" type="button" className="h-8">
+                        <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="frontImage">Front Image *</Label>
+                        <Input 
+                          id="frontImage" 
+                          type="file" 
+                          accept="image/*" 
                           onChange={e => {
                             const file = e.target.files?.[0] || null
                             setFrontImageFile(file)
@@ -740,19 +714,25 @@ export function ManageLibrary() {
                               setFrontImagePreview(null)
                             }
                           }}
+                          className={`mt-1 ${formErrors.frontImage ? 'border-red-500' : ''}`} 
                         />
+                        {formErrors.frontImage && <p className="text-red-500 text-xs mt-1">{formErrors.frontImage}</p>}
                         {frontImagePreview && (
-                          <img src={frontImagePreview} alt="Front Preview" className="mt-2 w-full h-40 object-contain rounded-lg bg-gray-50" />
-                        )}
-                        {formErrors.frontImage && (
-                          <p className="text-red-500 text-xs mt-1">{formErrors.frontImage}</p>
+                          <div className="mt-2">
+                            <img
+                              src={frontImagePreview}
+                              alt="Front Preview"
+                              className="w-full h-40 object-contain rounded-lg bg-gray-50"
+                            />
+                          </div>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium">Back Image *</Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
+                      <div>
+                        <Label htmlFor="backImage">Back Image *</Label>
+                        <Input 
+                          id="backImage" 
+                          type="file" 
+                          accept="image/*" 
                           onChange={e => {
                             const file = e.target.files?.[0] || null
                             setBackImageFile(file)
@@ -764,120 +744,157 @@ export function ManageLibrary() {
                               setBackImagePreview(null)
                             }
                           }}
+                          className={`mt-1 ${formErrors.backImage ? 'border-red-500' : ''}`} 
                         />
+                        {formErrors.backImage && <p className="text-red-500 text-xs mt-1">{formErrors.backImage}</p>}
                         {backImagePreview && (
-                          <img src={backImagePreview} alt="Back Preview" className="mt-2 w-full h-40 object-contain rounded-lg bg-gray-50" />
-                        )}
-                        {formErrors.backImage && (
-                          <p className="text-red-500 text-xs mt-1">{formErrors.backImage}</p>
+                          <div className="mt-2">
+                            <img
+                              src={backImagePreview}
+                              alt="Back Preview"
+                              className="w-full h-40 object-contain rounded-lg bg-gray-50"
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-                {/* Right: Purchase Details */}
-                <div className="md:col-span-1 space-y-6">
-                  <div className="font-semibold mb-2">Purchase Details (Optional)</div>
-                  <div className="space-y-4">
+                {/* Right Column: Details & Purchase Info */}
+                <div className="space-y-6 pr-2">
+                  <div className="space-y-3">
                     <div>
-                      <Label htmlFor="invoice_number" className="text-sm font-medium">Invoice Number</Label>
-                      <Input
-                        id="invoice_number"
-                        value={editingItem ? editingItem.invoice_number : newItem.invoice_number}
+                      <Label htmlFor="description">Description *</Label>
+                      <Textarea 
+                        id="description" 
+                        value={editingItem ? editingItem.item_description : newItem.item_description} 
                         onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, invoice_number: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, invoice_number: e.target.value }))}
-                        placeholder="inv334452"
-                        className="mt-1 w-full h-9 text-sm"
+                          ? setEditingItem((prev) => prev && { ...prev, item_description: e.target.value })
+                          : setNewItem((prev) => ({ ...prev, item_description: e.target.value }))}
+                        rows={3} 
+                        className={`mt-1 ${formErrors.item_description ? 'border-red-500' : ''}`} 
                       />
-                      {formErrors.invoice_number && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>
-                      )}
+                      {formErrors.item_description && <p className="text-red-500 text-xs mt-1">{formErrors.item_description}</p>}
                     </div>
                     <div>
-                      <Label htmlFor="purchased_from" className="text-sm font-medium">Purchased From</Label>
-                      <Input
-                        id="purchased_from"
-                        value={editingItem ? editingItem.purchased_from : newItem.purchased_from}
+                      <Label htmlFor="specifications">Specifications</Label>
+                      <Textarea 
+                        id="specifications" 
+                        value={editingItem ? editingItem.item_specification : newItem.item_specification} 
                         onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, purchased_from: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, purchased_from: e.target.value }))}
-                        placeholder="amazon"
-                        className="mt-1 w-full h-9 text-sm"
+                          ? setEditingItem((prev) => prev && { ...prev, item_specification: e.target.value })
+                          : setNewItem((prev) => ({ ...prev, item_specification: e.target.value }))}
+                        rows={3} 
+                        className="mt-1" 
                       />
-                      {formErrors.purchased_from && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>
-                      )}
                     </div>
-                    <div>
-                      <Label htmlFor="purchase_date" className="text-sm font-medium">Purchase Date</Label>
-                      <Input
-                        id="purchase_date"
-                        type="date"
-                        value={editingItem ? editingItem.purchase_date : newItem.purchase_date}
-                        onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, purchase_date: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, purchase_date: e.target.value }))}
-                        className="mt-1 w-full h-9 text-sm"
-                      />
-                      {formErrors.purchase_date && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>
-                      )}
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Purchase Details (Optional)</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                        <Input 
+                          id="invoiceNumber" 
+                          value={editingItem ? editingItem.invoice_number : newItem.invoice_number} 
+                          onChange={e => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, invoice_number: e.target.value })
+                            : setNewItem((prev) => ({ ...prev, invoice_number: e.target.value }))}
+                          className={`mt-1 ${formErrors.invoice_number ? 'border-red-500' : ''}`} 
+                        />
+                        {formErrors.invoice_number && <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedFrom">Purchased From</Label>
+                        <Input 
+                          id="purchasedFrom" 
+                          value={editingItem ? editingItem.purchased_from : newItem.purchased_from} 
+                          onChange={e => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, purchased_from: e.target.value })
+                            : setNewItem((prev) => ({ ...prev, purchased_from: e.target.value }))}
+                          className={`mt-1 ${formErrors.purchased_from ? 'border-red-500' : ''}`} 
+                        />
+                        {formErrors.purchased_from && <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>}
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="purchase_value" className="text-sm font-medium">Purchase Value</Label>
-                      <Input
-                        id="purchase_value"
-                        type="number"
-                        value={editingItem ? editingItem.purchase_value : newItem.purchase_value}
-                        onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, purchase_value: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, purchase_value: e.target.value }))}
-                        placeholder="137"
-                        className="mt-1 w-full h-9 text-sm"
-                      />
-                      {formErrors.purchase_value && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="purchase_currency" className="text-sm font-medium">Currency</Label>
-                      <Input
-                        id="purchase_currency"
-                        value={editingItem ? editingItem.purchase_currency : newItem.purchase_currency}
-                        onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, purchase_currency: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, purchase_currency: e.target.value }))}
-                        placeholder="INR - Indian Rupee"
-                        className="mt-1 w-full h-9 text-sm"
-                      />
-                      {formErrors.purchase_currency && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>
-                      )}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="purchasedDate">Purchase Date</Label>
+                        <Input 
+                          id="purchasedDate" 
+                          type="date" 
+                          value={editingItem ? editingItem.purchase_date : newItem.purchase_date} 
+                          onChange={e => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, purchase_date: e.target.value })
+                            : setNewItem((prev) => ({ ...prev, purchase_date: e.target.value }))}
+                          className={`mt-1 ${formErrors.purchase_date ? 'border-red-500' : ''}`} 
+                        />
+                        {formErrors.purchase_date && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedValue">Purchase Value</Label>
+                        <Input 
+                          id="purchasedValue" 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          value={editingItem ? editingItem.purchase_value : newItem.purchase_value} 
+                          onChange={e => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, purchase_value: e.target.value })
+                            : setNewItem((prev) => ({ ...prev, purchase_value: e.target.value }))}
+                          placeholder="0.00" 
+                          className={`mt-1 ${formErrors.purchase_value ? 'border-red-500' : ''}`} 
+                        />
+                        {formErrors.purchase_value && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedCurrency">Currency</Label>
+                        <Select 
+                          value={editingItem ? editingItem.purchase_currency : newItem.purchase_currency} 
+                          onValueChange={value => editingItem
+                            ? setEditingItem((prev) => prev && { ...prev, purchase_currency: value })
+                            : setNewItem((prev) => ({ ...prev, purchase_currency: value }))}
+                        >
+                          <SelectTrigger className={`mt-1 ${formErrors.purchase_currency ? 'border-red-500' : ''}`}>
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                            <SelectItem value="USD">USD - US Dollar</SelectItem>
+                            <SelectItem value="EUR">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {formErrors.purchase_currency && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => {
+                {/* Form Actions */}
+                <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">
+                  <Button variant="outline" onClick={() => {
                     setIsAddDialogOpen(false)
                     setIsEditDialogOpen(false)
                     resetForm()
-                  }}
-                  className="px-6"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={editingItem ? handleEditItem : handleAddItem}
-                  disabled={!isAddFormValid()}
-                >
-                  {editingItem ? "Update Item" : "Add Item"}
-                </Button>
-              </div>
+                  }} className="px-6">Cancel</Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                          <Button onClick={editingItem ? handleEditItem : handleAddItem} disabled={!isAddFormValid()}>
+                            {editingItem ? "Update Item" : "Add Item"}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!isAddFormValid() && (
+                        <TooltipContent>
+                          <p>Please fill in all required fields: Book Name, Description, Category, Location, Quantity, Front Image, and Back Image.</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>

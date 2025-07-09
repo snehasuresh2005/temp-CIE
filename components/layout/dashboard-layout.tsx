@@ -30,6 +30,7 @@ import {
   Moon,
   Settings,
   Sun,
+  Bell,
 } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
@@ -228,45 +229,57 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           {/* Spacer for desktop to push profile to the right */}
           <div className="hidden lg:block flex-1" />
 
-          {/* Dark mode toggle button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Toggle dark mode"
-            className="mr-2"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Dark mode toggle button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Toggle dark mode"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
 
-          {/* Profile dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 px-3 rounded-full flex items-center space-x-2">
-                <div className="flex items-center space-x-2">
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900 text-sm">{user?.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+            <Button variant="ghost" size="icon" aria-label="Notifications">
+              <Bell className="h-5 w-5" />
+            </Button>
+
+            {/* Profile dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 px-3 rounded-full flex items-center space-x-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900 text-sm">{user?.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase() : ''}
+                      </p>
+                    </div>
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-sm">
+                        {user?.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-sm">
-                      {user?.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" forceMount>
-              {/* Sign Out Button */}
-              <DropdownMenuItem
-                onClick={handleSignOut}
-                className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span className="font-medium">Sign Out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" forceMount>
+                <DropdownMenuItem onClick={() => onPageChange('profile')} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {/* Sign Out Button */}
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span className="font-medium">Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 

@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image, Upload } from "lucide-react"
+import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -114,12 +114,6 @@ export function ManageLabComponents() {
 
   // Add form validation state
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
-
-  // Bulk upload state
-  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false)
-  const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null)
-  const [isBulkUploading, setIsBulkUploading] = useState(false)
-  const [bulkUploadResult, setBulkUploadResult] = useState<any>(null)
 
   useEffect(() => {
     fetchComponents()
@@ -321,10 +315,6 @@ export function ManageLabComponents() {
   }
 
   const handleDeleteComponent = async (componentId: string) => {
-    if (!window.confirm("Are you sure you want to delete this component? This will also delete all related component requests.")) {
-      return
-    }
-
     try {
       const response = await fetch(`/api/lab-components/${componentId}`, {
         method: "DELETE",
@@ -334,17 +324,16 @@ export function ManageLabComponents() {
         setComponents((prev) => prev.filter((component) => component.id !== componentId))
         toast({
           title: "Success",
-          description: "Component and all related requests deleted successfully",
+          description: "Component deleted successfully",
         })
       } else {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to delete component")
+        throw new Error("Failed to delete component")
       }
     } catch (error) {
       console.error("Error deleting component:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete component",
+        description: "Failed to delete component",
         variant: "destructive",
       })
     }
@@ -631,112 +620,6 @@ export function ManageLabComponents() {
     setNewLocation("")
   }
 
-  // Bulk upload functions
-  const handleBulkUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
-        setBulkUploadFile(file)
-        console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type)
-      } else {
-        toast({
-          title: "Invalid File",
-          description: "Please select a valid CSV file",
-          variant: "destructive",
-        })
-        setBulkUploadFile(null)
-      }
-    } else {
-      setBulkUploadFile(null)
-    }
-  }
-
-  const handleBulkUpload = async () => {
-    if (!bulkUploadFile || !user) {
-      toast({
-        title: "No File Selected",
-        description: "Please select a CSV file to upload",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Additional validation
-    if (bulkUploadFile.size === 0) {
-      toast({
-        title: "Empty File",
-        description: "The selected file is empty",
-        variant: "destructive",
-      })
-      return
-    }
-
-    console.log('Uploading file:', bulkUploadFile.name, 'Size:', bulkUploadFile.size, 'Type:', bulkUploadFile.type)
-
-    setIsBulkUploading(true)
-    setBulkUploadResult(null)
-
-    try {
-      const formData = new FormData()
-      formData.append('csv', bulkUploadFile)
-
-      const response = await fetch('/api/lab-components/bulk-upload', {
-        method: 'POST',
-        headers: {
-          'x-user-id': user.id,
-        },
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        setBulkUploadResult(result)
-        toast({
-          title: "Bulk Upload Successful",
-          description: `Processed ${result.processed} components with ${result.errors} errors`,
-        })
-        // Refresh the components list
-        fetchComponents()
-        setIsBulkUploadDialogOpen(false)
-        // Reset the file input
-        setBulkUploadFile(null)
-      } else {
-        toast({
-          title: "Bulk Upload Failed",
-          description: result.error || 'Upload failed',
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error('Bulk upload error:', error)
-      toast({
-        title: "Bulk Upload Error",
-        description: "Network error occurred",
-        variant: "destructive",
-      })
-    } finally {
-      setIsBulkUploading(false)
-    }
-  }
-
-  const downloadSampleCSV = () => {
-    const csvContent = `component_name,component_description,component_specification,component_quantity,component_tag_id,component_category,component_location,invoice_number,purchase_value,purchased_from,purchase_currency,purchase_date,front_image_id,back_image_id
-"Arduino Uno R3","Arduino Uno is an open-source microcontroller board based on the ATmega328P, designed for building interactive electronics projects with ease.","ATmega328P MCU, 14 digital I/O pins, 6 analog inputs, 16 MHz clock speed, USB-powered, 5V operating voltage.",10,445RO,Electrical,"LAB C",inv2233444,300,amazon,INR,2025-06-10,"1751346972100_arduino -front.jpg","1751346972405_arduino-back.jpg"
-"NodeMCU","NodeMCU ESP8266 is a low-power, Wi-Fi-enabled microcontroller board ideal for IoT applications, offering GPIOs, serial communication, and easy programming via USB.","ESP8266 Wi-Fi SoC, 80 MHz clock, 4MB flash, 11 digital GPIOs, USB-to-serial, operates at 3.3V logic.",8,ESP8266,Electrical,"Storage ROOM",invc223387,120,Flipcart,INR,2025-06-06,"1750845469301_WhatsApp Image 2025-06-19 at 21.50.45.jpeg","1750845469275_WhatsApp Image 2025-06-19 at 21.50.39.jpeg"
-"Breadboard","High-quality breadboard for electronic prototyping and circuit testing.","830 tie points, 65 rows, 2 power rails, 0.1 inch spacing, compatible with Arduino and other microcontrollers.",5,BRD001,Electrical,"LAB C",inv2025001,50,amazon,INR,2025-01-15,"1751347927009_breadboard-front.jpg","1751347927531_breadboard-back.jpg"`
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'sample-lab-components.csv'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -758,78 +641,6 @@ export function ManageLabComponents() {
             Refresh
           </Button>
 
-          <Dialog open={isBulkUploadDialogOpen} onOpenChange={(open) => {
-            setIsBulkUploadDialogOpen(open)
-            if (!open) {
-              // Reset bulk upload state when dialog closes
-              setBulkUploadFile(null)
-              setBulkUploadResult(null)
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Bulk Upload
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Bulk Upload Lab Components</DialogTitle>
-                <DialogDescription>
-                  Upload a CSV file to add multiple lab components at once.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="csv-file">Select CSV File</Label>
-                  <Input
-                    id="csv-file"
-                    type="file"
-                    accept=".csv"
-                    onChange={handleBulkUploadFileChange}
-                    disabled={isBulkUploading}
-                  />
-                  {bulkUploadFile && (
-                    <p className="text-sm text-green-600 mt-1">
-                      ✓ File selected: {bulkUploadFile.name} ({(bulkUploadFile.size / 1024).toFixed(1)} KB)
-                    </p>
-                  )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    The CSV should include headers for: component_name, component_description, component_specification, component_quantity, component_tag_id, component_category, component_location, invoice_number, purchase_value, purchased_from, purchase_currency, purchase_date, front_image_id, back_image_id
-                  </p>
-                </div>
-                <Button onClick={downloadSampleCSV} variant="outline" size="sm">
-                  Download Sample CSV
-                </Button>
-                {bulkUploadResult && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Upload Results:</h4>
-                    <div className="text-sm space-y-1">
-                      <div>Total Rows: {bulkUploadResult.total_rows}</div>
-                      <div>Processed: {bulkUploadResult.processed}</div>
-                      <div>Errors: {bulkUploadResult.errors}</div>
-                    </div>
-                    {bulkUploadResult.error_details && bulkUploadResult.error_details.length > 0 && (
-                      <div className="max-h-20 overflow-y-auto text-xs text-red-600">
-                        {bulkUploadResult.error_details.map((error: string, index: number) => (
-                          <div key={index}>{error}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={handleBulkUpload}
-                  disabled={!bulkUploadFile || isBulkUploading}
-                >
-                  {isBulkUploading ? "Uploading..." : "Upload"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
           <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
             setIsAddDialogOpen(open)
             if (!open) {
@@ -842,482 +653,154 @@ export function ManageLabComponents() {
                 Add Component
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-7xl w-full max-h-[98vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Add New Lab Component</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-y-6 w-full">
-                {/* Basic Details Row 1 – Name & Tag ID */}
-                <div className="grid md:grid-cols-3 gap-4">
-                  {/* Component Name spans 2 columns on md+ */}
-                  <div className="md:col-span-2">
-                    <Label htmlFor="name" className="text-sm font-medium">Component Name *</Label>
-                    <Input
-                      id="name"
-                      value={newComponent.component_name}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_name: e.target.value }))}
-                      placeholder="Arduino Uno R3"
-                      className={`mt-1 w-full h-9 text-sm ${formErrors.component_name ? 'border-red-500' : ''}`}
-                    />
-                    {formErrors.component_name && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>
-                    )}
-                  </div>
-
-                  {/* Tag ID */}
-                  <div>
-                    <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
-                    <Input
-                      id="tagId"
-                      value={newComponent.component_tag_id}
-                      onChange={e => setNewComponent((prev) => ({ ...prev, component_tag_id: e.target.value }))}
-                      placeholder="e.g. 123-XYZ"
-                      className="mt-1 w-full h-9 text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Basic Details Row 2 – Location, Category, Quantity */}
-                <div className="grid md:grid-cols-3 gap-4">
-                  {/* Location */}
-                  <div>
-                    <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
-                    <Select
-                      open={showAddLocation || undefined}
-                      value={newComponent.component_location}
-                      onValueChange={(value) => {
-                        if (value === '__add_new_location__') {
-                          setShowAddLocation(true)
-                        } else {
-                          setNewComponent((prev) => ({ ...prev, component_location: value }))
-                          setShowAddLocation(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className={`mt-1 w-full h-9 text-sm ${formErrors.component_location ? 'border-red-500' : ''}`}> 
-                        <SelectValue placeholder="Select location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locationOptions.map((location) => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__add_new_location__" className="text-blue-600">+ Add new location…</SelectItem>
-                        {showAddLocation && (
-                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
-                            <Input
-                              value={newLocation}
-                              onChange={e => setNewLocation(e.target.value)}
-                              placeholder="Enter new location name"
-                              className="flex-1 h-8 text-sm"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                await handleAddLocation();
-                                setShowAddLocation(false);
-                              }}
-                              disabled={isSavingLocation || !newLocation.trim()}
-                              className="px-3"
-                            >
-                              {isSavingLocation ? "Adding..." : "Add"}
-                            </Button>
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {formErrors.component_location && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>
-                    )}
-                  </div>
-
-                  {/* Category */}
-                  <div>
-                    <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
-                    <Select
-                      open={showAddCategory || undefined}
-                      value={newComponent.component_category}
-                      onValueChange={(value) => {
-                        if (value === '__add_new__') {
-                          setShowAddCategory(true)
-                        } else {
-                          setNewComponent((prev) => ({ ...prev, component_category: value }))
-                          setShowAddCategory(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className={`mt-1 w-full h-9 text-sm ${formErrors.component_category ? 'border-red-500' : ''}`}> 
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__add_new__" className="text-blue-600">+ Add new category…</SelectItem>
-                        {showAddCategory && (
-                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
-                            <Input
-                              value={newCategory}
-                              onChange={e => setNewCategory(e.target.value)}
-                              placeholder="Enter new category name"
-                              className="flex-1 h-8 text-sm"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                await handleAddCategory();
-                                setShowAddCategory(false);
-                              }}
-                              disabled={isSavingCategory || !newCategory.trim()}
-                              className="px-3"
-                            >
-                              {isSavingCategory ? "Adding..." : "Add"}
-                            </Button>
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {formErrors.component_category && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>
-                    )}
-                  </div>
-
-                  {/* Quantity */}
-                  <div>
-                    <Label htmlFor="quantity" className="text-sm font-medium">Quantity *</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      value={newComponent.component_quantity}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))}
-                      min="1"
-                      className={`mt-1 w-full h-9 text-sm ${formErrors.component_quantity ? 'border-red-500' : ''}`}
-                    />
-                    {formErrors.component_quantity && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>
-                    )}
-                  </div>
-                </div>
-                {/* Basic Details Row - Location, Tag ID, Category */}
-                <div className="hidden">
-                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                    <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
-                    <Select
-                      open={showAddLocation || undefined}
-                      value={newComponent.component_location}
-                      onValueChange={(value) => {
-                        if (value === '__add_new_location__') {
-                          setShowAddLocation(true)
-                        } else {
-                          setNewComponent((prev) => ({ ...prev, component_location: value }))
-                          setShowAddLocation(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}>
-                        <SelectValue placeholder="Select location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locationOptions.map((location) => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__add_new_location__" className="text-blue-600">+ Add new location…</SelectItem>
-                        {showAddLocation && (
-                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
-                            <Input
-                              value={newLocation}
-                              onChange={e => setNewLocation(e.target.value)}
-                              placeholder="Enter new location name"
-                              className="flex-1 h-8 text-sm"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                await handleAddLocation();
-                                setShowAddLocation(false);
-                              }}
-                              disabled={isSavingLocation || !newLocation.trim()}
-                              className="px-3"
-                            >
-                              {isSavingLocation ? "Adding..." : "Add"}
-                            </Button>
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {formErrors.component_location && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                    <Label htmlFor="tagId" className="text-sm font-medium">Tag ID (optional)</Label>
-                    <Input
-                      id="tagId"
-                      value={newComponent.component_tag_id}
-                      onChange={e => setNewComponent((prev) => ({ ...prev, component_tag_id: e.target.value }))}
-                      placeholder="e.g. 123-XYZ"
-                      className="mt-1 w-full h-9 text-sm"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-[180px] md:min-w-[220px]">
-                    <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
-                    <Select
-                      open={showAddCategory || undefined}
-                      value={newComponent.component_category}
-                      onValueChange={(value) => {
-                        if (value === '__add_new__') {
-                          setShowAddCategory(true)
-                        } else {
-                          setNewComponent((prev) => ({ ...prev, component_category: value }))
-                          setShowAddCategory(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__add_new__" className="text-blue-600">+ Add new category…</SelectItem>
-                        {showAddCategory && (
-                          <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
-                            <Input
-                              value={newCategory}
-                              onChange={e => setNewCategory(e.target.value)}
-                              placeholder="Enter new category name"
-                              className="flex-1 h-8 text-sm"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                await handleAddCategory();
-                                setShowAddCategory(false);
-                              }}
-                              disabled={isSavingCategory || !newCategory.trim()}
-                              className="px-3"
-                            >
-                              {isSavingCategory ? "Adding..." : "Add"}
-                            </Button>
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {formErrors.component_category && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Image Upload Section with Gen Button */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Component Images</h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      className="h-8"
-                    >
-                      gen
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="frontImage" className="text-sm font-medium">Front Image *</Label>
-                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.frontImage ? 'border-red-500' : 'border-gray-300'}`}> 
-                        <Input
-                          id="frontImage"
-                          type="file"
-                          accept="image/*"
-                          onChange={e => setFrontImageFile(e.target.files?.[0] || null)}
-                          className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
+              <form className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
+                {/* Left Column: Basic Info & Images */}
+                <div className="space-y-6 pr-3 pl-3">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <Label htmlFor="name">Component Name *</Label>
+                        <Input id="name" value={newComponent.component_name} onChange={e => setNewComponent(prev => ({ ...prev, component_name: e.target.value }))} className={`mt-1 ${formErrors.component_name ? 'border-red-500' : ''}`} />
+                        {formErrors.component_name && <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>}
                       </div>
-                      {formErrors.frontImage && (
-                        <p className="text-red-500 text-xs">{formErrors.frontImage}</p>
-                      )}
-                      {frontImagePreview && (
-                        <div className="mt-2">
-                          <Label className="text-xs font-medium text-gray-600">Preview:</Label>
-                          <img
-                            src={frontImagePreview}
-                            alt="Front Preview"
-                            className="mt-1 w-full h-64 object-contain rounded-lg bg-gray-50"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="backImage" className="text-sm font-medium">Back Image *</Label>
-                      <div className={`border-2 border-dashed rounded-lg h-10 p-1 flex items-center hover:border-gray-400 transition-colors ${formErrors.backImage ? 'border-red-500' : 'border-gray-300'}`}> 
-                        <Input
-                          id="backImage"
-                          type="file"
-                          accept="image/*"
-                          onChange={e => setBackImageFile(e.target.files?.[0] || null)}
-                          className="border-0 p-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
+                      <div className="col-span-1">
+                        <Label htmlFor="tagId">Tag ID (optional)</Label>
+                        <Input id="tagId" value={newComponent.component_tag_id} onChange={e => setNewComponent(prev => ({ ...prev, component_tag_id: e.target.value }))} className="mt-1" />
                       </div>
-                      {formErrors.backImage && (
-                        <p className="text-red-500 text-xs">{formErrors.backImage}</p>
-                      )}
-                      {backImagePreview && (
-                        <div className="mt-2">
-                          <Label className="text-xs font-medium text-gray-600">Preview:</Label>
-                          <img
-                            src={backImagePreview}
-                            alt="Back Preview"
-                            className="mt-1 w-full h-64 object-contain rounded-lg bg-gray-50"
-                          />
-                        </div>
-                      )}
+                    </div>
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1">
+                        <Label htmlFor="location">Location *</Label>
+                        <Select value={newComponent.component_location} onValueChange={value => setNewComponent(prev => ({ ...prev, component_location: value }))}>
+                          <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}><SelectValue placeholder="Select location" /></SelectTrigger>
+                          <SelectContent>
+                            {locationOptions.map(location => <SelectItem key={location} value={location}>{location}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.component_location && <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>}
+                      </div>
+                      <div className="flex-1">
+                        <Label htmlFor="category">Category *</Label>
+                        <Select value={newComponent.component_category} onValueChange={value => setNewComponent(prev => ({ ...prev, component_category: value }))}>
+                          <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}><SelectValue placeholder="Select category" /></SelectTrigger>
+                          <SelectContent>
+                            {categoryOptions.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.component_category && <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>}
+                      </div>
+                      <div className="w-20">
+                        <Label htmlFor="quantity">Quantity *</Label>
+                        <Input id="quantity" type="number" value={newComponent.component_quantity} onChange={e => setNewComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))} min="1" className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`} />
+                        {formErrors.component_quantity && <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Component Images</h3>
+                      <Button variant="outline" size="sm" type="button" className="h-8">
+                        <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="frontImage">Front Image *</Label>
+                        <Input id="frontImage" type="file" accept="image/*" onChange={e => setFrontImageFile(e.target.files?.[0] || null)} className={`mt-1 ${formErrors.frontImage ? 'border-red-500' : ''}`} />
+                        {formErrors.frontImage && <p className="text-red-500 text-xs mt-1">{formErrors.frontImage}</p>}
+                        {frontImagePreview && (
+                          <div className="mt-2">
+                            <img
+                              src={frontImagePreview}
+                              alt="Front Preview"
+                              className="w-full h-40 object-contain rounded-lg bg-gray-50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="backImage">Back Image *</Label>
+                        <Input id="backImage" type="file" accept="image/*" onChange={e => setBackImageFile(e.target.files?.[0] || null)} className={`mt-1 ${formErrors.backImage ? 'border-red-500' : ''}`} />
+                        {formErrors.backImage && <p className="text-red-500 text-xs mt-1">{formErrors.backImage}</p>}
+                        {backImagePreview && (
+                          <div className="mt-2">
+                            <img
+                              src={backImagePreview}
+                              alt="Back Preview"
+                              className="w-full h-40 object-contain rounded-lg bg-gray-50"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Description and Specifications Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
-                    <Textarea
-                      id="description"
-                      value={newComponent.component_description}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_description: e.target.value }))}
-                      placeholder="Provide a detailed description of the component..."
-                      rows={4}
-                      className={`mt-0 ${formErrors.component_description ? 'border-red-500' : ''}`}
-                    />
-                    {formErrors.component_description && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="specifications" className="text-sm font-medium">Specifications</Label>
-                    <Textarea
-                      id="specifications"
-                      value={newComponent.component_specification}
-                      onChange={(e) => setNewComponent((prev) => ({ ...prev, component_specification: e.target.value }))}
-                      placeholder="Technical specifications, dimensions, power requirements, etc."
-                      rows={4}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                {/* Purchase Details Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900">Purchase Details (Optional)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Right Column: Details & Purchase Info */}
+                <div className="space-y-6 pr-2">
+                  <div className="space-y-3">
                     <div>
-                      <Label htmlFor="invoiceNumber" className="text-sm font-medium">Invoice Number</Label>
-                      <Input
-                        id="invoiceNumber"
-                        value={newComponent.invoice_number}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, invoice_number: e.target.value }))}
-                        placeholder="INV-2025-001"
-                        className={`mt-1 ${formErrors.invoice_number ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.invoice_number && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>
-                      )}
+                      <Label htmlFor="description">Description *</Label>
+                      <Textarea id="description" value={newComponent.component_description} onChange={e => setNewComponent(prev => ({ ...prev, component_description: e.target.value }))} rows={3} className={`mt-1 ${formErrors.component_description ? 'border-red-500' : ''}`} />
+                      {formErrors.component_description && <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>}
                     </div>
                     <div>
-                      <Label htmlFor="purchasedFrom" className="text-sm font-medium">Purchased From</Label>
-                      <Input
-                        id="purchasedFrom"
-                        value={newComponent.purchased_from}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchased_from: e.target.value }))}
-                        placeholder="Vendor/Supplier Name"
-                        className={`mt-1 ${formErrors.purchased_from ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.purchased_from && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>
-                      )}
+                      <Label htmlFor="specifications">Specifications</Label>
+                      <Textarea id="specifications" value={newComponent.component_specification} onChange={e => setNewComponent(prev => ({ ...prev, component_specification: e.target.value }))} rows={3} className="mt-1" />
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="purchasedDate" className="text-sm font-medium">Purchase Date</Label>
-                      <Input
-                        id="purchasedDate"
-                        type="date"
-                        value={newComponent.purchase_date}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_date: e.target.value }))}
-                        className={`mt-1 ${formErrors.purchase_date ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.purchase_date && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>
-                      )}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Purchase Details (Optional)</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                        <Input id="invoiceNumber" value={newComponent.invoice_number} onChange={e => setNewComponent(prev => ({ ...prev, invoice_number: e.target.value }))} className={`mt-1 ${formErrors.invoice_number ? 'border-red-500' : ''}`} />
+                        {formErrors.invoice_number && <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedFrom">Purchased From</Label>
+                        <Input id="purchasedFrom" value={newComponent.purchased_from} onChange={e => setNewComponent(prev => ({ ...prev, purchased_from: e.target.value }))} className={`mt-1 ${formErrors.purchased_from ? 'border-red-500' : ''}`} />
+                        {formErrors.purchased_from && <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>}
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="purchasedValue" className="text-sm font-medium">Purchase Value</Label>
-                      <Input
-                        id="purchasedValue"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={newComponent.purchase_value}
-                        onChange={(e) => setNewComponent((prev) => ({ ...prev, purchase_value: e.target.value }))}
-                        placeholder="0.00"
-                        className={`mt-1 ${formErrors.purchase_value ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.purchase_value && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="purchasedCurrency" className="text-sm font-medium">Currency</Label>
-                      <Select
-                        value={newComponent.purchase_currency}
-                        onValueChange={(value) => setNewComponent((prev) => ({ ...prev, purchase_currency: value }))}
-                      >
-                        <SelectTrigger className={`mt-1 ${formErrors.purchase_currency ? 'border-red-500' : ''}`}>
-                          <SelectValue placeholder="Select currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                          <SelectItem value="USD">USD - US Dollar</SelectItem>
-                          <SelectItem value="EUR">EUR - Euro</SelectItem>
-                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {formErrors.purchase_currency && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>
-                      )}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="purchasedDate">Purchase Date</Label>
+                        <Input id="purchasedDate" type="date" value={newComponent.purchase_date} onChange={e => setNewComponent(prev => ({ ...prev, purchase_date: e.target.value }))} className={`mt-1 ${formErrors.purchase_date ? 'border-red-500' : ''}`} />
+                        {formErrors.purchase_date && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedValue">Purchase Value</Label>
+                        <Input id="purchasedValue" type="number" min="0" step="0.01" value={newComponent.purchase_value} onChange={e => setNewComponent(prev => ({ ...prev, purchase_value: e.target.value }))} placeholder="0.00" className={`mt-1 ${formErrors.purchase_value ? 'border-red-500' : ''}`} />
+                        {formErrors.purchase_value && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="purchasedCurrency">Currency</Label>
+                        <Select value={newComponent.purchase_currency} onValueChange={value => setNewComponent(prev => ({ ...prev, purchase_currency: value }))}>
+                          <SelectTrigger className={`mt-1 ${formErrors.purchase_currency ? 'border-red-500' : ''}`}><SelectValue placeholder="Select currency" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                            <SelectItem value="USD">USD - US Dollar</SelectItem>
+                            <SelectItem value="EUR">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {formErrors.purchase_currency && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>}
+                      </div>
                     </div>
                   </div>
                 </div>
-
                 {/* Form Actions */}
-                <div className="flex justify-end space-x-3 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
-                    className="px-6"
-                  >
-                    Cancel
-                  </Button>
+                <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="px-6">Cancel</Button>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span tabIndex={0}>
-                          <Button onClick={handleAddComponent} disabled={!isAddFormValid()}>
-                            Add Component
-                          </Button>
+                          <Button onClick={handleAddComponent} disabled={!isAddFormValid()}>Add Component</Button>
                         </span>
                       </TooltipTrigger>
                       {!isAddFormValid() && (
@@ -1328,7 +811,7 @@ export function ManageLabComponents() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-              </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
