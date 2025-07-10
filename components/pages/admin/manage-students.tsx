@@ -196,6 +196,16 @@ export function ManageStudents() {
     return program ? program.label : programValue
   }
 
+  // Add form validation check
+  const isFormValid = useMemo(() => {
+    return !!(
+      newStudent.name?.trim() &&
+      newStudent.email?.trim() &&
+      newStudent.student_id?.trim() &&
+      newStudent.program?.trim()
+    )
+  }, [newStudent.name, newStudent.email, newStudent.student_id, newStudent.program])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -223,12 +233,12 @@ export function ManageStudents() {
                 Add Student
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add New Student</DialogTitle>
                 <DialogDescription>Enter the details for the new student</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Full Name *</Label>
                   <Input
@@ -281,7 +291,6 @@ export function ManageStudents() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="gpa">GPA</Label>
                     <Input
@@ -322,12 +331,17 @@ export function ManageStudents() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
+                <div className="col-span-2 flex justify-end space-x-2 pt-4">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddStudent}>Add Student</Button>
+                  <Button 
+                    onClick={handleAddStudent}
+                    disabled={!isFormValid}
+                    className={!isFormValid ? "opacity-50 cursor-not-allowed" : ""}
+                  >
+                    Add Student
+                  </Button>
                 </div>
               </div>
             </DialogContent>
