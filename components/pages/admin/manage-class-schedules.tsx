@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useAuth } from "@/components/auth-provider"
 
 interface Course {
-  course_id: string
+  id: string
   course_name: string
   course_description: string
   course_start_date: string
@@ -31,6 +31,7 @@ interface Course {
   created_date: string
   modified_by?: string
   modified_date: string
+  course_code?: string // Added for course code
 }
 
 interface Faculty {
@@ -173,6 +174,8 @@ export function ManageClassSchedules() {
 
       const data = await response.json()
       setSchedules((prev) => [...prev, data.schedule])
+      
+      // Reset form after successful creation
       setNewSchedule({
         courseId: "",
         facultyId: "",
@@ -281,9 +284,52 @@ export function ManageClassSchedules() {
   }
 
   const getAvailableSections = (courseId: string) => {
-    const course = courses.find((c) => c.course_id === courseId)
+    const course = courses.find((c) => c.id === courseId)
     return course ? ["A", "B", "C", "D"] : []
   }
+
+  // Add form validation check for new schedule
+  const isFormValid = useMemo(() => {
+    return !!(
+      newSchedule.courseId?.trim() &&
+      newSchedule.facultyId?.trim() &&
+      newSchedule.room?.trim() &&
+      newSchedule.dayOfWeek?.trim() &&
+      newSchedule.startTime?.trim() &&
+      newSchedule.endTime?.trim() &&
+      newSchedule.section?.trim()
+    )
+  }, [
+    newSchedule.courseId,
+    newSchedule.facultyId,
+    newSchedule.room,
+    newSchedule.dayOfWeek,
+    newSchedule.startTime,
+    newSchedule.endTime,
+    newSchedule.section
+  ])
+
+  // Add form validation check for edit schedule
+  const isEditFormValid = useMemo(() => {
+    if (!editingSchedule) return false
+    return !!(
+      editingSchedule.courseId?.trim() &&
+      editingSchedule.facultyId?.trim() &&
+      editingSchedule.room?.trim() &&
+      editingSchedule.dayOfWeek?.trim() &&
+      editingSchedule.startTime?.trim() &&
+      editingSchedule.endTime?.trim() &&
+      editingSchedule.section?.trim()
+    )
+  }, [
+    editingSchedule?.courseId,
+    editingSchedule?.facultyId,
+    editingSchedule?.room,
+    editingSchedule?.dayOfWeek,
+    editingSchedule?.startTime,
+    editingSchedule?.endTime,
+    editingSchedule?.section
+  ])
 
   if (isLoading) {
     return (
@@ -307,25 +353,28 @@ export function ManageClassSchedules() {
               Add Schedule
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[800px]">
             <DialogHeader>
               <DialogTitle>Add New Class Schedule</DialogTitle>
               <DialogDescription>
                 Create a new class schedule entry for students and faculty.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-6 py-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="course">Course *</Label>
-                  <Select onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, courseId: value }))}>
+                  <Select 
+                    value={newSchedule.courseId} 
+                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, courseId: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select course" />
                     </SelectTrigger>
                     <SelectContent>
                       {courses.map((course) => (
-                        <SelectItem key={course.course_id} value={course.course_id}>
-                          {course.course_name}
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.course_name} ({course.course_code || course.id})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -334,7 +383,10 @@ export function ManageClassSchedules() {
 
                 <div className="space-y-2">
                   <Label htmlFor="faculty">Faculty *</Label>
-                  <Select onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, facultyId: value }))}>
+                  <Select 
+                    value={newSchedule.facultyId} 
+                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, facultyId: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select faculty" />
                     </SelectTrigger>
@@ -349,20 +401,23 @@ export function ManageClassSchedules() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="room">Room *</Label>
                   <Input
                     id="room"
                     value={newSchedule.room}
                     onChange={(e) => setNewSchedule((prev) => ({ ...prev, room: e.target.value }))}
-                    placeholder="Room 101"
+                    placeholder="Enter room number (e.g., Room 101, Lab A)"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="section">Section *</Label>
-                  <Select onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, section: value }))}>
+                  <Select 
+                    value={newSchedule.section} 
+                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, section: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select section" />
                     </SelectTrigger>
@@ -377,10 +432,13 @@ export function ManageClassSchedules() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="dayOfWeek">Day *</Label>
-                  <Select onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, dayOfWeek: value }))}>
+                  <Select 
+                    value={newSchedule.dayOfWeek} 
+                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, dayOfWeek: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select day" />
                     </SelectTrigger>
@@ -414,12 +472,59 @@ export function ManageClassSchedules() {
                   />
                 </div>
               </div>
+              
+              {/* Course Details Display */}
+              {newSchedule.courseId && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
+                  <h4 className="font-semibold text-blue-900 mb-2">Selected Course Details</h4>
+                  {(() => {
+                    const selectedCourse = courses.find(c => c.id === newSchedule.courseId);
+                    if (!selectedCourse) return null;
+                    return (
+                      <div className="space-y-1 text-blue-800">
+                        <div className="grid grid-cols-2 gap-x-4">
+                          <p>
+                            <strong>Course:</strong> {selectedCourse.course_name}
+                          </p>
+                          <p>
+                            <strong>Code:</strong> {selectedCourse.course_code || selectedCourse.id}
+                          </p>
+                        </div>
+                        <p>
+                          <strong>Description:</strong>{" "}
+                          {selectedCourse.course_description.length > 100
+                            ? `${selectedCourse.course_description.substring(0, 100)}...`
+                            : selectedCourse.course_description}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => {
+                setIsAddDialogOpen(false)
+                // Reset form when closing
+                setNewSchedule({
+                  courseId: "",
+                  facultyId: "",
+                  room: "",
+                  dayOfWeek: "",
+                  startTime: "",
+                  endTime: "",
+                  section: "",
+                })
+              }}>
                 Cancel
               </Button>
-              <Button onClick={handleAddSchedule}>Add Schedule</Button>
+              <Button 
+                onClick={handleAddSchedule}
+                disabled={!isFormValid}
+                className={!isFormValid ? "opacity-50 cursor-not-allowed" : ""}
+              >
+                Add Schedule
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -454,9 +559,9 @@ export function ManageClassSchedules() {
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredSchedules.length === 0 ? (
-              <Card>
+              <Card className="col-span-full">
                 <CardContent className="p-8 text-center">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No schedules found</h3>
@@ -503,16 +608,16 @@ export function ManageClassSchedules() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <Clock className="h-4 w-4 text-gray-400" />
                         <span>
-                          {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                          {schedule.dayOfWeek} • {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-4 w-4 text-gray-400" />
-                        <span>{schedule.dayOfWeek}</span>
+                        <span>{schedule.room}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -550,7 +655,7 @@ export function ManageClassSchedules() {
       </Tabs>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>Edit Class Schedule</DialogTitle>
             <DialogDescription>
@@ -558,8 +663,8 @@ export function ManageClassSchedules() {
             </DialogDescription>
           </DialogHeader>
           {editingSchedule && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-6 py-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="edit-course">Course *</Label>
                   <Select
@@ -573,8 +678,8 @@ export function ManageClassSchedules() {
                     </SelectTrigger>
                     <SelectContent>
                       {courses.map((course) => (
-                        <SelectItem key={course.course_id} value={course.course_id}>
-                          {course.course_name}
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.course_name} ({course.course_code || course.id})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -603,7 +708,7 @@ export function ManageClassSchedules() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="edit-room">Room *</Label>
                   <Input
@@ -612,7 +717,7 @@ export function ManageClassSchedules() {
                     onChange={(e) =>
                       setEditingSchedule((prev) => prev ? { ...prev, room: e.target.value } : null)
                     }
-                    placeholder="Room 101"
+                    placeholder="Enter room number (e.g., Room 101, Lab A)"
                   />
                 </div>
 
@@ -638,7 +743,7 @@ export function ManageClassSchedules() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="edit-dayOfWeek">Day *</Label>
                   <Select
@@ -684,13 +789,51 @@ export function ManageClassSchedules() {
                   />
                 </div>
               </div>
+              
+              {/* Course Details Display */}
+              {editingSchedule.courseId && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
+                  <h4 className="font-semibold text-blue-900 mb-2">Selected Course Details</h4>
+                  {(() => {
+                    const selectedCourse = courses.find(c => c.id === editingSchedule.courseId);
+                    if (!selectedCourse) return null;
+                    return (
+                      <div className="space-y-1 text-blue-800">
+                        <div className="grid grid-cols-2 gap-x-4">
+                          <p>
+                            <strong>Course:</strong> {selectedCourse.course_name}
+                          </p>
+                          <p>
+                            <strong>Code:</strong> {selectedCourse.course_code || selectedCourse.id}
+                          </p>
+                        </div>
+                        <p>
+                          <strong>Description:</strong>{" "}
+                          {selectedCourse.course_description.length > 100
+                            ? `${selectedCourse.course_description.substring(0, 100)}...`
+                            : selectedCourse.course_description}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => {
+              setIsEditDialogOpen(false)
+              setEditingSchedule(null)
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleEditSchedule}>Update Schedule</Button>
+            <Button 
+              onClick={handleEditSchedule}
+              disabled={!isEditFormValid}
+              className={!isEditFormValid ? "opacity-50 cursor-not-allowed" : ""}
+            >
+              Update Schedule
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

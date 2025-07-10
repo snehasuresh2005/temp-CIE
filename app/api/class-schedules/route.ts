@@ -53,17 +53,16 @@ export async function GET(request: NextRequest) {
       // Get schedules for a specific student based on their enrollments
       const studentEnrollments = await prisma.enrollment.findMany({
         where: { student_id: studentId },
-        select: { course_id: true, section: true },
-      })
+        select: { course_id: true },
+      });
 
-      const enrollmentFilters = studentEnrollments.map((enrollment) => ({
-        course_id: enrollment.course_id,
-        section: enrollment.section,
-      }))
+      const courseIds = studentEnrollments.map((enrollment) => enrollment.course_id);
 
       schedules = await prisma.classSchedule.findMany({
         where: {
-          OR: enrollmentFilters,
+          course_id: {
+            in: courseIds,
+          },
         },
         include: {
           course: true,
@@ -98,7 +97,29 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ schedules })
+    // Transform all schedules to match frontend interface
+    const transformedSchedules = schedules.map(schedule => ({
+      id: schedule.id,
+      courseId: schedule.course_id,
+      facultyId: schedule.faculty_id,
+      room: schedule.room,
+      dayOfWeek: schedule.day_of_week,
+      startTime: schedule.start_time,
+      endTime: schedule.end_time,
+      section: schedule.section,
+      course: {
+        course_id: schedule.course.id,
+        course_name: schedule.course.course_name,
+      },
+      faculty: {
+        user: {
+          name: schedule.faculty?.user.name || "",
+          email: schedule.faculty?.user.email || "",
+        },
+      },
+    }));
+
+    return NextResponse.json({ schedules: transformedSchedules })
   } catch (error) {
     console.error("Get class schedules error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -107,36 +128,60 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // For now, we'll allow access without authentication
-    // In a real app, you'd implement proper session checking here
-
     const data = await request.json()
 
-    const scheduleData: any = {
-      course_id: data.courseId,
-      room: data.room,
-      day_of_week: data.dayOfWeek,
-      start_time: data.startTime,
-      end_time: data.endTime,
-      section: data.section,
-      faculty_id: data.facultyId,
-    }
+    // Data validation could be added here
 
-    const schedule = await prisma.classSchedule.create({
-      data: scheduleData,
+    const newSchedule = await prisma.classSchedule.create({
+      data: {
+        course_id: data.courseId,
+        faculty_id: data.facultyId,
+        room: data.room,
+        day_of_week: data.dayOfWeek,
+        start_time: data.startTime,
+        end_time: data.endTime,
+        section: data.section,
+      },
       include: {
         course: true,
         faculty: {
           include: {
-            user: true,
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
           },
         },
       },
-    })
+    });
 
-    return NextResponse.json({ schedule })
+    // Transform the response to match frontend interface
+    const transformedSchedule = {
+      id: newSchedule.id,
+      courseId: newSchedule.course_id,
+      facultyId: newSchedule.faculty_id,
+      room: newSchedule.room,
+      dayOfWeek: newSchedule.day_of_week,
+      startTime: newSchedule.start_time,
+      endTime: newSchedule.end_time,
+      section: newSchedule.section,
+      course: {
+        course_id: newSchedule.course.id,
+        course_name: newSchedule.course.course_name,
+      },
+      faculty: {
+        user: {
+          name: newSchedule.faculty?.user.name || "",
+          email: newSchedule.faculty?.user.email || "",
+        },
+      },
+    };
+
+    return NextResponse.json({ schedule: transformedSchedule });
   } catch (error) {
-    console.error("Create class schedule error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Create class schedule error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
