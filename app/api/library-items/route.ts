@@ -16,10 +16,7 @@ export async function GET(req: NextRequest) {
     const items = await prisma.libraryItem.findMany({
       where: whereClause,
       include: {
-        domain: true,
-        faculty: {
-          include: { user: true }
-        }
+        domain: true
       },
       orderBy: { created_at: 'desc' },
     });
@@ -34,10 +31,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    // Require faculty_id
-    if (!body.faculty_id) {
-      return NextResponse.json({ error: "Missing faculty_id" }, { status: 400 });
-    }
+    // faculty_id is now optional
     // Safely handle purchase_date and purchase_value
     let purchaseDate = null;
     if (body.purchase_date) {
@@ -58,7 +52,7 @@ export async function POST(req: NextRequest) {
         available_quantity: Number(body.item_quantity),
         item_location: body.item_location,
         item_specification: body.item_specification || '',
-        faculty_id: body.faculty_id,
+        faculty_id: body.faculty_id || null,
         
         invoice_number: body.invoice_number || '',
         purchased_from: body.purchased_from || '',
