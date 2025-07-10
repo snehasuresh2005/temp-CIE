@@ -6,14 +6,14 @@ import { Readable } from 'stream'
 import { prisma } from '@/lib/prisma'
 import { getUserById } from '@/lib/auth'
 
-interface LabComponentCSV {
-  component_name: string
-  component_description: string
-  component_specification?: string
-  component_quantity: string
-  component_tag_id?: string
-  component_category: string
-  component_location: string
+interface LibraryItemCSV {
+  item_name: string
+  item_description: string
+  item_specification?: string
+  item_quantity: string
+  item_tag_id?: string
+  item_category: string
+  item_location: string
   invoice_number?: string
   purchase_value?: string
   purchased_from?: string
@@ -62,14 +62,14 @@ export async function POST(request: NextRequest) {
     const csvContent = buffer.toString('utf-8')
 
     // Parse CSV content
-    const results: LabComponentCSV[] = []
+    const results: LibraryItemCSV[] = []
     const parser = csv()
 
     return new Promise((resolve) => {
       const stream = Readable.from(csvContent)
       
       stream.pipe(parser)
-        .on('data', (data: LabComponentCSV) => {
+        .on('data', (data: LibraryItemCSV) => {
           results.push(data)
         })
         .on('end', async () => {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Validate and process each row
-            const processedComponents = []
+            const processedItems = []
             const errors = []
 
             for (let i = 0; i < results.length; i++) {
@@ -89,35 +89,35 @@ export async function POST(request: NextRequest) {
 
               try {
                 // Validate required fields
-                if (!row.component_name?.trim()) {
-                  errors.push(`Row ${rowNumber}: component_name is required`)
+                if (!row.item_name?.trim()) {
+                  errors.push(`Row ${rowNumber}: item_name is required`)
                   continue
                 }
 
-                if (!row.component_description?.trim()) {
-                  errors.push(`Row ${rowNumber}: component_description is required`)
+                if (!row.item_description?.trim()) {
+                  errors.push(`Row ${rowNumber}: item_description is required`)
                   continue
                 }
 
-                if (!row.component_quantity?.trim()) {
-                  errors.push(`Row ${rowNumber}: component_quantity is required`)
+                if (!row.item_quantity?.trim()) {
+                  errors.push(`Row ${rowNumber}: item_quantity is required`)
                   continue
                 }
 
-                if (!row.component_category?.trim()) {
-                  errors.push(`Row ${rowNumber}: component_category is required`)
+                if (!row.item_category?.trim()) {
+                  errors.push(`Row ${rowNumber}: item_category is required`)
                   continue
                 }
 
-                if (!row.component_location?.trim()) {
-                  errors.push(`Row ${rowNumber}: component_location is required`)
+                if (!row.item_location?.trim()) {
+                  errors.push(`Row ${rowNumber}: item_location is required`)
                   continue
                 }
 
                 // Parse quantity
-                const quantity = parseInt(row.component_quantity)
+                const quantity = parseInt(row.item_quantity)
                 if (isNaN(quantity) || quantity < 0) {
-                  errors.push(`Row ${rowNumber}: component_quantity must be a positive number`)
+                  errors.push(`Row ${rowNumber}: item_quantity must be a positive number`)
                   continue
                 }
 
@@ -143,41 +143,43 @@ export async function POST(request: NextRequest) {
                   purchaseDate = parsedDate
                 }
 
-                // Check if component already exists by name and tag_id
-                const existingComponent = await prisma.labComponent.findFirst({
+                // Check if item already exists by name and tag_id
+                const existingItem = await prisma.libraryItem.findFirst({
                   where: {
-                    component_name: row.component_name.trim(),
-                    component_tag_id: row.component_tag_id?.trim() || null
+                    item_name: row.item_name.trim(),
+                    item_tag_id: row.item_tag_id?.trim() || null
                   }
                 })
 
-                if (existingComponent) {
-                  // Update existing component quantity
-                  await prisma.labComponent.update({
-                    where: { id: existingComponent.id },
+                if (existingItem) {
+                  // Update existing item quantity
+                  await prisma.libraryItem.update({
+                    where: { id: existingItem.id },
                     data: {
-                      component_quantity: existingComponent.component_quantity + quantity,
-                      modified_by: userId,
+                      item_quantity: existingItem.item_quantity + quantity,
+                      available_quantity: existingItem.available_quantity + quantity,
+                      modified_by: user.name,
                       modified_at: new Date()
                     }
                   })
-                  processedComponents.push({
+                  processedItems.push({
                     action: 'updated',
-                    component_name: row.component_name,
-                    component_tag_id: row.component_tag_id,
+                    item_name: row.item_name,
+                    item_tag_id: row.item_tag_id,
                     quantity_added: quantity
                   })
                 } else {
-                  // Create new component
-                  await prisma.labComponent.create({
+                  // Create new item
+                  await prisma.libraryItem.create({
                     data: {
-                      component_name: row.component_name.trim(),
-                      component_description: row.component_description.trim(),
-                      component_specification: row.component_specification?.trim() || null,
-                      component_quantity: quantity,
-                      component_tag_id: row.component_tag_id?.trim() || null,
-                      component_category: row.component_category.trim(),
-                      component_location: row.component_location.trim(),
+                      item_name: row.item_name.trim(),
+                      item_description: row.item_description.trim(),
+                      item_specification: row.item_specification?.trim() || null,
+                      item_quantity: quantity,
+                      available_quantity: quantity,
+                      item_tag_id: row.item_tag_id?.trim() || null,
+                      item_category: row.item_category.trim(),
+                      item_location: row.item_location.trim(),
                       invoice_number: row.invoice_number?.trim() || null,
                       purchase_value: purchaseValue,
                       purchased_from: row.purchased_from?.trim() || null,
@@ -185,13 +187,13 @@ export async function POST(request: NextRequest) {
                       purchase_date: purchaseDate,
                       front_image_id: row.front_image_id?.trim() || null,
                       back_image_id: row.back_image_id?.trim() || null,
-                      created_by: userId
+                      created_by: user.name
                     }
                   })
-                  processedComponents.push({
+                  processedItems.push({
                     action: 'created',
-                    component_name: row.component_name,
-                    component_tag_id: row.component_tag_id,
+                    item_name: row.item_name,
+                    item_tag_id: row.item_tag_id,
                     quantity: quantity
                   })
                 }
@@ -206,10 +208,10 @@ export async function POST(request: NextRequest) {
             const response = {
               success: true,
               total_rows: results.length,
-              processed: processedComponents.length,
+              processed: processedItems.length,
               errors: errors.length,
               error_details: errors,
-              processed_components: processedComponents
+              processed_items: processedItems
             }
 
             resolve(NextResponse.json(response))

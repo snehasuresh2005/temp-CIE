@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -114,6 +114,12 @@ export function ManageLabComponents() {
 
   // Add form validation state
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Bulk upload state
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false)
+  const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null)
+  const [isBulkUploading, setIsBulkUploading] = useState(false)
 
   useEffect(() => {
     fetchComponents()
@@ -175,103 +181,112 @@ export function ManageLabComponents() {
   )
 
   const handleAddComponent = async () => {
-    // Validate form before proceeding
-    if (!validateForm()) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields correctly",
-        variant: "destructive",
-      })
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log('Already submitting, ignoring click')
       return
     }
+    
+    setIsSubmitting(true)
+    console.log('Starting component submission...')
+    
+    try {
+      // Validate form before proceeding
+      if (!validateForm()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields correctly",
+          variant: "destructive",
+        })
+        return
+      }
 
-    // If Tag ID is empty, check for duplicate
-    if (!newComponent.component_tag_id) {
-      const formattedCategory = toTitleCase(newComponent.component_category)
-      const formattedLocation = formatLocation(newComponent.component_location)
-      const existing = components.find(
-        c =>
-          (c.component_name?.trim().toLowerCase() || '') === (newComponent.component_name?.trim().toLowerCase() || '') &&
-          (c.component_category?.trim().toLowerCase() || '') === (formattedCategory?.trim().toLowerCase() || '') &&
-          (c.component_location?.trim().toLowerCase() || '') === (formattedLocation?.trim().toLowerCase() || '')
-      )
-      if (existing) {
-        if (!window.confirm("This item already exists. The quantity you add will be added to the existing one. Continue?")) {
+      // If Tag ID is empty, check for duplicate
+      if (!newComponent.component_tag_id) {
+        const formattedCategory = toTitleCase(newComponent.component_category)
+        const formattedLocation = formatLocation(newComponent.component_location)
+        const existing = components.find(
+          c =>
+            (c.component_name?.trim().toLowerCase() || '') === (newComponent.component_name?.trim().toLowerCase() || '') &&
+            (c.component_category?.trim().toLowerCase() || '') === (formattedCategory?.trim().toLowerCase() || '') &&
+            (c.component_location?.trim().toLowerCase() || '') === (formattedLocation?.trim().toLowerCase() || '')
+        )
+        if (existing) {
+          if (!window.confirm("This item already exists. The quantity you add will be added to the existing one. Continue?")) {
+            return
+          }
+          // Simulate updating the quantity in the frontend (no backend yet)
+          setComponents(prev =>
+            prev.map(c =>
+              c.id === existing.id
+                ? { ...c, component_quantity: c.component_quantity + newComponent.component_quantity, availableQuantity: (c.availableQuantity || 0) + newComponent.component_quantity }
+                : c
+            )
+          )
+          toast({
+            title: "Quantity Updated",
+            description: "The quantity has been added to the existing component.",
+          })
+          // Reset form
+          resetForm()
+          setIsAddDialogOpen(false)
           return
         }
-        // Simulate updating the quantity in the frontend (no backend yet)
-        setComponents(prev =>
-          prev.map(c =>
-            c.id === existing.id
-              ? { ...c, component_quantity: c.component_quantity + newComponent.component_quantity, availableQuantity: (c.availableQuantity || 0) + newComponent.component_quantity }
-              : c
-          )
-        )
-        toast({
-          title: "Quantity Updated",
-          description: "The quantity has been added to the existing component.",
-        })
-        // Reset form
-        resetForm()
-        setIsAddDialogOpen(false)
-        return
       }
-    }
 
-    let frontImageUrl = undefined
-    let backImageUrl = undefined
+      let frontImageUrl = undefined
+      let backImageUrl = undefined
 
-    // Upload front image
-    if (frontImageFile) {
-      const formData = new FormData()
-      formData.append('image', frontImageFile)
-      const uploadRes = await fetch('/api/lab-components/upload', {
-        method: 'POST',
-        body: formData,
-      })
-      if (uploadRes.ok) {
-        const data = await uploadRes.json()
-        frontImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
-      } else {
-        toast({
-          title: "Error",
-          description: "Front image upload failed",
-          variant: "destructive",
+      // Upload front image
+      if (frontImageFile) {
+        const formData = new FormData()
+        formData.append('image', frontImageFile)
+        const uploadRes = await fetch('/api/lab-components/upload', {
+          method: 'POST',
+          body: formData,
         })
-        return
+        if (uploadRes.ok) {
+          const data = await uploadRes.json()
+          frontImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
+        } else {
+          toast({
+            title: "Error",
+            description: "Front image upload failed",
+            variant: "destructive",
+          })
+          return
+        }
       }
-    }
 
-    // Upload back image
-    if (backImageFile) {
-      const formData = new FormData()
-      formData.append('image', backImageFile)
-      const uploadRes = await fetch('/api/lab-components/upload', {
-        method: 'POST',
-        body: formData,
-      })
-      if (uploadRes.ok) {
-        const data = await uploadRes.json()
-        backImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
-      } else {
-        toast({
-          title: "Error",
-          description: "Back image upload failed",
-          variant: "destructive",
+      // Upload back image
+      if (backImageFile) {
+        const formData = new FormData()
+        formData.append('image', backImageFile)
+        const uploadRes = await fetch('/api/lab-components/upload', {
+          method: 'POST',
+          body: formData,
         })
-        return
+        if (uploadRes.ok) {
+          const data = await uploadRes.json()
+          backImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
+        } else {
+          toast({
+            title: "Error",
+            description: "Back image upload failed",
+            variant: "destructive",
+          })
+          return
+        }
       }
-    }
 
-    // Format category and location before sending
-    const formattedCategory = toTitleCase(newComponent.component_category)
-    const formattedLocation = formatLocation(newComponent.component_location)
+      // Format category and location before sending
+      const formattedCategory = toTitleCase(newComponent.component_category)
+      const formattedLocation = formatLocation(newComponent.component_location)
 
-    console.log("Frontend - handleAddComponent - user object:", user)
-    console.log("Frontend - handleAddComponent - user.id:", user?.id)
-    console.log("Frontend - handleAddComponent - user.name:", user?.name)
+      console.log("Frontend - handleAddComponent - user object:", user)
+      console.log("Frontend - handleAddComponent - user.id:", user?.id)
+      console.log("Frontend - handleAddComponent - user.name:", user?.name)
 
-    try {
       const response = await fetch("/api/lab-components", {
         method: "POST",
         headers: {
@@ -311,6 +326,9 @@ export function ManageLabComponents() {
         description: error instanceof Error ? error.message : "Failed to add component",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
+      console.log('Component submission finished')
     }
   }
 
@@ -466,9 +484,9 @@ export function ManageLabComponents() {
     return Object.keys(errors).length === 0
   }
 
-  // Check if form is valid for button state
-  const isAddFormValid = () => {
-    return (
+  // Check if form is valid for button state - using useMemo for reactivity
+  const isAddFormValid = useMemo(() => {
+    const isValid = !!(
       newComponent.component_name?.trim() &&
       newComponent.component_description?.trim() &&
       newComponent.component_category?.trim() &&
@@ -477,7 +495,29 @@ export function ManageLabComponents() {
       frontImageFile &&
       backImageFile
     )
-  }
+    
+    // Debug log to help troubleshoot
+    console.log('Form validation check:', {
+      name: !!newComponent.component_name?.trim(),
+      description: !!newComponent.component_description?.trim(), 
+      category: !!newComponent.component_category?.trim(),
+      location: !!newComponent.component_location?.trim(),
+      quantity: newComponent.component_quantity > 0,
+      frontImage: !!frontImageFile,
+      backImage: !!backImageFile,
+      isValid
+    })
+    
+    return isValid
+  }, [
+    newComponent.component_name,
+    newComponent.component_description,
+    newComponent.component_category,
+    newComponent.component_location,
+    newComponent.component_quantity,
+    frontImageFile,
+    backImageFile
+  ])
 
   const handleEditComponent = async () => {
     if (!editingComponent) return
@@ -618,6 +658,173 @@ export function ManageLabComponents() {
     setShowAddLocation(false)
     setNewCategory("")
     setNewLocation("")
+    setIsSubmitting(false)
+  }
+
+  // Bulk upload functions
+  const downloadSampleCSV = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const headers = [
+      'component_name',
+      'component_description', 
+      'component_specification',
+      'component_quantity',
+      'component_tag_id',
+      'component_category',
+      'component_location',
+      'front_image_id',
+      'back_image_id',
+      'invoice_number',
+      'purchase_value',
+      'purchased_from',
+      'purchase_currency',
+      'purchase_date'
+    ]
+    
+    const sampleData = [
+      [
+        'Arduino Uno R3',
+        'Microcontroller board based on the ATmega328P',
+        'Operating Voltage: 5V, Input Voltage: 7-12V, Digital I/O Pins: 14, Flash Memory: 32KB',
+        '10',
+        'ARD001',
+        'Electrical',
+        'Lab A',
+        'arduino-front.jpg',
+        'arduino-back.jpg',
+        'INV001',
+        '750.00',
+        'Electronics Store',
+        'INR',
+        '2024-01-15'
+      ],
+      [
+        'NodeMCU ESP8266',
+        'Wi-Fi enabled microcontroller development board',
+        'Processor: ESP8266, Flash: 4MB, GPIO: 10, Wi-Fi: 802.11 b/g/n',
+        '8',
+        'ESP001',
+        'Electrical',
+        'Lab A',
+        'nodemcu-front.jpg',
+        'nodemcu-back.jpg',
+        'INV002',
+        '450.00',
+        'Tech Components Ltd',
+        'INR',
+        '2024-01-20'
+      ],
+      [
+        'Breadboard 830 Point',
+        'Solderless breadboard for prototyping electronic circuits',
+        'Tie Points: 830, Size: 165mm x 55mm, ABS Plastic Base',
+        '15',
+        'BB001',
+        'Electrical',
+        'Lab B',
+        'breadboard-front.jpg',
+        'breadboard-back.jpg',
+        'INV003',
+        '120.00',
+        'Circuit World',
+        'INR',
+        '2024-01-25'
+      ],
+      [
+        'Multimeter Digital',
+        'Digital multimeter for measuring voltage, current, and resistance',
+        'Range: DC 0-600V, AC 0-600V, Current: 0-10A, Resistance: 0-20MΩ',
+        '5',
+        'MM001',
+        'Measurement',
+        'Equipment Room',
+        'multimeter-front.jpg',
+        'multimeter-back.jpg',
+        'INV004',
+        '1200.00',
+        'Instrument Supply Co',
+        'INR',
+        '2024-02-01'
+      ],
+      [
+        'Resistor Kit 1/4W',
+        'Assorted carbon film resistors kit',
+        'Values: 10Ω to 1MΩ, Tolerance: ±5%, Power: 1/4W, Quantity: 600 pieces',
+        '3',
+        'RES001',
+        'Electrical',
+        'Storage Room',
+        'resistor-kit-front.jpg',
+        'resistor-kit-back.jpg',
+        'INV005',
+        '350.00',
+        'Electronic Components Hub',
+        'INR',
+        '2024-02-05'
+      ]
+    ]
+    
+    const csvContent = [headers.join(','), ...sampleData.map(row => row.map(field => `"${field}"`).join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.setAttribute('hidden', '')
+    a.setAttribute('href', url)
+    a.setAttribute('download', 'lab-components-sample.csv')
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleBulkUpload = async () => {
+    if (!bulkUploadFile) return
+    
+    setIsBulkUploading(true)
+    
+    try {
+      const formData = new FormData()
+      formData.append('csv', bulkUploadFile)
+      
+      const response = await fetch('/api/lab-components/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'x-user-id': user?.id || '',
+        },
+        body: formData,
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Bulk upload completed! Processed: ${result.processed}, Errors: ${result.errors}`,
+        })
+        
+        if (result.errors > 0) {
+          console.log('Upload errors:', result.error_details)
+        }
+        
+        // Refresh components list
+        fetchComponents()
+        
+        // Close dialog and reset
+        setIsBulkUploadDialogOpen(false)
+        setBulkUploadFile(null)
+      } else {
+        throw new Error(result.error || 'Upload failed')
+      }
+    } catch (error) {
+      console.error('Bulk upload error:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload CSV",
+        variant: "destructive",
+      })
+    } finally {
+      setIsBulkUploading(false)
+    }
   }
 
   if (loading) {
@@ -640,6 +847,64 @@ export function ManageLabComponents() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+          <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Package className="h-4 w-4 mr-2" />
+                Bulk Upload
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Lab Components</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV file to add multiple lab components at once. 
+                  <br />
+                  <a 
+                    href="#" 
+                    onClick={downloadSampleCSV}
+                    className="text-blue-600 hover:underline mt-2 inline-block"
+                  >
+                    Download sample CSV template
+                  </a>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="csvFile">CSV File</Label>
+                  <Input
+                    id="csvFile"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      setBulkUploadFile(file || null)
+                      if (file) {
+                        console.log(`Selected file: ${file.name} (${file.size} bytes)`)
+                      }
+                    }}
+                    className="mt-1"
+                  />
+                  {bulkUploadFile && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Selected: {bulkUploadFile.name} ({(bulkUploadFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => {
+                    setIsBulkUploadDialogOpen(false)
+                    setBulkUploadFile(null)
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkUpload} disabled={!bulkUploadFile || isBulkUploading}>
+                    {isBulkUploading ? "Uploading..." : "Upload"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
             setIsAddDialogOpen(open)
@@ -657,7 +922,7 @@ export function ManageLabComponents() {
               <DialogHeader>
                 <DialogTitle>Add New Lab Component</DialogTitle>
               </DialogHeader>
-              <form className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
                 {/* Left Column: Basic Info & Images */}
                 <div className="space-y-6 pr-3 pl-3">
                   <div className="space-y-3">
@@ -800,10 +1065,20 @@ export function ManageLabComponents() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span tabIndex={0}>
-                          <Button onClick={handleAddComponent} disabled={!isAddFormValid()}>Add Component</Button>
+                          <Button 
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleAddComponent()
+                            }} 
+                            disabled={!isAddFormValid || isSubmitting}
+                          >
+                            {isSubmitting ? "Adding..." : "Add Component"}
+                          </Button>
                         </span>
                       </TooltipTrigger>
-                      {!isAddFormValid() && (
+                      {!isAddFormValid && (
                         <TooltipContent>
                           <p>Please fill in all required fields: Component Name, Description, Category, Location, Quantity, Front Image, and Back Image.</p>
                         </TooltipContent>
@@ -811,7 +1086,7 @@ export function ManageLabComponents() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

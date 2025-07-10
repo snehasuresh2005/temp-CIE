@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,8 +47,6 @@ interface LibraryItem {
   imageUrl?: string | null
   backImageUrl?: string | null
   availableQuantity?: number
-  faculty_id?: string
-  facultyName?: string
 }
 
 // Utility functions for formatting
@@ -117,6 +115,12 @@ export function ManageLibrary() {
 
   // Add form validation state
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Bulk upload state
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false)
+  const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null)
+  const [isBulkUploading, setIsBulkUploading] = useState(false)
 
   useEffect(() => {
     fetchItems()
@@ -199,15 +203,25 @@ export function ManageLibrary() {
   )
 
   const handleAddItem = async () => {
-    // Validate form before proceeding
-    if (!validateForm()) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields correctly",
-        variant: "destructive",
-      })
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log('Already submitting, ignoring click')
       return
     }
+    
+    setIsSubmitting(true)
+    console.log('Starting library item submission...')
+    
+    try {
+      // Validate form before proceeding
+      if (!isAddFormValid()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields correctly",
+          variant: "destructive",
+        })
+        return
+      }
 
     // If Tag ID is empty, check for duplicate
     if (!newItem.item_tag_id) {
@@ -236,7 +250,6 @@ export function ManageLibrary() {
           description: "The quantity has been added to the existing item.",
         })
         // Reset form
-        resetForm()
         setIsAddDialogOpen(false)
         return
       }
@@ -291,8 +304,7 @@ export function ManageLibrary() {
     const formattedCategory = toTitleCase(newItem.item_category)
     const formattedLocation = formatLocation(newItem.item_location)
 
-    try {
-      const response = await fetch("/api/library-items", {
+    const response = await fetch("/api/library-items", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -313,7 +325,6 @@ export function ManageLibrary() {
         setItems((prev) => [...prev, data.item])
         
         // Reset form
-        resetForm()
         setIsAddDialogOpen(false)
 
         toast({
@@ -331,6 +342,9 @@ export function ManageLibrary() {
         description: error instanceof Error ? error.message : "Failed to add item",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
+      console.log('Library item submission finished')
     }
   }
 
@@ -365,6 +379,205 @@ export function ManageLibrary() {
     setEditingItem(null)
     setImageStates({})
     setFormErrors({})
+    setIsSubmitting(false)
+  }
+
+  // Bulk upload functions
+  const downloadSampleCSV = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const headers = [
+      'item_name',
+      'item_description', 
+      'item_specification',
+      'item_quantity',
+      'item_tag_id',
+      'item_category',
+      'item_location',
+      'front_image_id',
+      'back_image_id',
+      'invoice_number',
+      'purchase_value',
+      'purchased_from',
+      'purchase_currency',
+      'purchase_date'
+    ]
+    
+    const sampleData = [
+      [
+        'Introduction to Computer Science',
+        'A comprehensive guide to computer science fundamentals covering algorithms and programming',
+        'Pages: 500, Edition: 5th, Publisher: Tech Books, ISBN: 978-0123456789',
+        '5',
+        'LIB001',
+        'Computer Science',
+        'Library A',
+        'book-cs-front.jpg',
+        'book-cs-back.jpg',
+        'INV001',
+        '1200.00',
+        'Academic Publishers',
+        'INR',
+        '2024-01-15'
+      ],
+      [
+        'Data Structures and Algorithms',
+        'Advanced concepts in data structures with algorithmic problem solving techniques',
+        'Pages: 680, Edition: 4th, Publisher: Algorithm Press, ISBN: 978-0987654321',
+        '8',
+        'LIB002',
+        'Computer Science',
+        'Library A',
+        'book-dsa-front.jpg',
+        'book-dsa-back.jpg',
+        'INV002',
+        '1500.00',
+        'Educational Books Ltd',
+        'INR',
+        '2024-01-20'
+      ],
+      [
+        'Digital Electronics',
+        'Comprehensive guide to digital circuits, logic design, and microprocessors',
+        'Pages: 520, Edition: 2nd, Publisher: Circuit Books, ISBN: 978-0456789123',
+        '6',
+        'LIB003',
+        'Electronics',
+        'Library B',
+        'book-digital-front.jpg',
+        'book-digital-back.jpg',
+        'INV003',
+        '980.00',
+        'Engineering Publishers',
+        'INR',
+        '2024-01-25'
+      ],
+      [
+        'Machine Learning Fundamentals',
+        'Introduction to ML algorithms, neural networks, and deep learning concepts',
+        'Pages: 720, Edition: 1st, Publisher: AI Books, ISBN: 978-0234567891',
+        '4',
+        'LIB004',
+        'Artificial Intelligence',
+        'Library A',
+        'book-ml-front.jpg',
+        'book-ml-back.jpg',
+        'INV004',
+        '2200.00',
+        'Tech Knowledge Publishers',
+        'INR',
+        '2024-02-01'
+      ],
+      [
+        'Computer Networks',
+        'Networking protocols, architecture, security, and network programming',
+        'Pages: 640, Edition: 5th, Publisher: Network Press, ISBN: 978-0345678912',
+        '7',
+        'LIB005',
+        'Networking',
+        'Library B',
+        'book-network-front.jpg',
+        'book-network-back.jpg',
+        'INV005',
+        '1350.00',
+        'Technical Books Inc',
+        'INR',
+        '2024-02-05'
+      ],
+      [
+        'Database Management Systems',
+        'SQL, NoSQL, database design principles, and optimization techniques',
+        'Pages: 580, Edition: 3rd, Publisher: Data Books, ISBN: 978-0567891234',
+        '6',
+        'LIB006',
+        'Database',
+        'Library A',
+        'book-db-front.jpg',
+        'book-db-back.jpg',
+        'INV006',
+        '1180.00',
+        'Information Systems Publishers',
+        'INR',
+        '2024-02-10'
+      ],
+      [
+        'Software Engineering',
+        'Software development lifecycle, design patterns, and project management',
+        'Pages: 620, Edition: 6th, Publisher: Software Press, ISBN: 978-0678912345',
+        '5',
+        'LIB007',
+        'Software Engineering',
+        'Library A',
+        'book-se-front.jpg',
+        'book-se-back.jpg',
+        'INV007',
+        '1650.00',
+        'Professional Books Corp',
+        'INR',
+        '2024-02-15'
+      ]
+    ]
+    
+    const csvContent = [headers.join(','), ...sampleData.map(row => row.map(field => `"${field}"`).join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.setAttribute('hidden', '')
+    a.setAttribute('href', url)
+    a.setAttribute('download', 'library-items-sample.csv')
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleBulkUpload = async () => {
+    if (!bulkUploadFile) return
+    
+    setIsBulkUploading(true)
+    
+    try {
+      const formData = new FormData()
+      formData.append('csv', bulkUploadFile)
+      
+      const response = await fetch('/api/library-items/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'x-user-id': user?.id || '',
+        },
+        body: formData,
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Bulk upload completed! Processed: ${result.processed}, Errors: ${result.errors}`,
+        })
+        
+        if (result.errors > 0) {
+          console.log('Upload errors:', result.error_details)
+        }
+        
+        // Refresh items list
+        fetchItems()
+        
+        // Close dialog and reset
+        setIsBulkUploadDialogOpen(false)
+        setBulkUploadFile(null)
+      } else {
+        throw new Error(result.error || 'Upload failed')
+      }
+    } catch (error) {
+      console.error('Bulk upload error:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload CSV",
+        variant: "destructive",
+      })
+    } finally {
+      setIsBulkUploading(false)
+    }
   }
 
   const validateForm = () => {
@@ -584,6 +797,64 @@ export function ManageLibrary() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+          <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Package className="h-4 w-4 mr-2" />
+                Bulk Upload
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Library Items</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV file to add multiple library items at once. 
+                  <br />
+                  <a 
+                    href="#" 
+                    onClick={downloadSampleCSV}
+                    className="text-blue-600 hover:underline mt-2 inline-block"
+                  >
+                    Download sample CSV template
+                  </a>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="csvFile">CSV File</Label>
+                  <Input
+                    id="csvFile"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      setBulkUploadFile(file || null)
+                      if (file) {
+                        console.log(`Selected file: ${file.name} (${file.size} bytes)`)
+                      }
+                    }}
+                    className="mt-1"
+                  />
+                  {bulkUploadFile && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Selected: {bulkUploadFile.name} ({(bulkUploadFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => {
+                    setIsBulkUploadDialogOpen(false)
+                    setBulkUploadFile(null)
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkUpload} disabled={!bulkUploadFile || isBulkUploading}>
+                    {isBulkUploading ? "Uploading..." : "Upload"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
             setIsAddDialogOpen(open)
             if (!open) {
@@ -600,7 +871,7 @@ export function ManageLibrary() {
               <DialogHeader>
                 <DialogTitle>{editingItem ? "Edit Library Item" : "Add New Library Item"}</DialogTitle>
               </DialogHeader>
-              <form className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
                 {/* Left Column: Basic Info & Images */}
                 <div className="space-y-6 pr-3 pl-3">
                   <div className="space-y-3">
@@ -881,8 +1152,16 @@ export function ManageLibrary() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span tabIndex={0}>
-                          <Button onClick={editingItem ? handleEditItem : handleAddItem} disabled={!isAddFormValid()}>
-                            {editingItem ? "Update Item" : "Add Item"}
+                          <Button 
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              editingItem ? handleEditItem() : handleAddItem()
+                            }}
+                            disabled={!isAddFormValid()}
+                          >
+                            {isSubmitting ? "Processing..." : (editingItem ? "Update Item" : "Add Item")}
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -894,7 +1173,7 @@ export function ManageLibrary() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
