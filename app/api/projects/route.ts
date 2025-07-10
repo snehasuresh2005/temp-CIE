@@ -250,7 +250,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const user = await getUserById(userId)
-    if (!user || (user.role !== "faculty" && user.role !== "student")) {
+    if (!user || (user.role !== "FACULTY" && user.role !== "STUDENT")) {
       return NextResponse.json({ error: "Access denied - Faculty or Student only" }, { status: 403 })
     }
 

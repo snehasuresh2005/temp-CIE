@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     }
 
     const user = await getUserById(userId)
-    if (!user || user.role !== "faculty") {
+    if (!user || user.role !== "FACULTY") {
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 

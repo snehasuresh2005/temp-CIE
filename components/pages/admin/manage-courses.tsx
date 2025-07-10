@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -331,6 +331,70 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
     }
   }
 
+  // Add form validation check
+  const isFormValid = useMemo(() => {
+    // Check if course basic details are filled
+    const courseDetailsValid = !!(
+      newCourse.course_code?.trim() &&
+      newCourse.course_name?.trim() &&
+      newCourse.course_description?.trim() &&
+      newCourse.course_start_date &&
+      newCourse.course_end_date
+    )
+
+    // Check if dates are valid
+    const datesValid = newCourse.course_start_date && newCourse.course_end_date &&
+      new Date(newCourse.course_end_date) > new Date(newCourse.course_start_date)
+
+    // Check if at least one valid course unit exists
+    const validUnits = courseUnits.filter(unit => 
+      unit.unit_name?.trim() && unit.unit_description?.trim()
+    )
+    const unitsValid = validUnits.length > 0
+
+    return courseDetailsValid && datesValid && unitsValid
+  }, [
+    newCourse.course_code,
+    newCourse.course_name, 
+    newCourse.course_description,
+    newCourse.course_start_date,
+    newCourse.course_end_date,
+    courseUnits
+  ])
+
+  // Add edit form validation check
+  const isEditFormValid = useMemo(() => {
+    if (!editCourse) return false
+
+    // Check if course basic details are filled
+    const courseDetailsValid = !!(
+      editCourse.course_code?.trim() &&
+      editCourse.course_name?.trim() &&
+      editCourse.course_description?.trim() &&
+      editCourse.course_start_date &&
+      editCourse.course_end_date
+    )
+
+    // Check if dates are valid
+    const datesValid = editCourse.course_start_date && editCourse.course_end_date &&
+      new Date(editCourse.course_end_date) > new Date(editCourse.course_start_date)
+
+    // Check if at least one valid course unit exists
+    const validUnits = editCourseUnits.filter(unit => 
+      unit.unit_name?.trim() && unit.unit_description?.trim()
+    )
+    const unitsValid = validUnits.length > 0
+
+    return courseDetailsValid && datesValid && unitsValid
+  }, [
+    editCourse?.course_code,
+    editCourse?.course_name, 
+    editCourse?.course_description,
+    editCourse?.course_start_date,
+    editCourse?.course_end_date,
+    editCourseUnits
+  ])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -504,7 +568,11 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddCourse}>
+                <Button 
+                  onClick={handleAddCourse}
+                  disabled={!isFormValid}
+                  className={!isFormValid ? "opacity-50 cursor-not-allowed" : ""}
+                >
                   Create Course
                 </Button>
               </div>
@@ -727,7 +795,13 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
               </div>
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleEditCourse}>Update Course</Button>
+                <Button 
+                  onClick={handleEditCourse}
+                  disabled={!isEditFormValid}
+                  className={!isEditFormValid ? "opacity-50 cursor-not-allowed" : ""}
+                >
+                  Update Course
+                </Button>
               </div>
             </div>
           )}

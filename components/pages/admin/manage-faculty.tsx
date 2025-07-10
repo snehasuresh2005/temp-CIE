@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -70,7 +70,29 @@ export function ManageFaculty() {
   })
 
   const [newFacultyImage, setNewFacultyImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
+
+  // Image preview handler
+  useEffect(() => {
+    if (newFacultyImage) {
+      const reader = new FileReader()
+      reader.onload = (e) => setImagePreview(e.target?.result as string)
+      reader.readAsDataURL(newFacultyImage)
+    } else {
+      setImagePreview(null)
+    }
+  }, [newFacultyImage])
+
+  // Add form validation check
+  const isFormValid = useMemo(() => {
+    return !!(
+      newFaculty.name?.trim() &&
+      newFaculty.email?.trim() &&
+      newFaculty.facultyId?.trim() &&
+      newFaculty.department?.trim()
+    )
+  }, [newFaculty.name, newFaculty.email, newFaculty.facultyId, newFaculty.department])
 
   useEffect(() => {
     console.log("ManageFaculty component mounted");
@@ -143,6 +165,8 @@ export function ManageFaculty() {
           specialization: "",
           officeHours: "10:00 AM - 4:00 PM",
         })
+        setNewFacultyImage(null)
+        setImagePreview(null)
         setIsAddDialogOpen(false)
 
         toast({
@@ -255,11 +279,13 @@ export function ManageFaculty() {
                 Add Faculty
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add New Faculty Member</DialogTitle>
                 <DialogDescription>Enter the details for the new faculty member</DialogDescription>
               </DialogHeader>
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left Column */}
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">Full Name *</Label>
@@ -298,6 +324,10 @@ export function ManageFaculty() {
                     placeholder="FAC001"
                   />
                 </div>
+                </div>
+                
+                {/* Right Column */}
+                <div className="space-y-4">
                 <div>
                   <Label htmlFor="department">Department *</Label>
                   <Select onValueChange={(value) => setNewFaculty((prev) => ({ ...prev, department: value }))}>
@@ -340,6 +370,11 @@ export function ManageFaculty() {
                     placeholder="10:00 AM - 4:00 PM"
                   />
                 </div>
+                </div>
+                
+                {/* Image Upload Section - Full Width */}
+                <div className="col-span-2 space-y-4 border-t pt-6">
+                  <div className="grid grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="image">Profile Image</Label>
                   <Input
@@ -349,11 +384,41 @@ export function ManageFaculty() {
                     className="mb-2"
                   />
                 </div>
-                <div className="flex justify-end space-x-2">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Preview</Label>
+                      {imagePreview ? (
+                        <div className="border rounded-lg p-2 bg-gray-50">
+                          <img
+                            src={imagePreview}
+                            alt="Profile Preview"
+                            className="w-full h-32 object-contain rounded bg-white"
+                          />
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50 h-32 flex items-center justify-center">
+                          <div className="text-gray-400">
+                            <svg className="mx-auto h-8 w-8 mb-1" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <p className="text-xs text-gray-500">No image selected</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="col-span-2 flex justify-end space-x-2 pt-4 border-t">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddFaculty}>Add Faculty</Button>
+                  <Button 
+                    onClick={handleAddFaculty}
+                    disabled={!isFormValid}
+                    className={!isFormValid ? "opacity-50 cursor-not-allowed" : ""}
+                  >
+                    Add Faculty
+                  </Button>
                 </div>
               </div>
             </DialogContent>

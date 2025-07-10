@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
     }
     const user = await getUserById(userId)
-    if (!user || (user.role !== "faculty" && user.role !== "admin")) {
+    if (!user || (user.role !== "FACULTY" && user.role !== "ADMIN")) {
       return NextResponse.json({ error: "Access denied - Faculty or Admin only" }, { status: 403 })
     }
 
@@ -168,7 +168,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const user = await getUserById(userId)
-    if (!user || (user.role !== "faculty" && user.role !== "admin")) {
+    if (!user || (user.role !== "FACULTY" && user.role !== "ADMIN")) {
       return NextResponse.json({ error: "Access denied - Faculty or Admin only" }, { status: 403 })
     }
 
@@ -271,7 +271,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
     }
     const user = await getUserById(userId)
-    if (!user || (user.role !== "faculty" && user.role !== "admin")) {
+    if (!user || (user.role !== "FACULTY" && user.role !== "ADMIN")) {
       return NextResponse.json({ error: "Access denied - Faculty or Admin only" }, { status: 403 })
     }
     const data = await request.json()
@@ -285,7 +285,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 })
     }
     // Only admin or the creator can update
-    if (user.role === "faculty" && course.created_by !== userId) {
+    if (user.role === "FACULTY" && course.created_by !== userId) {
       return NextResponse.json({ error: "Access denied - You can only edit courses you created" }, { status: 403 })
     }
     // If course_code is being changed, check uniqueness
@@ -349,6 +349,10 @@ export async function PATCH(request: NextRequest) {
         }
       }
     })
+    if (!updatedFull) {
+      return NextResponse.json({ error: "Failed to fetch updated course" }, { status: 500 })
+    }
+
     // Get creator information
     const creator = await prisma.user.findUnique({
       where: { id: updatedFull.created_by },

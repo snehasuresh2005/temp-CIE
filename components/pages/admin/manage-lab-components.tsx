@@ -191,101 +191,101 @@ export function ManageLabComponents() {
     console.log('Starting component submission...')
     
     try {
-      // Validate form before proceeding
-      if (!validateForm()) {
+    // Validate form before proceeding
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // If Tag ID is empty, check for duplicate
+    if (!newComponent.component_tag_id) {
+      const formattedCategory = toTitleCase(newComponent.component_category)
+      const formattedLocation = formatLocation(newComponent.component_location)
+      const existing = components.find(
+        c =>
+          (c.component_name?.trim().toLowerCase() || '') === (newComponent.component_name?.trim().toLowerCase() || '') &&
+          (c.component_category?.trim().toLowerCase() || '') === (formattedCategory?.trim().toLowerCase() || '') &&
+          (c.component_location?.trim().toLowerCase() || '') === (formattedLocation?.trim().toLowerCase() || '')
+      )
+      if (existing) {
+        if (!window.confirm("This item already exists. The quantity you add will be added to the existing one. Continue?")) {
+          return
+        }
+        // Simulate updating the quantity in the frontend (no backend yet)
+        setComponents(prev =>
+          prev.map(c =>
+            c.id === existing.id
+              ? { ...c, component_quantity: c.component_quantity + newComponent.component_quantity, availableQuantity: (c.availableQuantity || 0) + newComponent.component_quantity }
+              : c
+          )
+        )
         toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields correctly",
+          title: "Quantity Updated",
+          description: "The quantity has been added to the existing component.",
+        })
+        // Reset form
+        resetForm()
+        setIsAddDialogOpen(false)
+        return
+      }
+    }
+
+    let frontImageUrl = undefined
+    let backImageUrl = undefined
+
+    // Upload front image
+    if (frontImageFile) {
+      const formData = new FormData()
+      formData.append('image', frontImageFile)
+      const uploadRes = await fetch('/api/lab-components/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (uploadRes.ok) {
+        const data = await uploadRes.json()
+        frontImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
+      } else {
+        toast({
+          title: "Error",
+          description: "Front image upload failed",
           variant: "destructive",
         })
         return
       }
+    }
 
-      // If Tag ID is empty, check for duplicate
-      if (!newComponent.component_tag_id) {
-        const formattedCategory = toTitleCase(newComponent.component_category)
-        const formattedLocation = formatLocation(newComponent.component_location)
-        const existing = components.find(
-          c =>
-            (c.component_name?.trim().toLowerCase() || '') === (newComponent.component_name?.trim().toLowerCase() || '') &&
-            (c.component_category?.trim().toLowerCase() || '') === (formattedCategory?.trim().toLowerCase() || '') &&
-            (c.component_location?.trim().toLowerCase() || '') === (formattedLocation?.trim().toLowerCase() || '')
-        )
-        if (existing) {
-          if (!window.confirm("This item already exists. The quantity you add will be added to the existing one. Continue?")) {
-            return
-          }
-          // Simulate updating the quantity in the frontend (no backend yet)
-          setComponents(prev =>
-            prev.map(c =>
-              c.id === existing.id
-                ? { ...c, component_quantity: c.component_quantity + newComponent.component_quantity, availableQuantity: (c.availableQuantity || 0) + newComponent.component_quantity }
-                : c
-            )
-          )
-          toast({
-            title: "Quantity Updated",
-            description: "The quantity has been added to the existing component.",
-          })
-          // Reset form
-          resetForm()
-          setIsAddDialogOpen(false)
-          return
-        }
-      }
-
-      let frontImageUrl = undefined
-      let backImageUrl = undefined
-
-      // Upload front image
-      if (frontImageFile) {
-        const formData = new FormData()
-        formData.append('image', frontImageFile)
-        const uploadRes = await fetch('/api/lab-components/upload', {
-          method: 'POST',
-          body: formData,
+    // Upload back image
+    if (backImageFile) {
+      const formData = new FormData()
+      formData.append('image', backImageFile)
+      const uploadRes = await fetch('/api/lab-components/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (uploadRes.ok) {
+        const data = await uploadRes.json()
+        backImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
+      } else {
+        toast({
+          title: "Error",
+          description: "Back image upload failed",
+          variant: "destructive",
         })
-        if (uploadRes.ok) {
-          const data = await uploadRes.json()
-          frontImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
-        } else {
-          toast({
-            title: "Error",
-            description: "Front image upload failed",
-            variant: "destructive",
-          })
-          return
-        }
+        return
       }
+    }
 
-      // Upload back image
-      if (backImageFile) {
-        const formData = new FormData()
-        formData.append('image', backImageFile)
-        const uploadRes = await fetch('/api/lab-components/upload', {
-          method: 'POST',
-          body: formData,
-        })
-        if (uploadRes.ok) {
-          const data = await uploadRes.json()
-          backImageUrl = data.imageUrl.split('/').pop() // Get file name from URL
-        } else {
-          toast({
-            title: "Error",
-            description: "Back image upload failed",
-            variant: "destructive",
-          })
-          return
-        }
-      }
+    // Format category and location before sending
+    const formattedCategory = toTitleCase(newComponent.component_category)
+    const formattedLocation = formatLocation(newComponent.component_location)
 
-      // Format category and location before sending
-      const formattedCategory = toTitleCase(newComponent.component_category)
-      const formattedLocation = formatLocation(newComponent.component_location)
-
-      console.log("Frontend - handleAddComponent - user object:", user)
-      console.log("Frontend - handleAddComponent - user.id:", user?.id)
-      console.log("Frontend - handleAddComponent - user.name:", user?.name)
+    console.log("Frontend - handleAddComponent - user object:", user)
+    console.log("Frontend - handleAddComponent - user.id:", user?.id)
+    console.log("Frontend - handleAddComponent - user.name:", user?.name)
 
       const response = await fetch("/api/lab-components", {
         method: "POST",
@@ -931,132 +931,132 @@ export function ManageLabComponents() {
                         <Label htmlFor="name">Component Name *</Label>
                         <Input id="name" value={newComponent.component_name} onChange={e => setNewComponent(prev => ({ ...prev, component_name: e.target.value }))} className={`mt-1 ${formErrors.component_name ? 'border-red-500' : ''}`} />
                         {formErrors.component_name && <p className="text-red-500 text-xs mt-1">{formErrors.component_name}</p>}
-                      </div>
+                  </div>
                       <div className="col-span-1">
                         <Label htmlFor="tagId">Tag ID (optional)</Label>
                         <Input id="tagId" value={newComponent.component_tag_id} onChange={e => setNewComponent(prev => ({ ...prev, component_tag_id: e.target.value }))} className="mt-1" />
-                      </div>
-                    </div>
+                  </div>
+                </div>
                     <div className="flex gap-3 items-end">
                       <div className="flex-1">
                         <Label htmlFor="location">Location *</Label>
                         <Select value={newComponent.component_location} onValueChange={value => setNewComponent(prev => ({ ...prev, component_location: value }))}>
                           <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}><SelectValue placeholder="Select location" /></SelectTrigger>
-                          <SelectContent>
+                      <SelectContent>
                             {locationOptions.map(location => <SelectItem key={location} value={location}>{location}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                      </SelectContent>
+                    </Select>
                         {formErrors.component_location && <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>}
-                      </div>
+                  </div>
                       <div className="flex-1">
                         <Label htmlFor="category">Category *</Label>
                         <Select value={newComponent.component_category} onValueChange={value => setNewComponent(prev => ({ ...prev, component_category: value }))}>
                           <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}><SelectValue placeholder="Select category" /></SelectTrigger>
-                          <SelectContent>
+                      <SelectContent>
                             {categoryOptions.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                      </SelectContent>
+                    </Select>
                         {formErrors.component_category && <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>}
-                      </div>
+                  </div>
                       <div className="w-20">
                         <Label htmlFor="quantity">Quantity *</Label>
                         <Input id="quantity" type="number" value={newComponent.component_quantity} onChange={e => setNewComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))} min="1" className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`} />
                         {formErrors.component_quantity && <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>}
-                      </div>
+                </div>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Component Images</h3>
                       <Button variant="outline" size="sm" type="button" className="h-8">
                         <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
-                      </Button>
-                    </div>
+                    </Button>
+                  </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="frontImage">Front Image *</Label>
                         <Input id="frontImage" type="file" accept="image/*" onChange={e => setFrontImageFile(e.target.files?.[0] || null)} className={`mt-1 ${formErrors.frontImage ? 'border-red-500' : ''}`} />
                         {formErrors.frontImage && <p className="text-red-500 text-xs mt-1">{formErrors.frontImage}</p>}
-                        {frontImagePreview && (
-                          <div className="mt-2">
-                            <img
-                              src={frontImagePreview}
-                              alt="Front Preview"
+                      {frontImagePreview && (
+                        <div className="mt-2">
+                          <img
+                            src={frontImagePreview}
+                            alt="Front Preview"
                               className="w-full h-40 object-contain rounded-lg bg-gray-50"
-                            />
-                          </div>
-                        )}
-                      </div>
+                          />
+                        </div>
+                      )}
+                    </div>
                       <div>
                         <Label htmlFor="backImage">Back Image *</Label>
                         <Input id="backImage" type="file" accept="image/*" onChange={e => setBackImageFile(e.target.files?.[0] || null)} className={`mt-1 ${formErrors.backImage ? 'border-red-500' : ''}`} />
                         {formErrors.backImage && <p className="text-red-500 text-xs mt-1">{formErrors.backImage}</p>}
-                        {backImagePreview && (
-                          <div className="mt-2">
-                            <img
-                              src={backImagePreview}
-                              alt="Back Preview"
+                      {backImagePreview && (
+                        <div className="mt-2">
+                          <img
+                            src={backImagePreview}
+                            alt="Back Preview"
                               className="w-full h-40 object-contain rounded-lg bg-gray-50"
-                            />
-                          </div>
-                        )}
-                      </div>
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
+                </div>
                 </div>
                 {/* Right Column: Details & Purchase Info */}
                 <div className="space-y-6 pr-2">
                   <div className="space-y-3">
-                    <div>
+                  <div>
                       <Label htmlFor="description">Description *</Label>
                       <Textarea id="description" value={newComponent.component_description} onChange={e => setNewComponent(prev => ({ ...prev, component_description: e.target.value }))} rows={3} className={`mt-1 ${formErrors.component_description ? 'border-red-500' : ''}`} />
                       {formErrors.component_description && <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>}
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                       <Label htmlFor="specifications">Specifications</Label>
                       <Textarea id="specifications" value={newComponent.component_specification} onChange={e => setNewComponent(prev => ({ ...prev, component_specification: e.target.value }))} rows={3} className="mt-1" />
-                    </div>
                   </div>
+                </div>
                   <div className="space-y-3">
                     <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Purchase Details (Optional)</h3>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
+                    <div>
                         <Label htmlFor="invoiceNumber">Invoice Number</Label>
                         <Input id="invoiceNumber" value={newComponent.invoice_number} onChange={e => setNewComponent(prev => ({ ...prev, invoice_number: e.target.value }))} className={`mt-1 ${formErrors.invoice_number ? 'border-red-500' : ''}`} />
                         {formErrors.invoice_number && <p className="text-red-500 text-xs mt-1">{formErrors.invoice_number}</p>}
-                      </div>
-                      <div>
+                    </div>
+                    <div>
                         <Label htmlFor="purchasedFrom">Purchased From</Label>
                         <Input id="purchasedFrom" value={newComponent.purchased_from} onChange={e => setNewComponent(prev => ({ ...prev, purchased_from: e.target.value }))} className={`mt-1 ${formErrors.purchased_from ? 'border-red-500' : ''}`} />
                         {formErrors.purchased_from && <p className="text-red-500 text-xs mt-1">{formErrors.purchased_from}</p>}
-                      </div>
                     </div>
+                  </div>
                     <div className="grid grid-cols-3 gap-4">
-                      <div>
+                    <div>
                         <Label htmlFor="purchasedDate">Purchase Date</Label>
                         <Input id="purchasedDate" type="date" value={newComponent.purchase_date} onChange={e => setNewComponent(prev => ({ ...prev, purchase_date: e.target.value }))} className={`mt-1 ${formErrors.purchase_date ? 'border-red-500' : ''}`} />
                         {formErrors.purchase_date && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_date}</p>}
-                      </div>
-                      <div>
+                    </div>
+                    <div>
                         <Label htmlFor="purchasedValue">Purchase Value</Label>
                         <Input id="purchasedValue" type="number" min="0" step="0.01" value={newComponent.purchase_value} onChange={e => setNewComponent(prev => ({ ...prev, purchase_value: e.target.value }))} placeholder="0.00" className={`mt-1 ${formErrors.purchase_value ? 'border-red-500' : ''}`} />
                         {formErrors.purchase_value && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_value}</p>}
-                      </div>
-                      <div>
+                    </div>
+                    <div>
                         <Label htmlFor="purchasedCurrency">Currency</Label>
                         <Select value={newComponent.purchase_currency} onValueChange={value => setNewComponent(prev => ({ ...prev, purchase_currency: value }))}>
                           <SelectTrigger className={`mt-1 ${formErrors.purchase_currency ? 'border-red-500' : ''}`}><SelectValue placeholder="Select currency" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                            <SelectItem value="USD">USD - US Dollar</SelectItem>
-                            <SelectItem value="EUR">EUR - Euro</SelectItem>
-                            <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <SelectContent>
+                          <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                          <SelectItem value="USD">USD - US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR - Euro</SelectItem>
+                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                        </SelectContent>
+                      </Select>
                         {formErrors.purchase_currency && <p className="text-red-500 text-xs mt-1">{formErrors.purchase_currency}</p>}
-                      </div>
                     </div>
                   </div>
+                </div>
                 </div>
                 {/* Form Actions */}
                 <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">

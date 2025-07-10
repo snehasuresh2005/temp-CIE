@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await getUserById(userId);
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Access denied - Admin only" }, { status: 403 });
     }
 
