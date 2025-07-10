@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
           user_id: newUser.id,
           student_id,
           program,
-          year,
+          year: year ? year.toString() : "1",
           section,
           gpa: gpa ? parseFloat(gpa) : 0,
         },

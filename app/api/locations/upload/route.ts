@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         code: "INVALID_SESSION" 
       }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    if (user.role !== "ADMIN") {
       console.log('Access denied: role is not admin. Role received:', user.role);
       return NextResponse.json({ error: "Access denied - Admin only" }, { status: 403 });
     }
