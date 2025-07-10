@@ -213,15 +213,15 @@ export function ManageLibrary() {
     console.log('Starting library item submission...')
     
     try {
-      // Validate form before proceeding
+    // Validate form before proceeding
       if (!isAddFormValid()) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields correctly",
-          variant: "destructive",
-        })
-        return
-      }
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly",
+        variant: "destructive",
+      })
+      return
+    }
 
     // If Tag ID is empty, check for duplicate
     if (!newItem.item_tag_id) {
@@ -304,7 +304,7 @@ export function ManageLibrary() {
     const formattedCategory = toTitleCase(newItem.item_category)
     const formattedLocation = formatLocation(newItem.item_location)
 
-    const response = await fetch("/api/library-items", {
+      const response = await fetch("/api/library-items", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
