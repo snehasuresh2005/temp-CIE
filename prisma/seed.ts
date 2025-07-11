@@ -518,7 +518,7 @@ async function main() {
       purpose: "Circuit prototyping and testing",
       request_date: new Date("2025-07-03T09:00:00.000Z"),
       required_date: new Date("2025-07-17T17:00:00.000Z"),
-      status: "USER_RETURNED",
+             status: "USER_RETURNED" as const,
       approved_by: madhukharFaculty?.id,
       approved_date: new Date("2025-07-03T13:00:00.000Z"),
       collection_date: new Date("2025-07-04T11:00:00.000Z"),
