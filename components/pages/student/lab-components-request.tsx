@@ -91,6 +91,7 @@ export function LabComponentsRequest() {
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
   const [returnDialogOpen, setReturnDialogOpen] = useState<string | null>(null)
+  const [userReturnDialogOpen, setUserReturnDialogOpen] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -297,7 +298,7 @@ export function LabComponentsRequest() {
           "x-user-id": user.id
         },
         body: JSON.stringify({
-          status: "PENDING_RETURN",
+          status: "PENDING_RETURN",  // Step 1: Student requests return
           return_date: new Date().toISOString(),
         }),
       })
@@ -306,7 +307,7 @@ export function LabComponentsRequest() {
         fetchData()
         toast({
           title: "Return Request Submitted",
-          description: "Your return request has been submitted and is pending faculty approval",
+          description: "Your return request has been submitted and is pending coordinator approval",
         })
       } else {
         throw new Error("Failed to submit return request")
@@ -316,6 +317,40 @@ export function LabComponentsRequest() {
       toast({
         title: "Error",
         description: "Failed to submit return request",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleUserReturned = async (requestId: string) => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/component-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id
+        },
+        body: JSON.stringify({
+          status: "USER_RETURNED",  // Step 2: Student confirms they physically returned it
+          return_date: new Date().toISOString(),
+        }),
+      })
+
+      if (response.ok) {
+        fetchData()
+        toast({
+          title: "Return Confirmed",
+          description: "You have confirmed the component return. Waiting for coordinator verification.",
+        })
+      } else {
+        throw new Error("Failed to confirm return")
+      }
+    } catch (error) {
+      console.error("Error confirming return:", error)
+      toast({
+        title: "Error",
+        description: "Failed to confirm return",
         variant: "destructive",
       })
     }
@@ -333,8 +368,10 @@ export function LabComponentsRequest() {
         return "bg-blue-100 text-blue-800"
       case "pending_return":
         return "bg-orange-100 text-orange-800"
-      case "returned":
+      case "user_returned":
         return "bg-purple-100 text-purple-800"
+      case "returned":
+        return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -352,6 +389,8 @@ export function LabComponentsRequest() {
         return <Package className="h-4 w-4" />
       case "pending_return":
         return <Clock className="h-4 w-4" />
+      case "user_returned":
+        return <CheckCircle className="h-4 w-4" />
       case "returned":
         return <CheckCircle className="h-4 w-4" />
       default:
@@ -748,12 +787,34 @@ export function LabComponentsRequest() {
                           </div>
                         </Badge>
                         
-                        {/* Status-specific messages - more compact */}
+                        {/* Status-specific actions and messages */}
                         <div className="text-right min-w-0">
                           {request.status === "COLLECTED" && (
-                            <p className="text-xs text-blue-600">
-                              📦 In possession
-                            </p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setReturnDialogOpen(request.id)}
+                              className="text-xs"
+                            >
+                              Request Return
+                            </Button>
+                          )}
+
+                          {request.status === "PENDING_RETURN" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setUserReturnDialogOpen(request.id)}
+                              className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-300 text-xs"
+                            >
+                              I Returned It
+                            </Button>
+                          )}
+
+                          {request.status === "USER_RETURNED" && (
+                            <div className="text-xs text-purple-600 font-medium">
+                              Waiting for coordinator verification
+                            </div>
                           )}
                           
                           {request.status === "RETURNED" && (
@@ -768,15 +829,9 @@ export function LabComponentsRequest() {
                             </p>
                           )}
 
-                          {request.status === "PENDING_RETURN" && (
-                            <p className="text-xs text-orange-600">
-                              ⏳ Pending return
-                            </p>
-                          )}
-
                           {/* Show overdue warning for collected items */}
                           {request.status === "COLLECTED" && isOverdue(request.required_date) && (
-                            <p className="text-xs text-red-600 font-medium">
+                            <p className="text-xs text-red-600 font-medium mt-1">
                               ⚠️ {getOverdueDays(request.required_date)}d overdue
                             </p>
                           )}
@@ -790,6 +845,56 @@ export function LabComponentsRequest() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Return Request Dialog */}
+      <Dialog open={!!returnDialogOpen} onOpenChange={(open) => !open && setReturnDialogOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Component Return</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to request return of this component? The coordinator will need to approve your return request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setReturnDialogOpen(null)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (returnDialogOpen) {
+                handleReturnComponent(returnDialogOpen)
+                setReturnDialogOpen(null)
+              }
+            }}>
+              Submit Return Request
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Returned Dialog */}
+      <Dialog open={!!userReturnDialogOpen} onOpenChange={(open) => !open && setUserReturnDialogOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Component Return</DialogTitle>
+            <DialogDescription>
+              Please confirm that you have physically returned this component to the lab. The coordinator will then verify and complete the return process.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setUserReturnDialogOpen(null)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (userReturnDialogOpen) {
+                handleUserReturned(userReturnDialogOpen)
+                setUserReturnDialogOpen(null)
+              }
+            }}>
+              Yes, I Returned It
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

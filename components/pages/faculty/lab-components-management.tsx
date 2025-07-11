@@ -317,8 +317,7 @@ export function LabComponentsManagement() {
 
   const pendingRequests = requests.filter((req) => req.status === "PENDING")
   const activeRequests = requests.filter((req) => ["APPROVED", "COLLECTED"].includes(req.status))
-  const pendingReturnRequests = requests.filter((req) => req.status === "PENDING_RETURN")
-  const userReturnedRequests = requests.filter((req) => req.status === "USER_RETURNED")
+  const pendingReturnRequests = requests.filter((req) => ["PENDING_RETURN", "USER_RETURNED"].includes(req.status))
   const overdueRequests = requests.filter((req) => req.status === "COLLECTED" && isOverdue(req.required_date))
   const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED"].includes(req.status))
 
@@ -353,7 +352,7 @@ export function LabComponentsManagement() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -390,17 +389,6 @@ export function LabComponentsManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-purple-600" />
-              <div>
-                <p className="text-2xl font-bold">{userReturnedRequests.length}</p>
-                <p className="text-sm text-gray-600">Ready to Verify</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
               <div>
                 <p className="text-2xl font-bold">{overdueRequests.length}</p>
@@ -429,7 +417,6 @@ export function LabComponentsManagement() {
           <TabsTrigger value="pending">Pending Requests ({pendingRequests.length})</TabsTrigger>
           <TabsTrigger value="active">Active Loans ({activeRequests.length})</TabsTrigger>
           <TabsTrigger value="pending-returns">Pending Returns ({pendingReturnRequests.length})</TabsTrigger>
-          <TabsTrigger value="ready-verify">Ready to Verify ({userReturnedRequests.length})</TabsTrigger>
           <TabsTrigger value="completed">Completed ({completedRequests.length})</TabsTrigger>
           <TabsTrigger value="inventory">Inventory Status</TabsTrigger>
         </TabsList>
@@ -669,7 +656,7 @@ export function LabComponentsManagement() {
                 <CardContent className="p-8 text-center">
                   <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No pending returns</h3>
-                  <p className="text-gray-600">All components have been returned.</p>
+                  <p className="text-gray-600">All components have been returned and verified.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -709,7 +696,11 @@ export function LabComponentsManagement() {
                           </p>
                           {request.return_date && (
                             <p className="text-xs text-green-600">
-                              Student marked returned: {new Date(request.return_date).toLocaleDateString()}
+                              {request.status === "PENDING_RETURN" 
+                                ? "Return request submitted: " 
+                                : "User confirmed return: "
+                              }
+                              {new Date(request.return_date).toLocaleDateString()}
                             </p>
                           )}
                         </div>
@@ -721,93 +712,32 @@ export function LabComponentsManagement() {
                             <span className="capitalize">{request.status.toLowerCase().replace("_", " ")}</span>
                           </div>
                         </Badge>
-                        <Button
-                          size="sm"
-                          disabled={true}
-                          className="bg-gray-300 text-gray-500 cursor-not-allowed"
-                        >
-                          <Clock className="h-4 w-4 mr-1" />
-                          Waiting for User
-                        </Button>
-                        <div className="text-xs text-orange-600 mt-1">
-                          User must click "I Returned It" first
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="ready-verify" className="space-y-4">
-          <div className="grid gap-4">
-            {userReturnedRequests.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No ready to verify requests</h3>
-                  <p className="text-gray-600">All components have been returned.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              userReturnedRequests.map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Avatar>
-                          <AvatarFallback>
-                            {request.student?.user
-                              ? request.student.user.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")
-                              : request.requesting_faculty?.user.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">
-                            {request.student?.user?.name || request.requesting_faculty?.user?.name || "Unknown"}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {request.student?.user?.email || request.requesting_faculty?.user?.email || "Unknown"}
-                          </p>
-                          <p className="text-sm font-medium text-blue-600">
-                            Project: <span className="font-medium">{request.project?.name || "N/A"}</span>
-                          </p>
-                          <p className="text-sm font-medium text-blue-600">
-                            Component: <span className="font-medium">{request.component?.component_name}</span>
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Required by: {new Date(request.required_date).toLocaleDateString()}
-                          </p>
-                          {request.return_date && (
-                            <p className="text-xs text-green-600">
-                              Student marked returned: {new Date(request.return_date).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getStatusColor(request.status)}>
-                          <div className="flex items-center space-x-1">
-                            {getStatusIcon(request.status)}
-                            <span className="capitalize">{request.status.toLowerCase()}</span>
-                          </div>
-                        </Badge>
-                        <Button
-                          size="sm"
-                          onClick={() => handleMarkReturned(request.id)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Confirm Return
-                        </Button>
+                        {request.status === "PENDING_RETURN" && (
+                          <>
+                            <Button
+                              size="sm"
+                              disabled={true}
+                              className="bg-gray-300 text-gray-500 cursor-not-allowed"
+                            >
+                              <Clock className="h-4 w-4 mr-1" />
+                              Waiting for User
+                            </Button>
+                            <div className="text-xs text-orange-600 mt-1">
+                              User must click "I Returned It" first
+                            </div>
+                          </>
+                        )}
+                        
+                        {request.status === "USER_RETURNED" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleMarkReturned(request.id)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Confirm Return
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
