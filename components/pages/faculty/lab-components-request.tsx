@@ -32,7 +32,6 @@ export function getOverdueDays(expectedReturnDate: string): number {
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
-
 interface LabComponent {
   id: string
   component_name: string
@@ -45,6 +44,10 @@ interface LabComponent {
   image_url: string | null
   back_image_url?: string | null
   projects: { id: string; name: string }[]
+  domain?: {
+    id: string
+    name: string
+  }
 }
 
 interface Project {
@@ -68,9 +71,16 @@ interface ComponentRequest {
   notes: string | null
   project_id: string
   project: Project
+  faculty_notes?: string
+  collection_date?: string
+  due_date?: string
 }
 
-export function LabComponentsRequest() {
+interface LabComponentsRequestProps {
+  onBackToManagement?: () => void
+}
+
+export function LabComponentsRequest({ onBackToManagement }: LabComponentsRequestProps) {
   const { user } = useAuth()
   const [components, setComponents] = useState<LabComponent[]>([])
   const [requests, setRequests] = useState<ComponentRequest[]>([])
@@ -121,7 +131,7 @@ export function LabComponentsRequest() {
     
     switch (project.status) {
       case "PENDING":
-        return "Project pending faculty approval"
+        return "Project pending approval"
       case "ONGOING":
         return "Project approved and active"
       case "COMPLETED":
@@ -174,8 +184,8 @@ export function LabComponentsRequest() {
       const requestsData = await requestsResponse.json()
       setRequests(requestsData.requests || [])
 
-      // Fetch user's projects
-      const projectsResponse = await fetch(`/api/student/projects`, {
+      // Fetch user's projects (faculty's own projects)
+      const projectsResponse = await fetch(`/api/projects`, {
         headers: {
           "x-user-id": user.id,
         },
@@ -195,84 +205,39 @@ export function LabComponentsRequest() {
     }
   }
 
-  const filteredComponents = components.filter(
-    (component) =>
-      component.component_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.component_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.component_description.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
   const handleRequestComponent = async () => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to make a request.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!selectedComponent || !newRequest.purpose || !newRequest.required_date || !newRequest.project_id) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!isProjectApproved(newRequest.project_id)) {
-      toast({
-        title: "Error",
-        description: "You can only request components for approved projects",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (newRequest.quantity > selectedComponent.available_quantity) {
-      toast({
-        title: "Error",
-        description: "Requested quantity exceeds available quantity",
-        variant: "destructive",
-      })
-      return
-    }
+    if (!selectedComponent || !user) return
 
     try {
       const response = await fetch("/api/component-requests", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": user.id
+          "x-user-id": user.id,
         },
         body: JSON.stringify({
           component_id: selectedComponent.id,
-          project_id: newRequest.project_id,
           quantity: newRequest.quantity,
           purpose: newRequest.purpose,
           required_date: newRequest.required_date,
-          notes: "",
+          project_id: newRequest.project_id,
         }),
       })
 
       if (response.ok) {
-        // Refetch all data to ensure consistency
-        fetchData()
-
+        toast({
+          title: "Request Submitted",
+          description: "Your component request has been submitted successfully",
+        })
+        setIsRequestDialogOpen(false)
+        setSelectedComponent(null)
         setNewRequest({
           quantity: 1,
           purpose: "",
           required_date: "",
           project_id: ""
         })
-        setSelectedComponent(null)
-        setIsRequestDialogOpen(false)
-
-        toast({
-          title: "Success",
-          description: "Component request submitted successfully",
-        })
+        fetchData()
       } else {
         const errorData = await response.json()
         throw new Error(errorData.error || "Failed to submit request")
@@ -288,26 +253,26 @@ export function LabComponentsRequest() {
   }
 
   const handleReturnComponent = async (requestId: string) => {
-    if (!user) return;
     try {
       const response = await fetch(`/api/component-requests/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": user.id
+          "x-user-id": user?.id || "",
         },
         body: JSON.stringify({
-          status: "PENDING_RETURN",
+          status: "PENDING_RETURN",  // Step 1: Faculty requests return
           return_date: new Date().toISOString(),
         }),
       })
 
       if (response.ok) {
-        fetchData()
         toast({
           title: "Return Request Submitted",
-          description: "Your return request has been submitted and is pending faculty approval",
+          description: "Your return request has been submitted and is pending coordinator approval",
         })
+        setReturnDialogOpen(null)
+        fetchData()
       } else {
         throw new Error("Failed to submit return request")
       }
@@ -321,27 +286,65 @@ export function LabComponentsRequest() {
     }
   }
 
+  const handleUserReturned = async (requestId: string) => {
+    try {
+      const response = await fetch(`/api/component-requests/${requestId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+        },
+        body: JSON.stringify({
+          status: "USER_RETURNED",  // Step 2: User confirms they physically returned it
+          return_date: new Date().toISOString(),
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Return Confirmed",
+          description: "You have confirmed the component return. Waiting for coordinator verification.",
+        })
+        setReturnDialogOpen(null)
+        fetchData()
+      } else {
+        throw new Error("Failed to confirm return")
+      }
+    } catch (error) {
+      console.error("Error confirming return:", error)
+      toast({
+        title: "Error",
+        description: "Failed to confirm return",
+        variant: "destructive",
+      })
+    }
+  }
+
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "pending":
+    switch (status) {
+      case "PENDING":
         return "bg-yellow-100 text-yellow-800"
-      case "approved":
+      case "APPROVED":
         return "bg-green-100 text-green-800"
-      case "rejected":
+      case "REJECTED":
         return "bg-red-100 text-red-800"
-      case "collected":
+      case "COLLECTED":
         return "bg-blue-100 text-blue-800"
-      case "pending_return":
+      case "PENDING_RETURN":
         return "bg-orange-100 text-orange-800"
-      case "returned":
+      case "USER_RETURNED":
         return "bg-purple-100 text-purple-800"
+      case "RETURNED":
+        return "bg-gray-100 text-gray-800"
+      case "OVERDUE":
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status) {
       case "pending":
         return <Clock className="h-4 w-4" />
       case "approved":
@@ -352,6 +355,8 @@ export function LabComponentsRequest() {
         return <Package className="h-4 w-4" />
       case "pending_return":
         return <Clock className="h-4 w-4" />
+      case "user_returned":
+        return <CheckCircle className="h-4 w-4" />
       case "returned":
         return <CheckCircle className="h-4 w-4" />
       default:
@@ -373,11 +378,34 @@ export function LabComponentsRequest() {
   }
 
   const hasApprovedProject = (component: LabComponent) => {
-    return component.projects.some(compProject => {
+    return component.projects?.some(compProject => {
       const fullProject = projects.find(p => p.id === compProject.id)
       return fullProject?.status === "ONGOING"
     })
   }
+
+  // Get components linked to faculty's approved projects
+  const getFacultyLinkedComponents = () => {
+    const approvedProjects = projects.filter(project => project.status === "ONGOING")
+    const linkedComponentIds = new Set<string>()
+    
+    approvedProjects.forEach(project => {
+      project.components_needed.forEach(componentId => {
+        linkedComponentIds.add(componentId)
+      })
+    })
+    
+    return Array.from(linkedComponentIds)
+  }
+
+  // Filter components by search term only (show all components)
+  const filteredComponents = components.filter(component => {
+    const matchesSearch = component.component_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      component.component_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      component.component_description.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    return matchesSearch
+  })
 
   if (loading) {
     return (
@@ -392,11 +420,24 @@ export function LabComponentsRequest() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lab Components Request</h1>
+          <p className="text-gray-600">Request lab components for your projects</p>
         </div>
-        <Button onClick={fetchData} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {onBackToManagement && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onBackToManagement}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back to Management
+            </Button>
+          )}
+          <Button onClick={fetchData} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="available" className="space-y-4">
@@ -411,8 +452,20 @@ export function LabComponentsRequest() {
               <Input placeholder="Search components..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {filteredComponents.map((component) => (
+          {filteredComponents.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Components Available</h3>
+              <p className="text-sm">
+                {searchTerm 
+                  ? "No components match your search terms. Try adjusting your search." 
+                  : "No lab components are currently available in the system."
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {filteredComponents.map((component) => (
               <Card key={component.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
                 <CardHeader className="p-3">
                   <div className="flex justify-between items-start">
@@ -679,7 +732,7 @@ export function LabComponentsRequest() {
                                             <p>Please fill in all required fields (quantity, purpose, required date, and project)</p>
                                           )}
                                           {isFormValid() && !isProjectApproved(newRequest.project_id) && (
-                                            <p>You can only request components for projects with "ONGOING" status (approved by faculty)</p>
+                                            <p>You can only request components for projects with "ONGOING" status</p>
                                           )}
                                           {selectedComponent.projects.length === 0 && (
                                             <p>No projects are associated with this component.</p>
@@ -698,8 +751,9 @@ export function LabComponentsRequest() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-2">
@@ -748,48 +802,78 @@ export function LabComponentsRequest() {
                           </div>
                         </Badge>
                         
-                        {/* Status-specific messages - more compact */}
-                        <div className="text-right min-w-0">
-                          {request.status === "COLLECTED" && (
-                            <p className="text-xs text-blue-600">
-                              📦 In possession
-                            </p>
-                          )}
-                          
-                          {request.status === "RETURNED" && (
-                            <p className="text-xs text-green-600">
-                              ✅ Returned
-                            </p>
-                          )}
-                          
-                          {request.status === "REJECTED" && (
-                            <p className="text-xs text-red-600">
-                              ❌ Rejected
-                            </p>
-                          )}
-
-                          {request.status === "PENDING_RETURN" && (
-                            <p className="text-xs text-orange-600">
-                              ⏳ Pending return
-                            </p>
-                          )}
-
-                          {/* Show overdue warning for collected items */}
-                          {request.status === "COLLECTED" && isOverdue(request.required_date) && (
-                            <p className="text-xs text-red-600 font-medium">
-                              ⚠️ {getOverdueDays(request.required_date)}d overdue
-                            </p>
-                          )}
-                        </div>
+                        {request.status === "COLLECTED" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setReturnDialogOpen(request.id)}
+                          >
+                            Request Return
+                          </Button>
+                        )}
+                        
+                        {request.status === "PENDING_RETURN" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUserReturned(request.id)}
+                            className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-300"
+                          >
+                            I Returned It
+                          </Button>
+                        )}
+                        
+                        {request.status === "USER_RETURNED" && (
+                          <div className="text-xs text-purple-600 font-medium">
+                            Waiting for coordinator verification
+                          </div>
+                        )}
                       </div>
                     </div>
+                    
+                    {request.faculty_notes && (
+                      <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                        <strong>Faculty Notes:</strong> {request.faculty_notes}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))
             )}
           </div>
+          
+          <div className="flex justify-end pt-4">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onBackToManagement || (() => window.history.back())}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              {onBackToManagement ? "Back to Management" : "Back"}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
+
+      {/* Return Dialog */}
+      <Dialog open={!!returnDialogOpen} onOpenChange={(open) => !open && setReturnDialogOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Component Return</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to request return of this component? The coordinator will need to verify and approve the return.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setReturnDialogOpen(null)}>
+              Cancel
+            </Button>
+            <Button onClick={() => returnDialogOpen && handleReturnComponent(returnDialogOpen)}>
+              Submit Return Request
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
-}
+} 

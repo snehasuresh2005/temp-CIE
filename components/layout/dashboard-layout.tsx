@@ -122,14 +122,14 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   const mainMargin = sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
 
   const getRoleColor = (role: string) => {
-    switch (role.toLowerCase()) {
-      case "admin":
+    switch (role) {
+      case "ADMIN":
         return "bg-red-100 text-red-800"
-      case "faculty":
+      case "FACULTY":
         return "bg-blue-100 text-blue-800"
-      case "professor":
+      case "PROFESSOR":
         return "bg-purple-100 text-purple-800"
-      case "student":
+      case "STUDENT":
         return "bg-green-100 text-green-800"
       default:
         return "bg-gray-100 text-gray-800"
@@ -148,8 +148,8 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       join_date: user.join_date,
     }
 
-    switch (user.role.toLowerCase()) {
-      case "admin":
+    switch (user.role) {
+      case "ADMIN":
         return {
           ...baseData,
           role: "admin" as const,
@@ -158,7 +158,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           permissions: ["Full System Access", "User Management", "System Configuration"],
           working_hours: "9:00 AM - 5:00 PM",
         }
-      case "faculty":
+      case "FACULTY":
         return {
           ...baseData,
           role: "faculty" as const,
@@ -168,7 +168,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           specialization: "Software Engineering",
           office_hours: "Mon-Wed-Fri: 2:00 PM - 4:00 PM",
         }
-      case "professor":
+      case "PROFESSOR":
         return {
           ...baseData,
           role: "professor" as const,
@@ -178,7 +178,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           specialization: "Database Systems",
           office_hours: "Tue-Thu: 1:00 PM - 3:00 PM",
         }
-      case "student":
+      case "STUDENT":
         return {
           ...baseData,
           role: "student" as const,

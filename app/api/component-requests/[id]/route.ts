@@ -23,8 +23,13 @@ export async function PATCH(
     const currentRequest = await prisma.componentRequest.findUnique({
       where: { id: params.id },
       include: {
-        component: true,
-        student: { include: { user: true } }
+        component: {
+          include: {
+            domain: true
+          }
+        },
+        student: { include: { user: true } },
+        requesting_faculty: { include: { user: true } }
       }
     })
 
@@ -32,17 +37,23 @@ export async function PATCH(
       return NextResponse.json({ error: 'Request not found' }, { status: 404 })
     }
 
-    // Check permissions based on user role
-    if (user.role === 'STUDENT') {
+    // Basic permission checks
+    if (user.role === "STUDENT") {
       const student = await prisma.student.findUnique({ where: { user_id: userId } })
       if (!student || currentRequest.student_id !== student.id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
-      // Students can only cancel their own pending requests
-      if (status !== 'CANCELLED' || currentRequest.status !== 'PENDING') {
-        return NextResponse.json({ error: 'Invalid status change' }, { status: 400 })
+      // Students can request return (PENDING_RETURN) for collected items or confirm return (USER_RETURNED) for pending return items
+      if (status === 'PENDING_RETURN' && currentRequest.status !== 'COLLECTED') {
+        return NextResponse.json({ error: 'Can only request return for collected items' }, { status: 400 })
       }
-    } else if (user.role === 'FACULTY') {
+      if (status === 'USER_RETURNED' && currentRequest.status !== 'PENDING_RETURN') {
+        return NextResponse.json({ error: 'Can only confirm return for pending return requests' }, { status: 400 })
+      }
+      if (!['PENDING_RETURN', 'USER_RETURNED'].includes(status)) {
+        return NextResponse.json({ error: 'Students can only request return or confirm return' }, { status: 400 })
+      }
+    } else if (user.role === "FACULTY") {
       const faculty = await prisma.faculty.findUnique({
         where: { user_id: userId },
         include: { domain_assignments: true }
@@ -52,15 +63,30 @@ export async function PATCH(
         return NextResponse.json({ error: 'Faculty profile not found' }, { status: 404 })
       }
 
-      // Check if faculty is coordinator of the component's domain
-      const isCoordinator = currentRequest.component.domain_id ? 
-        faculty.domain_assignments.some(assignment => assignment.domain_id === currentRequest.component.domain_id) : 
-        true // Allow access to components without specific domain
+      // Allow faculty to request return or confirm return for their own requests
+      if (['PENDING_RETURN', 'USER_RETURNED'].includes(status) && currentRequest.faculty_id === faculty.id) {
+        if (status === 'PENDING_RETURN' && currentRequest.status !== 'COLLECTED') {
+          return NextResponse.json({ error: 'Can only request return for collected items' }, { status: 400 })
+        }
+        if (status === 'USER_RETURNED' && currentRequest.status !== 'PENDING_RETURN') {
+          return NextResponse.json({ error: 'Can only confirm return for pending return requests' }, { status: 400 })
+        }
+      } else {
+        // For other status updates, check if faculty is coordinator of the component's domain
+        const isCoordinator = currentRequest.component.domain_id ? 
+          faculty.domain_assignments.some(assignment => assignment.domain_id === currentRequest.component.domain_id) : 
+          true // Allow access to components without specific domain
 
-      if (!isCoordinator) {
-        return NextResponse.json({ error: 'Access denied - Not assigned to this domain' }, { status: 403 })
+        if (!isCoordinator) {
+          return NextResponse.json({ error: 'Access denied - Not assigned to this domain' }, { status: 403 })
+        }
+        
+        // Coordinators can only mark as RETURNED when user has confirmed return (USER_RETURNED)
+        if (status === 'RETURNED' && currentRequest.status !== 'USER_RETURNED') {
+          return NextResponse.json({ error: 'Can only mark as returned after user confirms return' }, { status: 400 })
+        }
       }
-    } else if (user.role !== 'ADMIN') {
+    } else if (user.role !== "ADMIN") {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -70,33 +96,13 @@ export async function PATCH(
       faculty_notes: faculty_notes || currentRequest.faculty_notes
     }
 
-    // Set faculty_id if user is faculty
-    if (user.role === 'FACULTY') {
-      const faculty = await prisma.faculty.findUnique({ where: { user_id: userId } })
-      if (faculty) {
-        updateData.faculty_id = faculty.id
-      }
-    }
-
     // Handle status-specific updates
     if (status === 'COLLECTED' && collection_date) {
       updateData.collection_date = new Date(collection_date)
-      
-      // Decrease available quantity when collected
-      await prisma.labComponent.update({
-        where: { id: currentRequest.component_id },
-        data: { available_quantity: { decrement: currentRequest.quantity } }
-      })
     }
 
     if (status === 'RETURNED' && return_date) {
       updateData.return_date = new Date(return_date)
-      
-      // Increase available quantity when returned
-      await prisma.labComponent.update({
-        where: { id: currentRequest.component_id },
-        data: { available_quantity: { increment: currentRequest.quantity } }
-      })
     }
 
     const updatedRequest = await prisma.componentRequest.update({

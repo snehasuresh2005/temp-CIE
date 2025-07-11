@@ -282,7 +282,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     // Only allow faculty and admin to update requests
-    if (user.role !== 'FACULTY' && user.role !== 'ADMIN') {
+    if (user.role !== "FACULTY" && user.role !== "ADMIN") {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
