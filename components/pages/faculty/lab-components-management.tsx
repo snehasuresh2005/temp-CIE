@@ -268,8 +268,7 @@ export function LabComponentsManagement() {
         return "bg-green-100 text-green-800"
       case "COLLECTED":
         return "bg-blue-100 text-blue-800"
-      case "PENDING_RETURN":
-        return "bg-orange-100 text-orange-800"
+
       case "USER_RETURNED":
         return "bg-purple-100 text-purple-800"
       case "RETURNED":
@@ -291,8 +290,7 @@ export function LabComponentsManagement() {
         return <CheckCircle className="h-4 w-4" />
       case "COLLECTED":
         return <Package className="h-4 w-4" />
-      case "PENDING_RETURN":
-        return <Clock className="h-4 w-4" />
+
       case "USER_RETURNED":
         return <CheckCircle className="h-4 w-4" />
       case "RETURNED":
@@ -317,7 +315,7 @@ export function LabComponentsManagement() {
 
   const pendingRequests = requests.filter((req) => req.status === "PENDING")
   const activeRequests = requests.filter((req) => ["APPROVED", "COLLECTED"].includes(req.status))
-  const pendingReturnRequests = requests.filter((req) => ["PENDING_RETURN", "USER_RETURNED"].includes(req.status))
+  const pendingReturnRequests = requests.filter((req) => req.status === "USER_RETURNED")
   const overdueRequests = requests.filter((req) => req.status === "COLLECTED" && isOverdue(req.required_date))
   const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED"].includes(req.status))
 
@@ -696,11 +694,7 @@ export function LabComponentsManagement() {
                           </p>
                           {request.return_date && (
                             <p className="text-xs text-green-600">
-                              {request.status === "PENDING_RETURN" 
-                                ? "Return request submitted: " 
-                                : "User confirmed return: "
-                              }
-                              {new Date(request.return_date).toLocaleDateString()}
+                              User confirmed return: {new Date(request.return_date).toLocaleDateString()}
                             </p>
                           )}
                         </div>
@@ -712,22 +706,6 @@ export function LabComponentsManagement() {
                             <span className="capitalize">{request.status.toLowerCase().replace("_", " ")}</span>
                           </div>
                         </Badge>
-                        {request.status === "PENDING_RETURN" && (
-                          <>
-                            <Button
-                              size="sm"
-                              disabled={true}
-                              className="bg-gray-300 text-gray-500 cursor-not-allowed"
-                            >
-                              <Clock className="h-4 w-4 mr-1" />
-                              Waiting for User
-                            </Button>
-                            <div className="text-xs text-orange-600 mt-1">
-                              User must click "I Returned It" first
-                            </div>
-                          </>
-                        )}
-                        
                         {request.status === "USER_RETURNED" && (
                           <Button
                             size="sm"

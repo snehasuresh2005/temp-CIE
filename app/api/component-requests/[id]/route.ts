@@ -43,15 +43,12 @@ export async function PATCH(
       if (!student || currentRequest.student_id !== student.id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
-      // Students can request return (PENDING_RETURN) for collected items or confirm return (USER_RETURNED) for pending return items
-      if (status === 'PENDING_RETURN' && currentRequest.status !== 'COLLECTED') {
-        return NextResponse.json({ error: 'Can only request return for collected items' }, { status: 400 })
+      // Students can confirm return (USER_RETURNED) for collected items
+      if (status === 'USER_RETURNED' && currentRequest.status !== 'COLLECTED') {
+        return NextResponse.json({ error: 'Can only confirm return for collected items' }, { status: 400 })
       }
-      if (status === 'USER_RETURNED' && currentRequest.status !== 'PENDING_RETURN') {
-        return NextResponse.json({ error: 'Can only confirm return for pending return requests' }, { status: 400 })
-      }
-      if (!['PENDING_RETURN', 'USER_RETURNED'].includes(status)) {
-        return NextResponse.json({ error: 'Students can only request return or confirm return' }, { status: 400 })
+      if (status !== 'USER_RETURNED') {
+        return NextResponse.json({ error: 'Students can only confirm return' }, { status: 400 })
       }
     } else if (user.role === "FACULTY") {
       const faculty = await prisma.faculty.findUnique({
@@ -63,13 +60,10 @@ export async function PATCH(
         return NextResponse.json({ error: 'Faculty profile not found' }, { status: 404 })
       }
 
-      // Allow faculty to request return or confirm return for their own requests
-      if (['PENDING_RETURN', 'USER_RETURNED'].includes(status) && currentRequest.faculty_id === faculty.id) {
-        if (status === 'PENDING_RETURN' && currentRequest.status !== 'COLLECTED') {
-          return NextResponse.json({ error: 'Can only request return for collected items' }, { status: 400 })
-        }
-        if (status === 'USER_RETURNED' && currentRequest.status !== 'PENDING_RETURN') {
-          return NextResponse.json({ error: 'Can only confirm return for pending return requests' }, { status: 400 })
+      // Allow faculty to confirm return for their own requests
+      if (status === 'USER_RETURNED' && currentRequest.faculty_id === faculty.id) {
+        if (currentRequest.status !== 'COLLECTED') {
+          return NextResponse.json({ error: 'Can only confirm return for collected items' }, { status: 400 })
         }
       } else {
         // For other status updates, check if faculty is coordinator of the component's domain
@@ -101,8 +95,10 @@ export async function PATCH(
       updateData.collection_date = new Date(collection_date)
     }
 
-    if (status === 'RETURNED' && return_date) {
+    if ((status === 'RETURNED' || status === 'USER_RETURNED') && return_date) {
       updateData.return_date = new Date(return_date)
+    } else if (status === 'USER_RETURNED' && !return_date) {
+      updateData.return_date = new Date()
     }
 
     const updatedRequest = await prisma.componentRequest.update({
