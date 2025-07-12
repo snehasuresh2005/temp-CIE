@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -104,10 +104,14 @@ export function ManageLabComponents() {
   const [newCategory, setNewCategory] = useState("")
   const [isSavingCategory, setIsSavingCategory] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
+  const [isDeleteCategoryDialogOpen, setIsDeleteCategoryDialogOpen] = useState(false)
   const [showAddLocation, setShowAddLocation] = useState(false)
   const [newLocation, setNewLocation] = useState("")
   const [isSavingLocation, setIsSavingLocation] = useState(false)
-  const [locationOptions, setLocationOptions] = useState<string[]>(["Lab A", "Lab B", "Lab C", "Storage Room", "Equipment Room"])
+  const [locationToDelete, setLocationToDelete] = useState<string | null>(null)
+  const [isDeleteLocationDialogOpen, setIsDeleteLocationDialogOpen] = useState(false)
+  const [locationOptions, setLocationOptions] = useState<string[]>([])
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingComponent, setEditingComponent] = useState<LabComponent | null>(null)
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
@@ -121,9 +125,14 @@ export function ManageLabComponents() {
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null)
   const [isBulkUploading, setIsBulkUploading] = useState(false)
 
+  // Refs for click-outside detection
+  const locationInputRef = useRef<HTMLDivElement>(null)
+  const categoryInputRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     fetchComponents()
     fetchCategories()
+    fetchLocations()
   }, [])
 
   // Debug user information
@@ -133,6 +142,64 @@ export function ManageLabComponents() {
     console.log("ManageLabComponents - User name:", user?.name)
     console.log("ManageLabComponents - User role:", user?.role)
   }, [user])
+
+  // Click-outside detection for location input
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showAddLocation &&
+        locationInputRef.current &&
+        !locationInputRef.current.contains(event.target as Node)
+      ) {
+        setShowAddLocation(false)
+        setNewLocation("")
+      }
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showAddLocation) {
+        setShowAddLocation(false)
+        setNewLocation("")
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscapeKey)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [showAddLocation])
+
+  // Click-outside detection for category input
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showAddCategory &&
+        categoryInputRef.current &&
+        !categoryInputRef.current.contains(event.target as Node)
+      ) {
+        setShowAddCategory(false)
+        setNewCategory("")
+      }
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showAddCategory) {
+        setShowAddCategory(false)
+        setNewCategory("")
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscapeKey)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [showAddCategory])
 
   const fetchComponents = async () => {
     try {
@@ -170,6 +237,20 @@ export function ManageLabComponents() {
       }
     } catch (e) {
       setCategoryOptions(defaultCategories);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch("/api/lab-components/locations");
+      if (res.ok) {
+        const data = await res.json();
+        setLocationOptions(data.locations || []);
+      }
+    } catch (e) {
+      console.error("Error fetching locations:", e);
+      // Set default locations as fallback
+      setLocationOptions(["Lab A", "Lab B", "Lab C", "Storage Room", "Equipment Room"]);
     }
   };
 
@@ -395,23 +476,78 @@ export function ManageLabComponents() {
     if (!newCategory.trim()) return
     setIsSavingCategory(true)
     try {
-      const formatted = toTitleCase(newCategory.trim())
-      // Save new category to backend
       const res = await fetch("/api/lab-components/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: formatted })
+        body: JSON.stringify({ category: newCategory.trim() })
       })
+      
       if (res.ok) {
-        setCategoryOptions((prev) => [...prev, formatted])
-        setNewComponent((prev) => ({ ...prev, component_category: formatted }))
+        const data = await res.json()
+        const formattedCategory = data.category
+        setCategoryOptions((prev) => [...prev, formattedCategory])
+        setNewComponent((prev) => ({ ...prev, component_category: formattedCategory }))
         setNewCategory("")
+        setShowAddCategory(false)
         toast({ title: "Category added!", description: "New category added successfully." })
       } else {
-        toast({ title: "Error", description: "Failed to add category.", variant: "destructive" })
+        const error = await res.json()
+        toast({ 
+          title: "Error", 
+          description: error.error || "Failed to add category.", 
+          variant: "destructive" 
+        })
       }
+    } catch (error) {
+      console.error("Error adding category:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to add category.", 
+        variant: "destructive" 
+      })
     } finally {
       setIsSavingCategory(false)
+    }
+  }
+
+  const handleDeleteCategory = async (category: string) => {
+    try {
+      const res = await fetch(`/api/lab-components/categories?category=${encodeURIComponent(category)}`, {
+        method: "DELETE"
+      })
+      
+      if (res.ok) {
+        setCategoryOptions((prev) => prev.filter(cat => cat !== category))
+        toast({ 
+          title: "Category removed!", 
+          description: "Category removed successfully." 
+        })
+      } else {
+        const error = await res.json()
+        if (error.componentsUsing) {
+          toast({ 
+            title: "Cannot delete category", 
+            description: `Category is being used by ${error.count} component(s). Remove components first.`, 
+            variant: "destructive" 
+          })
+        } else {
+          toast({ 
+            title: "Error", 
+            description: error.error || "Failed to delete category.", 
+            variant: "destructive" 
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting category:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete category.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsDeleteCategoryDialogOpen(false)
+      setCategoryToDelete(null)
     }
   }
 
@@ -419,13 +555,78 @@ export function ManageLabComponents() {
     if (!newLocation.trim()) return
     setIsSavingLocation(true)
     try {
-      const formatted = formatLocation(newLocation.trim())
-      setLocationOptions((prev) => [...prev, formatted])
-      setNewComponent((prev) => ({ ...prev, component_location: formatted }))
-      setNewLocation("")
-      toast({ title: "Location added!", description: "New location added successfully." })
+      const res = await fetch("/api/lab-components/locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: newLocation.trim() })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        const formattedLocation = data.location
+        setLocationOptions((prev) => [...prev, formattedLocation])
+        setNewComponent((prev) => ({ ...prev, component_location: formattedLocation }))
+        setNewLocation("")
+        setShowAddLocation(false)
+        toast({ title: "Location added!", description: "New location added successfully." })
+      } else {
+        const error = await res.json()
+        toast({ 
+          title: "Error", 
+          description: error.error || "Failed to add location.", 
+          variant: "destructive" 
+        })
+      }
+    } catch (error) {
+      console.error("Error adding location:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to add location.", 
+        variant: "destructive" 
+      })
     } finally {
       setIsSavingLocation(false)
+    }
+  }
+
+  const handleDeleteLocation = async (location: string) => {
+    try {
+      const res = await fetch(`/api/lab-components/locations?location=${encodeURIComponent(location)}`, {
+        method: "DELETE"
+      })
+      
+      if (res.ok) {
+        setLocationOptions((prev) => prev.filter(loc => loc !== location))
+        toast({ 
+          title: "Location removed!", 
+          description: "Location removed successfully." 
+        })
+      } else {
+        const error = await res.json()
+        if (error.componentsUsing) {
+          toast({ 
+            title: "Cannot delete location", 
+            description: `Location is being used by ${error.count} component(s). Remove components first.`, 
+            variant: "destructive" 
+          })
+        } else {
+          toast({ 
+            title: "Error", 
+            description: error.error || "Failed to delete location.", 
+            variant: "destructive" 
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting location:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete location.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsDeleteLocationDialogOpen(false)
+      setLocationToDelete(null)
     }
   }
 
@@ -939,25 +1140,130 @@ export function ManageLabComponents() {
                 </div>
                     <div className="flex gap-3 items-end">
                       <div className="flex-1">
-                        <Label htmlFor="location">Location *</Label>
-                        <Select value={newComponent.component_location} onValueChange={value => setNewComponent(prev => ({ ...prev, component_location: value }))}>
-                          <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}><SelectValue placeholder="Select location" /></SelectTrigger>
-                      <SelectContent>
-                            {locationOptions.map(location => <SelectItem key={location} value={location}>{location}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="location">Location *</Label>
+                          <div className="flex space-x-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowAddLocation(true)}
+                              className="h-6 w-6 p-0"
+                              title="Add location"
+                              aria-label="Add location"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            {newComponent.component_location && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setLocationToDelete(newComponent.component_location)
+                                  setIsDeleteLocationDialogOpen(true)
+                                }}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                title="Delete location"
+                                aria-label="Delete location"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {showAddLocation ? (
+                          <div ref={locationInputRef} className="flex gap-2 mt-1">
+                            <Input
+                              placeholder="Enter location (e.g., Lab A, Storage Room)"
+                              value={newLocation}
+                              onChange={(e) => setNewLocation(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleAddLocation}
+                              disabled={!newLocation.trim() || isSavingLocation}
+                            >
+                              {isSavingLocation ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select value={newComponent.component_location} onValueChange={value => setNewComponent(prev => ({ ...prev, component_location: value }))}>
+                            <SelectTrigger className={`mt-1 ${formErrors.component_location ? 'border-red-500' : ''}`}><SelectValue placeholder="Select Location
+                            " /></SelectTrigger>
+                            <SelectContent>
+                              {locationOptions.map(location => (
+                                <SelectItem key={location} value={location}>{location}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                         {formErrors.component_location && <p className="text-red-500 text-xs mt-1">{formErrors.component_location}</p>}
-                  </div>
+                      </div>
                       <div className="flex-1">
-                        <Label htmlFor="category">Category *</Label>
-                        <Select value={newComponent.component_category} onValueChange={value => setNewComponent(prev => ({ ...prev, component_category: value }))}>
-                          <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}><SelectValue placeholder="Select category" /></SelectTrigger>
-                      <SelectContent>
-                            {categoryOptions.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="category">Category *</Label>
+                          <div className="flex space-x-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowAddCategory(true)}
+                              className="h-6 w-6 p-0"
+                              title="Add category"
+                              aria-label="Add category"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            {newComponent.component_category && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setCategoryToDelete(newComponent.component_category)
+                                  setIsDeleteCategoryDialogOpen(true)
+                                }}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                title="Delete category"
+                                aria-label="Delete category"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {showAddCategory ? (
+                          <div ref={categoryInputRef} className="flex gap-2 mt-1">
+                            <Input
+                              placeholder="Enter category (e.g., Electrical, Mechanical)"
+                              value={newCategory}
+                              onChange={(e) => setNewCategory(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleAddCategory}
+                              disabled={!newCategory.trim() || isSavingCategory}
+                            >
+                              {isSavingCategory ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select value={newComponent.component_category} onValueChange={value => setNewComponent(prev => ({ ...prev, component_category: value }))}>
+                            <SelectTrigger className={`mt-1 ${formErrors.component_category ? 'border-red-500' : ''}`}><SelectValue placeholder="Select category" /></SelectTrigger>
+                            <SelectContent>
+                              {categoryOptions.map(category => (
+                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                         {formErrors.component_category && <p className="text-red-500 text-xs mt-1">{formErrors.component_category}</p>}
-                  </div>
+                      </div>
                       <div className="w-20">
                         <Label htmlFor="quantity">Quantity *</Label>
                         <Input id="quantity" type="number" value={newComponent.component_quantity} onChange={e => setNewComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))} min="1" className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`} />
@@ -1764,6 +2070,94 @@ export function ManageLabComponents() {
                   }}
                 >
                   Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Category Confirmation Dialog */}
+      <Dialog open={isDeleteCategoryDialogOpen} onOpenChange={setIsDeleteCategoryDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete Category
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this category? This action cannot be undone if the category is not being used by any components.
+            </DialogDescription>
+          </DialogHeader>
+          {categoryToDelete && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-medium">Category: {categoryToDelete}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  This will remove the category from the available options. Components currently using this category will not be affected.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteCategoryDialogOpen(false)
+                    setCategoryToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => categoryToDelete && handleDeleteCategory(categoryToDelete)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Category
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Location Confirmation Dialog */}
+      <Dialog open={isDeleteLocationDialogOpen} onOpenChange={setIsDeleteLocationDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete Location
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this location? This action cannot be undone if the location is not being used by any components.
+            </DialogDescription>
+          </DialogHeader>
+          {locationToDelete && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-medium">Location: {locationToDelete}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  This will remove the location from the available options. Components currently using this location will not be affected.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteLocationDialogOpen(false)
+                    setLocationToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => locationToDelete && handleDeleteLocation(locationToDelete)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Location
                 </Button>
               </div>
             </div>

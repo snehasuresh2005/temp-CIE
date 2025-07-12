@@ -93,4 +93,91 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Remove focus outlines from all form elements */
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible,
+  button:focus,
+  button:focus-visible,
+  [role="button"]:focus,
+  [role="button"]:focus-visible,
+  [tabindex]:focus,
+  [tabindex]:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  /* Remove focus outlines from Radix UI components */
+  [data-radix-focus-guard]:focus,
+  [data-radix-focus-guard]:focus-visible,
+  [data-radix-focus-trap]:focus,
+  [data-radix-focus-trap]:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  /* Remove focus outlines from all interactive elements */
+  *:focus,
+  *:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+  
+  /* Specific removal for form controls */
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus,
+  input[type="time"]:focus,
+  input[type="search"]:focus,
+  input[type="tel"]:focus,
+  input[type="url"]:focus,
+  textarea:focus,
+  select:focus {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+    border-color: hsl(var(--input)) !important;
+  }
+}
+
+@layer components {
+  /* Override Tailwind focus classes */
+  .focus\:outline-none:focus,
+  .focus-visible\:outline-none:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+  
+  .focus\:ring-0:focus,
+  .focus-visible\:ring-0:focus-visible {
+    box-shadow: none !important;
+  }
+  
+  .focus\:ring-2:focus,
+  .focus-visible\:ring-2:focus-visible {
+    box-shadow: none !important;
+  }
+  
+  /* Remove any ring effects */
+  .ring-0,
+  .ring-1,
+  .ring-2,
+  .ring-4,
+  .ring-8 {
+    box-shadow: none !important;
+  }
+  
+  /* Ensure no border changes on focus */
+  .focus\:border-transparent:focus,
+  .focus-visible\:border-transparent:focus-visible {
+    border-color: hsl(var(--input)) !important;
+  }
 }

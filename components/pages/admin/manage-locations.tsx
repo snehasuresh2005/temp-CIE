@@ -1,13 +1,13 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X } from 'lucide-react';
@@ -69,6 +69,17 @@ export function ManageLocations() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
+  
+  // Location type management state
+  const [locationTypeOptions, setLocationTypeOptions] = useState<string[]>([]);
+  const [newLocationType, setNewLocationType] = useState("");
+  const [isSavingLocationType, setIsSavingLocationType] = useState(false);
+  const [showAddLocationType, setShowAddLocationType] = useState(false);
+  const [locationTypeToDelete, setLocationTypeToDelete] = useState<string | null>(null);
+  const [isDeleteLocationTypeDialogOpen, setIsDeleteLocationTypeDialogOpen] = useState(false);
+
+  // Refs for click-outside detection
+  const locationTypeInputRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState<LocationFormData>({
     name: '',
@@ -84,7 +95,37 @@ export function ManageLocations() {
 
   useEffect(() => {
     fetchLocations();
+    fetchLocationTypes();
   }, [currentPage, searchTerm, locationTypeFilter]);
+
+  // Click-outside detection for location type input
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showAddLocationType &&
+        locationTypeInputRef.current &&
+        !locationTypeInputRef.current.contains(event.target as Node)
+      ) {
+        setShowAddLocationType(false)
+        setNewLocationType("")
+      }
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showAddLocationType) {
+        setShowAddLocationType(false)
+        setNewLocationType("")
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscapeKey)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [showAddLocationType])
 
   const fetchLocations = async () => {
     try {
@@ -113,6 +154,20 @@ export function ManageLocations() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLocationTypes = async () => {
+    try {
+      const res = await fetch("/api/locations/types");
+      if (res.ok) {
+        const data = await res.json();
+        setLocationTypeOptions(data.types || []);
+      }
+    } catch (e) {
+      console.error("Error fetching location types:", e);
+      // Set default location types as fallback
+      setLocationTypeOptions(["LAB", "CLASSROOM", "OFFICE", "WAREHOUSE", "OTHER", "CABIN", "LECTURE_HALL", "AUDITORIUM", "SEMINAR_HALL"]);
     }
   };
 
@@ -216,6 +271,85 @@ export function ManageLocations() {
     }
   };
 
+  const handleAddLocationType = async () => {
+    if (!newLocationType.trim()) return
+    setIsSavingLocationType(true)
+    try {
+      const res = await fetch("/api/locations/types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: newLocationType.trim() })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        const formattedType = data.type
+        setLocationTypeOptions((prev) => [...prev, formattedType])
+        setFormData((prev) => ({ ...prev, location_type: formattedType }))
+        setNewLocationType("")
+        setShowAddLocationType(false)
+        toast({ title: "Location type added!", description: "New location type added successfully." })
+      } else {
+        const error = await res.json()
+        toast({ 
+          title: "Error", 
+          description: error.error || "Failed to add location type.", 
+          variant: "destructive" 
+        })
+      }
+    } catch (error) {
+      console.error("Error adding location type:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to add location type.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsSavingLocationType(false)
+    }
+  }
+
+  const handleDeleteLocationType = async (type: string) => {
+    try {
+      const res = await fetch(`/api/locations/types?type=${encodeURIComponent(type)}`, {
+        method: "DELETE"
+      })
+      
+      if (res.ok) {
+        setLocationTypeOptions((prev) => prev.filter(t => t !== type))
+        toast({ 
+          title: "Location type removed!", 
+          description: "Location type removed successfully." 
+        })
+      } else {
+        const error = await res.json()
+        if (error.componentsUsing) {
+          toast({ 
+            title: "Cannot delete location type", 
+            description: `Location type is being used by ${error.count} location(s). Remove locations first.`, 
+            variant: "destructive" 
+          })
+        } else {
+          toast({ 
+            title: "Error", 
+            description: error.error || "Failed to delete location type.", 
+            variant: "destructive" 
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting location type:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete location type.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsDeleteLocationTypeDialogOpen(false)
+      setLocationTypeToDelete(null)
+    }
+  }
+
   const handleImageUpload = async (files: FileList) => {
     if (!files.length) return;
 
@@ -303,6 +437,11 @@ export function ManageLocations() {
       description: '',
       images: [],
     });
+    setNewLocationType("");
+    setIsSavingLocationType(false);
+    setShowAddLocationType(false);
+    setLocationTypeToDelete(null);
+    setIsDeleteLocationTypeDialogOpen(false);
   };
 
   const removeImage = (index: number) => {
@@ -394,37 +533,84 @@ export function ManageLocations() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
                   <Label htmlFor="wing">Wing (Optional)</Label>
                   <Input
                     id="wing"
                     placeholder="Enter wing name (e.g., North, South, East)"
                     value={formData.wing}
                     onChange={(e) => setFormData({ ...formData, wing: e.target.value })}
+                    className="mt-1"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="location_type">Location Type</Label>
-                  <Select
-                    value={formData.location_type}
-                    onValueChange={(value) => setFormData({ ...formData, location_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CABIN">Cabin</SelectItem>
-                      <SelectItem value="LECTURE_HALL">Lecture Hall</SelectItem>
-                      <SelectItem value="AUDITORIUM">Auditorium</SelectItem>
-                      <SelectItem value="SEMINAR_HALL">Seminar Hall</SelectItem>
-                      <SelectItem value="LAB">Lab</SelectItem>
-                      <SelectItem value="CLASSROOM">Classroom</SelectItem>
-                      <SelectItem value="OFFICE">Office</SelectItem>
-                      <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
-                      <SelectItem value="OTHER">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex-1">
+                  <div className="flex items-end justify-between">
+                    <Label htmlFor="location_type">Location Type</Label>
+                    <div className="flex space-x-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddLocationType(true)}
+                        className="h-6 w-6 p-0"
+                        title="Add location type"
+                        aria-label="Add location type"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      {formData.location_type && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setLocationTypeToDelete(formData.location_type)
+                            setIsDeleteLocationTypeDialogOpen(true)
+                          }}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                          title="Delete location type"
+                          aria-label="Delete location type"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {showAddLocationType ? (
+                    <div ref={locationTypeInputRef} className="flex gap-2 mt-1">
+                      <Input
+                        placeholder="Enter location type (e.g., Conference Room, Gym)"
+                        value={newLocationType}
+                        onChange={(e) => setNewLocationType(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddLocationType}
+                        disabled={!newLocationType.trim() || isSavingLocationType}
+                      >
+                        {isSavingLocationType ? "Adding..." : "Add"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={formData.location_type}
+                      onValueChange={(value) => setFormData({ ...formData, location_type: value })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select location type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationTypeOptions.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type.replace(/_/g, ' ')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
 
@@ -545,15 +731,11 @@ export function ManageLocations() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="CABIN">Cabin</SelectItem>
-            <SelectItem value="LECTURE_HALL">Lecture Hall</SelectItem>
-            <SelectItem value="AUDITORIUM">Auditorium</SelectItem>
-            <SelectItem value="SEMINAR_HALL">Seminar Hall</SelectItem>
-            <SelectItem value="LAB">Lab</SelectItem>
-            <SelectItem value="CLASSROOM">Classroom</SelectItem>
-            <SelectItem value="OFFICE">Office</SelectItem>
-            <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
-            <SelectItem value="OTHER">Other</SelectItem>
+            {locationTypeOptions.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type.replace(/_/g, ' ')}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -689,6 +871,50 @@ export function ManageLocations() {
             <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setLocationToDelete(null); }}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Location Type Confirmation Dialog */}
+      <Dialog open={isDeleteLocationTypeDialogOpen} onOpenChange={setIsDeleteLocationTypeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete Location Type
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this location type? This action cannot be undone if the location type is not being used by any locations.
+            </DialogDescription>
+          </DialogHeader>
+          {locationTypeToDelete && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-medium">Location Type: {locationTypeToDelete.replace(/_/g, ' ')}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  This will remove the location type from the available options. Locations currently using this type will not be affected.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteLocationTypeDialogOpen(false)
+                    setLocationTypeToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => locationTypeToDelete && handleDeleteLocationType(locationTypeToDelete)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Location Type
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
