@@ -469,7 +469,7 @@ async function main() {
     }
   });
 
-  // Create sample component requests demonstrating the 3-step return flow
+  // Create sample component requests demonstrating the simplified return flow
   console.log('\n📝 Creating sample component requests...');
   
   // Student request - COLLECTED status (ready for return)
@@ -490,7 +490,7 @@ async function main() {
     }
   });
 
-  // Student request - PENDING_RETURN status (user requested return)
+  // Student request - USER_RETURNED status (user confirmed return)
   const studentRequest2 = await prisma.componentRequest.create({
     data: {
       student_id: createdUsers['rishi@pes.edu'].student?.id,
@@ -499,7 +499,7 @@ async function main() {
       purpose: "Display module for project output",
       request_date: new Date("2025-07-02T11:00:00.000Z"),
       required_date: new Date("2025-07-16T17:00:00.000Z"),
-      status: "PENDING_RETURN",
+      status: "USER_RETURNED",
       approved_by: madhukharFaculty?.id,
       approved_date: new Date("2025-07-02T15:00:00.000Z"),
       collection_date: new Date("2025-07-03T10:00:00.000Z"),
@@ -546,7 +546,7 @@ async function main() {
     }
   });
 
-  // Faculty request - PENDING_RETURN status
+  // Faculty request - USER_RETURNED status
   const facultyRequest2 = await prisma.componentRequest.create({
     data: {
       faculty_id: sathyaFaculty?.id,
@@ -555,7 +555,7 @@ async function main() {
       purpose: "Actuator testing for automation prototype",
       request_date: new Date("2025-07-06T09:30:00.000Z"),
       required_date: new Date("2025-07-20T17:00:00.000Z"),
-      status: "PENDING_RETURN",
+      status: "USER_RETURNED",
       approved_by: madhukharFaculty?.id,
       approved_date: new Date("2025-07-06T14:00:00.000Z"),
       collection_date: new Date("2025-07-07T09:00:00.000Z"),
@@ -595,10 +595,9 @@ async function main() {
   console.log(`   - Library Items: 1`);
   console.log(`   - Locations: 2`);
   console.log(`   - Projects: 2 (1 student, 1 faculty - both ONGOING)`);
-  console.log(`   - Component Requests: 6 (demonstrating 3-step return flow)`);
+  console.log(`   - Component Requests: 6 (demonstrating simplified return flow)`);
   console.log('\n🔄 Return Flow Examples:');
   console.log('   - COLLECTED: Ready for return request');
-  console.log('   - PENDING_RETURN: User requested return, waiting for physical return');
   console.log('   - USER_RETURNED: User confirmed return, waiting for coordinator verification');
   console.log('   - RETURNED: Complete return cycle');
   console.log('\n👨‍💼 Coordinator Assignments:');
