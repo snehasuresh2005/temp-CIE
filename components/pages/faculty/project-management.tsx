@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText, Trash2 } from "lucide-react"
+import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText, Trash2, Settings } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import {
@@ -30,12 +30,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { FacultyProjectRequests } from "./faculty-project-requests"
 
 interface Project {
   id: string
   name: string
   description: string
-  course_id: string
+  course_id?: string
   components_needed: string[]
   expected_completion_date: string
   created_by: string
@@ -127,19 +128,42 @@ export function ProjectManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
+  const [showFacultyRequests, setShowFacultyRequests] = useState(false)
+  const [isLabComponentsCoordinator, setIsLabComponentsCoordinator] = useState(false)
   const { toast } = useToast()
 
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
-    course_id: "",
     components_needed: [] as string[],
     expected_completion_date: "",
   })
 
   useEffect(() => {
     fetchData()
+    checkCoordinatorStatus()
   }, [])
+
+  const checkCoordinatorStatus = async () => {
+    try {
+      const response = await fetch("/api/coordinators/check", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Check if the user is coordinator for Lab Components domain
+        const isLabCoordinator = data.assignedDomains?.some(
+          (domain: any) => domain.name === "Lab Components"
+        )
+        setIsLabComponentsCoordinator(isLabCoordinator || false)
+      }
+    } catch (error) {
+      console.error("Error checking coordinator status:", error)
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -205,10 +229,9 @@ export function ProjectManagement() {
     console.log("Form data:", newProject)
     console.log("User email:", user?.email)
     
-    if (!newProject.name || !newProject.course_id || !newProject.expected_completion_date) {
+    if (!newProject.name || !newProject.expected_completion_date) {
       console.log("Validation failed:", {
         name: !!newProject.name,
-        course_id: !!newProject.course_id,
         expected_completion_date: !!newProject.expected_completion_date
       })
       toast({
@@ -227,6 +250,7 @@ export function ProjectManagement() {
         },
         body: JSON.stringify({
           ...newProject,
+          course_id: null,
           user_email: user?.email,
           type: "FACULTY_ASSIGNED",
         }),
@@ -238,7 +262,6 @@ export function ProjectManagement() {
         setNewProject({
           name: "",
           description: "",
-          course_id: "",
           components_needed: [],
           expected_completion_date: "",
         })
@@ -246,7 +269,7 @@ export function ProjectManagement() {
 
         toast({
           title: "Success",
-          description: "Project created successfully",
+          description: "Project created successfully and sent for coordinator approval",
         })
       } else {
         const errorData = await response.json()
@@ -421,15 +444,29 @@ export function ProjectManagement() {
     )
   }
 
+  if (showFacultyRequests) {
+    return <FacultyProjectRequests onBack={() => setShowFacultyRequests(false)} />
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Project Management</h2>
+        <div className="flex items-center space-x-2">
+          {isLabComponentsCoordinator && (
+            <Button
+              variant="outline"
+              onClick={() => setShowFacultyRequests(true)}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Manage Project Requests
+            </Button>
+          )}
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Project
+                <Plus className="mr-2 h-4 w-4" />
+                Create Project
               </Button>
             </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
@@ -437,31 +474,14 @@ export function ProjectManagement() {
               <DialogTitle>Create New Project</DialogTitle>
               </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Project Name</Label>
-                  <Input
-                    id="name"
-                    value={newProject.name}
-                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                    placeholder="Enter project name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="course">Course</Label>
-                  <Select value={newProject.course_id} onValueChange={(value) => setNewProject({ ...newProject, course_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.course_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Project Name</Label>
+                <Input
+                  id="name"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                  placeholder="Enter project name"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -534,6 +554,7 @@ export function ProjectManagement() {
               </div>
             </DialogContent>
           </Dialog>
+        </div>
       </div>
 
       <Tabs defaultValue="projects" className="space-y-4">
@@ -545,79 +566,102 @@ export function ProjectManagement() {
 
         <TabsContent value="projects" className="space-y-4">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
-                <CardHeader className="pb-4">
-                  <div className="space-y-3">
+            {projects.map((project) => {
+              const course = courses.find(c => c.id === project.course_id)
+              
+              return (
+                <Card key={project.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
+                  <CardHeader>
                     <div className="flex items-start justify-between">
-                      <CardTitle className="flex items-center space-x-2 text-lg">
-                        <FolderOpen className="h-5 w-5 text-blue-600" />
-                        <span className="line-clamp-2">{project.name}</span>
-                      </CardTitle>
+                      <div>
+                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                          <FolderOpen className="h-6 w-6 mr-3 text-blue-500" />
+                          {project.name}
+                        </CardTitle>
+                        {course && (
+                          <CardDescription className="mt-2 text-sm text-gray-600">
+                            {course.course_name}
+                          </CardDescription>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="flex-grow flex flex-col">
+                    <div className="mb-4">
+                      <Badge className={`${getStatusColor(project.status)}`}>{project.status}</Badge>
+                      {project.status === "PENDING" && (
+                        <div className="mt-2 flex items-center text-sm text-yellow-600">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          <span>Waiting for coordinator approval</span>
+                        </div>
+                      )}
                     </div>
                     
-                    <div className="space-y-2">
-                      <CardDescription className="text-sm font-medium text-gray-700">
-                        {courses.find(c => c.id === project.course_id)?.course_name}
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="pt-0">
-                  <div className="space-y-4">
-                    {/* Project Description */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-bold text-gray-700 tracking-wide">Description</Label>
-                      <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{project.description}</p>
-                    </div>
-
-                    {/* Timeline and Submissions */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-bold text-gray-700 tracking-wide">Project Info:</Label>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <div>
-                            <div className="font-medium text-gray-900">Due Date</div>
-                            <div className="text-xs text-gray-600">{new Date(project.expected_completion_date).toLocaleDateString()}</div>
-                          </div>
+                    <div className="flex-grow">
+                      <div className="space-y-2">
+                        <div>
+                          <h3 className="text-sm font-semibold text-gray-700">Description</h3>
+                          <p className="text-sm text-gray-600 mt-1">{project.description}</p>
                         </div>
-                        <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
-                          <Users className="h-4 w-4 text-gray-500" />
+                        
+                        {project.components_needed && project.components_needed.length > 0 && (
                           <div>
-                            <div className="font-medium text-gray-900">Submissions</div>
-                            <div className="text-xs text-gray-600">{project.submissions?.length || 0} received</div>
+                            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Required Components</h3>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {project.components_needed.slice(0, 3).map((componentId) => {
+                                const component = labComponents.find(c => c.id === componentId)
+                                return (
+                                  <Badge key={componentId} variant="secondary" className="text-xs font-normal px-2 py-0.5">
+                                    {component?.component_name || 'Unknown Component'}
+                                  </Badge>
+                                )
+                              })}
+                              {project.components_needed.length > 3 && (
+                                <Badge variant="secondary" className="text-xs font-normal px-2 py-0.5">
+                                  +{project.components_needed.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
                           </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 pt-2 mt-auto">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <div>
+                          <p className="font-semibold">Due Date</p>
+                          <p>{new Date(project.expected_completion_date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Users className="h-4 w-4 mr-2 text-gray-500" />
+                        <div>
+                          <p className="font-semibold">Submissions</p>
+                          <p>{project.submissions?.length || 0} received</p>
                         </div>
                       </div>
                     </div>
-
-                    {/* Creation Date */}
-                    <div className="pt-2 border-t border-gray-100">
-                      <div className="text-xs text-gray-500 text-center">
-                        Created: {new Date(project.created_date).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    {/* Delete Button */}
-                    <div className="flex justify-end pt-2">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setProjectToDelete(project)
-                          setIsDeleteDialogOpen(true)
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Project
-                      </Button>
-                    </div>
+                  </CardContent>
+                  
+                  <div className="p-6 pt-0">
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => {
+                        setProjectToDelete(project)
+                        setIsDeleteDialogOpen(true)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Project
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </Card>
+              )
+            })}
           </div>
         </TabsContent>
 

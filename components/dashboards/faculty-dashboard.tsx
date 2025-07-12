@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Home, Users, User as UserIcon, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench, BookOpen, Settings, Award } from "lucide-react"
 import { FacultyHome } from "@/components/pages/faculty/faculty-home"
 import { LabComponentsManagement } from "@/components/pages/faculty/lab-components-management"
+import { LabComponentsRequest } from "@/components/pages/faculty/lab-components-request"
 import { FacultyCalendar } from "@/components/pages/faculty/faculty-calendar"
 import { FacultyViewCourses } from "@/components/pages/faculty/view-courses"
 import { ProjectManagement } from "@/components/pages/faculty/project-management"
@@ -53,7 +54,7 @@ export function FacultyDashboard() {
 
     // Add coordinator menu item if user is a coordinator
     if (isCoordinator) {
-            baseItems.splice(1, 0, { id: "coordinator", label: "CIE Coordinator", icon: Award })
+      baseItems.splice(1, 0, { id: "coordinator", label: "CIE Coordinator", icon: Award })
     }
 
     return baseItems
@@ -76,7 +77,7 @@ export function FacultyDashboard() {
       case "attendance":
         return <AttendanceManagement />
       case "lab-components":
-        return <LabComponentsManagement />
+        return isCoordinator ? <LabComponentsManagement /> : <LabComponentsRequest />
       case "profile":
         return <UserProfile />
       case "library":

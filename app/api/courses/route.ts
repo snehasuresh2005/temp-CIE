@@ -225,7 +225,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const user = await getUserById(userId)
-    if (!user || user.role !== "student") {
+    if (!user || user.role !== "STUDENT") {
       return NextResponse.json({ error: "Access denied - Students only" }, { status: 403 })
     }
 

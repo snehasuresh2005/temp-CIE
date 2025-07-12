@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const user = await getUserById(userId)
       if (!user) return res.status(403).json({ error: 'Access denied' })
 
-      if (user.role === 'faculty') {
+      if (user.role === "FACULTY") {
         // Faculty can see submissions for projects in their courses
         const faculty = await prisma.faculty.findUnique({ where: { user_id: userId } })
         if (!faculty) return res.status(404).json({ error: 'Faculty profile not found' })
@@ -98,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }))
 
         return res.status(200).json({ submissions: submissionsWithCourses })
-      } else if (user.role === 'student') {
+      } else if (user.role === "STUDENT") {
         // Students can see their own submissions
         const student = await prisma.student.findUnique({ where: { user_id: userId } })
         if (!student) return res.status(404).json({ error: 'Student profile not found' })
@@ -147,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const userId = req.headers['x-user-id'] as string
       if (!userId) return res.status(401).json({ error: 'User not authenticated' })
       const user = await getUserById(userId)
-      if (!user || user.role !== 'student') return res.status(403).json({ error: 'Access denied - Students only' })
+      if (!user || user.role !== "STUDENT") return res.status(403).json({ error: 'Access denied - Students only' })
       const student = await prisma.student.findUnique({ where: { user_id: userId } })
       if (!student) return res.status(404).json({ error: 'Student profile not found' })
 
@@ -290,7 +290,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const userId = req.headers['x-user-id'] as string
       if (!userId) return res.status(401).json({ error: 'User not authenticated' })
       const user = await getUserById(userId)
-      if (!user || user.role !== 'faculty') return res.status(403).json({ error: 'Access denied - Faculty only' })
+      if (!user || user.role !== "FACULTY") return res.status(403).json({ error: 'Access denied - Faculty only' })
       
       // Parse JSON body for PUT requests
       const body = await parseJsonBody(req)

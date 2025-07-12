@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await getUserById(userId)
-    if (!user || user.role !== "faculty") {
+    if (!user || user.role !== "FACULTY") {
       return NextResponse.json({ error: "Access denied - Faculty only" }, { status: 403 })
     }
 
@@ -101,7 +101,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const user = await getUserById(userId)
-    if (!user || user.role !== "faculty") {
+    if (!user || user.role !== "FACULTY") {
       return NextResponse.json({ error: "Access denied - Faculty only" }, { status: 403 })
     }
 

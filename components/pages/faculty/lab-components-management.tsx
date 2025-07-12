@@ -16,9 +16,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { CheckCircle, Clock, AlertTriangle, Package, X, Check, RefreshCw } from "lucide-react"
+import { CheckCircle, Clock, AlertTriangle, Package, X, Check, RefreshCw, Wrench } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { LabComponentsRequest } from "./lab-components-request"
 
 interface LabComponent {
   id: string
@@ -50,7 +51,13 @@ interface ComponentRequest {
   faculty_notes: string | null
   component?: LabComponent
   project: Project
-  student: {
+  student?: {
+    user: {
+      name: string
+      email: string
+    }
+  }
+  requesting_faculty?: {
     user: {
       name: string
       email: string
@@ -64,6 +71,7 @@ export function LabComponentsManagement() {
   const [requests, setRequests] = useState<ComponentRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [facultyNotes, setFacultyNotes] = useState("")
+  const [isRequestView, setIsRequestView] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -78,7 +86,11 @@ export function LabComponentsManagement() {
       const componentsData = await componentsResponse.json()
       setComponents(componentsData.components || [])
 
-      const requestsResponse = await fetch(`/api/component-requests?faculty_id=${user.id}`)
+      const requestsResponse = await fetch(`/api/component-requests`, {
+        headers: {
+          "x-user-id": user.id
+        }
+      })
       const requestsData = await requestsResponse.json()
       setRequests(requestsData.requests || [])
     } catch (error) {
@@ -217,7 +229,7 @@ export function LabComponentsManagement() {
           "x-user-id": user.id
         },
         body: JSON.stringify({
-          status: "RETURNED",
+          status: "RETURNED",  // Coordinator confirms final return
           return_date: new Date().toISOString(),
         }),
       })
@@ -232,17 +244,17 @@ export function LabComponentsManagement() {
         fetchData()
 
         toast({
-          title: "Component Returned",
-          description: "Component has been marked as returned",
+          title: "Return Confirmed",
+          description: "Component return has been verified and completed",
         })
       } else {
-        throw new Error("Failed to mark as returned")
+        throw new Error("Failed to confirm return")
       }
     } catch (error) {
-      console.error("Error marking as returned:", error)
+      console.error("Error confirming return:", error)
       toast({
         title: "Error",
-        description: "Failed to mark component as returned",
+        description: "Failed to confirm component return",
         variant: "destructive",
       })
     }
@@ -258,8 +270,10 @@ export function LabComponentsManagement() {
         return "bg-blue-100 text-blue-800"
       case "PENDING_RETURN":
         return "bg-orange-100 text-orange-800"
-      case "RETURNED":
+      case "USER_RETURNED":
         return "bg-purple-100 text-purple-800"
+      case "RETURNED":
+        return "bg-gray-100 text-gray-800"
       case "REJECTED":
         return "bg-red-100 text-red-800"
       case "OVERDUE":
@@ -279,6 +293,8 @@ export function LabComponentsManagement() {
         return <Package className="h-4 w-4" />
       case "PENDING_RETURN":
         return <Clock className="h-4 w-4" />
+      case "USER_RETURNED":
+        return <CheckCircle className="h-4 w-4" />
       case "RETURNED":
         return <CheckCircle className="h-4 w-4" />
       case "REJECTED":
@@ -301,7 +317,7 @@ export function LabComponentsManagement() {
 
   const pendingRequests = requests.filter((req) => req.status === "PENDING")
   const activeRequests = requests.filter((req) => ["APPROVED", "COLLECTED"].includes(req.status))
-  const pendingReturnRequests = requests.filter((req) => req.status === "PENDING_RETURN")
+  const pendingReturnRequests = requests.filter((req) => ["PENDING_RETURN", "USER_RETURNED"].includes(req.status))
   const overdueRequests = requests.filter((req) => req.status === "COLLECTED" && isOverdue(req.required_date))
   const completedRequests = requests.filter((req) => ["RETURNED", "REJECTED"].includes(req.status))
 
@@ -313,16 +329,27 @@ export function LabComponentsManagement() {
     )
   }
 
+  // If in request view, render the request component
+  if (isRequestView) {
+    return <LabComponentsRequest onBackToManagement={() => setIsRequestView(false)} />
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lab Components Management</h1>
         </div>
-        <Button onClick={fetchData} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={() => setIsRequestView(true)} variant="outline">
+            <Wrench className="h-4 w-4 mr-2" />
+            Make Request
+          </Button>
+          <Button onClick={fetchData} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -412,17 +439,26 @@ export function LabComponentsManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {request.student.user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
+                            {request.student?.user
+                              ? request.student.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                              : request.requesting_faculty?.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student.user.name}</h3>
-                          <p className="text-sm text-gray-600">{request.student.user.email}</p>
+                          <h3 className="font-medium">
+                            {request.student?.user?.name || request.requesting_faculty?.user?.name || "Unknown"}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {request.student?.user?.email || request.requesting_faculty?.user?.email || "Unknown"}
+                          </p>
                           <p className="text-sm font-medium text-blue-600">
-                            Project: <span className="font-medium">{request.project.name}</span>
+                            Project: <span className="font-medium">{request.project?.name || "N/A"}</span>
                           </p>
                           <p className="text-sm font-medium text-blue-600">
                             Component: <span className="font-medium">{request.component?.component_name}</span>
@@ -550,17 +586,26 @@ export function LabComponentsManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {request.student.user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
+                            {request.student?.user
+                              ? request.student.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                              : request.requesting_faculty?.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student.user.name}</h3>
-                          <p className="text-sm text-gray-600">{request.student.user.email}</p>
+                          <h3 className="font-medium">
+                            {request.student?.user?.name || request.requesting_faculty?.user?.name || "Unknown"}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {request.student?.user?.email || request.requesting_faculty?.user?.email || "Unknown"}
+                          </p>
                           <p className="text-sm font-medium text-blue-600">
-                            Project: <span className="font-medium">{request.project.name}</span>
+                            Project: <span className="font-medium">{request.project?.name || "N/A"}</span>
                           </p>
                           <p className="text-sm font-medium text-blue-600">
                             Component: <span className="font-medium">{request.component?.component_name}</span>
@@ -611,7 +656,7 @@ export function LabComponentsManagement() {
                 <CardContent className="p-8 text-center">
                   <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No pending returns</h3>
-                  <p className="text-gray-600">All components have been returned.</p>
+                  <p className="text-gray-600">All components have been returned and verified.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -622,17 +667,26 @@ export function LabComponentsManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {request.student.user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
+                            {request.student?.user
+                              ? request.student.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                              : request.requesting_faculty?.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student.user.name}</h3>
-                          <p className="text-sm text-gray-600">{request.student.user.email}</p>
+                          <h3 className="font-medium">
+                            {request.student?.user?.name || request.requesting_faculty?.user?.name || "Unknown"}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {request.student?.user?.email || request.requesting_faculty?.user?.email || "Unknown"}
+                          </p>
                           <p className="text-sm font-medium text-blue-600">
-                            Project: <span className="font-medium">{request.project.name}</span>
+                            Project: <span className="font-medium">{request.project?.name || "N/A"}</span>
                           </p>
                           <p className="text-sm font-medium text-blue-600">
                             Component: <span className="font-medium">{request.component?.component_name}</span>
@@ -642,7 +696,11 @@ export function LabComponentsManagement() {
                           </p>
                           {request.return_date && (
                             <p className="text-xs text-green-600">
-                              Student marked returned: {new Date(request.return_date).toLocaleDateString()}
+                              {request.status === "PENDING_RETURN" 
+                                ? "Return request submitted: " 
+                                : "User confirmed return: "
+                              }
+                              {new Date(request.return_date).toLocaleDateString()}
                             </p>
                           )}
                         </div>
@@ -654,14 +712,32 @@ export function LabComponentsManagement() {
                             <span className="capitalize">{request.status.toLowerCase().replace("_", " ")}</span>
                           </div>
                         </Badge>
-                        <Button
-                          size="sm"
-                          onClick={() => handleMarkReturned(request.id)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Confirm Return
-                        </Button>
+                        {request.status === "PENDING_RETURN" && (
+                          <>
+                            <Button
+                              size="sm"
+                              disabled={true}
+                              className="bg-gray-300 text-gray-500 cursor-not-allowed"
+                            >
+                              <Clock className="h-4 w-4 mr-1" />
+                              Waiting for User
+                            </Button>
+                            <div className="text-xs text-orange-600 mt-1">
+                              User must click "I Returned It" first
+                            </div>
+                          </>
+                        )}
+                        
+                        {request.status === "USER_RETURNED" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleMarkReturned(request.id)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Confirm Return
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -689,17 +765,26 @@ export function LabComponentsManagement() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {request.student.user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
+                            {request.student?.user
+                              ? request.student.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                              : request.requesting_faculty?.user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">{request.student.user.name}</h3>
-                          <p className="text-sm text-gray-600">{request.student.user.email}</p>
+                          <h3 className="font-medium">
+                            {request.student?.user?.name || request.requesting_faculty?.user?.name || "Unknown"}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {request.student?.user?.email || request.requesting_faculty?.user?.email || "Unknown"}
+                          </p>
                           <p className="text-sm font-medium text-blue-600">
-                            Project: <span className="font-medium">{request.project.name}</span>
+                            Project: <span className="font-medium">{request.project?.name || "N/A"}</span>
                           </p>
                           <p className="text-sm font-medium text-blue-600">
                             Component: <span className="font-medium">{request.component?.component_name}</span>

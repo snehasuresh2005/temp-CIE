@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Get all approved component requests to calculate available quantity
+    // Only count APPROVED and COLLECTED as "in use" - exclude RETURNED and USER_RETURNED components
     const approvedRequests = await prisma.componentRequest.findMany({
       where: {
         status: {

@@ -51,6 +51,7 @@ model Faculty {
   attendance_records  AttendanceRecord[]
   class_schedules     ClassSchedule[]
   component_approvals ComponentRequest[] @relation("ComponentApprovals")
+  component_requests  ComponentRequest[] @relation("ComponentRequests")
   user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
   location_bookings   LocationBooking[]
   project_requests    ProjectRequest[]
@@ -152,7 +153,7 @@ model Project {
   id                       String              @id @default(cuid())
   accepted_by              String?
   components_needed        String[]
-  course_id                String
+  course_id                String?
   created_by               String
   created_date             DateTime            @default(now())
   description              String
@@ -286,7 +287,8 @@ model LabComponent {
 
 model ComponentRequest {
   id            String        @id @default(cuid())
-  student_id    String
+  student_id    String?       // Make optional so faculty can make requests
+  faculty_id    String?       // Add faculty_id for faculty requests
   component_id  String
   quantity      Int
   request_date  DateTime      @default(now())
@@ -299,9 +301,10 @@ model ComponentRequest {
   purpose       String?
   required_date DateTime?
   faculty       Faculty?      @relation("ComponentApprovals", fields: [approved_by], references: [id])
+  requesting_faculty Faculty? @relation("ComponentRequests", fields: [faculty_id], references: [id])
   component     LabComponent  @relation(fields: [component_id], references: [id])
   project       Project?      @relation(fields: [project_id], references: [id])
-  student       Student       @relation(fields: [student_id], references: [id])
+  student       Student?      @relation(fields: [student_id], references: [id]) // Make optional
   faculty_notes       String?
   collection_date     DateTime?
   due_date           DateTime?
@@ -424,6 +427,7 @@ enum RequestStatus {
   COLLECTED
   RETURNED
   PENDING_RETURN
+  USER_RETURNED
   OVERDUE
 }
 

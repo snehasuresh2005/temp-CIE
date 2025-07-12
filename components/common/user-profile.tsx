@@ -150,7 +150,7 @@ export function UserProfile() {
       const formData = new FormData();
       formData.append('resume', file);
 
-      const endpoint = user.role === 'faculty' ? '/api/faculty/upload-resume' : '/api/student/upload-resume';
+      const endpoint = user.role === 'FACULTY' ? '/api/faculty/upload-resume' : '/api/student/upload-resume';
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -188,7 +188,7 @@ export function UserProfile() {
     if (!user) return;
 
     try {
-      const endpoint = user.role === 'faculty' ? '/api/faculty/upload-resume' : '/api/student/upload-resume';
+      const endpoint = user.role === 'FACULTY' ? '/api/faculty/upload-resume' : '/api/student/upload-resume';
       
       const response = await fetch(endpoint, {
         method: 'DELETE',
@@ -320,7 +320,7 @@ export function UserProfile() {
           </div>
 
           {/* Resume upload section (faculty and students only) */}
-          {(user?.role === 'faculty' || user?.role === 'student') && (
+          {(user?.role === 'FACULTY' || user?.role === 'STUDENT') && (
             <>
               <Separator className="sm:col-span-2" />
               <div className="sm:col-span-2">

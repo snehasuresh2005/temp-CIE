@@ -34,7 +34,7 @@ interface Project {
   id: string
   name: string
   description: string
-  course_id: string
+  course_id?: string
   components_needed: string[]
   expected_completion_date: string
   created_by: string
@@ -133,7 +133,6 @@ export function ViewProjects() {
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
-    course_id: "",
     components_needed: [] as string[],
     expected_completion_date: "",
     accepted_by: "",
@@ -181,6 +180,7 @@ export function ViewProjects() {
 
       if (labComponentsResponse.ok) {
         const labComponentsData = await labComponentsResponse.json()
+        console.log('Lab components loaded:', labComponentsData.components?.length || 0, 'components')
         setLabComponents(labComponentsData.components)
       }
     } catch (error) {
@@ -277,7 +277,7 @@ export function ViewProjects() {
   }
 
   const handleCreateProject = async () => {
-    if (!newProject.name || !newProject.course_id || !newProject.expected_completion_date || !newProject.accepted_by) {
+    if (!newProject.name || !newProject.expected_completion_date || !newProject.accepted_by) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -294,6 +294,7 @@ export function ViewProjects() {
         },
         body: JSON.stringify({
           ...newProject,
+          course_id: null,
           user_email: user?.email,
           type: "STUDENT_PROPOSED",
         }),
@@ -305,7 +306,6 @@ export function ViewProjects() {
         setNewProject({
           name: "",
           description: "",
-          course_id: "",
           components_needed: [],
           expected_completion_date: "",
           accepted_by: "",
@@ -433,8 +433,7 @@ export function ViewProjects() {
         console.warn('Non-string course_id values found in courses:', ids)
       }
     }
-    console.log('Current selected course_id:', newProject.course_id)
-  }, [courses, newProject.course_id])
+  }, [courses])
 
   // Filter courses to only those the student is enrolled in
   const enrolledCourses = courses.filter(course => course.course_enrollments.includes(user?.id ?? ''))
@@ -480,31 +479,14 @@ export function ViewProjects() {
                 <DialogTitle>Create New Project</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Project Name</Label>
-                    <Input
-                      id="name"
-                      value={newProject.name}
-                      onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                      placeholder="Enter project name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="course">Course</Label>
-                    <Select value={String(newProject.course_id)} onValueChange={(value) => setNewProject({ ...newProject, course_id: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {enrolledCourses.map((course) => (
-                          <SelectItem key={String(course.id)} value={String(course.id)}>
-                            {course.course_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Project Name</Label>
+                  <Input
+                    id="name"
+                    value={newProject.name}
+                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                    placeholder="Enter project name"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -632,7 +614,7 @@ export function ViewProjects() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredProjects.map((project: Project) => {
           // Debug logging
-          console.log('Rendering project:', project.id, 'Status:', project.status, 'Submission:', project.submission)
+          console.log('Rendering project:', project.id, 'Status:', project.status, 'Components needed:', project.components_needed, 'Lab components available:', labComponents.length)
           
           // Find the rejected request if any
           const rejectedRequest = (project.project_requests || []).find((r: ProjectRequest) => r.status === "REJECTED")
@@ -670,9 +652,11 @@ export function ViewProjects() {
                       <FolderOpen className="h-6 w-6 mr-3 text-blue-500" />
                       {project.name}
                     </CardTitle>
-                    <CardDescription className="mt-2 text-sm text-gray-600">
-                      {course ? course.course_name : "Unknown Course"}
-                    </CardDescription>
+                    {course && (
+                      <CardDescription className="mt-2 text-sm text-gray-600">
+                        {course.course_name}
+                      </CardDescription>
+                    )}
                     <p className="text-sm text-gray-500 mt-1">
                       {facultyLabel}
                       <span className="font-semibold">{facultyName}</span>
@@ -708,13 +692,14 @@ export function ViewProjects() {
                     </div>
                     {project.components_needed && project.components_needed.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold text-gray-700">Required Components</h3>
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Required Components</h3>
+                        <div className="flex flex-wrap gap-1 mt-1">
                           {project.components_needed.map((componentId) => {
                             const component = labComponents.find((c) => c.id === componentId)
+                            console.log('Component lookup:', componentId, '-> Found:', component?.component_name || 'NOT FOUND')
                             return (
-                              <Badge key={componentId} variant="secondary" className="font-normal">
-                                {component ? component.component_name : "Unknown Component"}
+                              <Badge key={componentId} variant="secondary" className="text-xs font-normal px-2 py-0.5">
+                                {component ? component.component_name : `Unknown Component (${componentId})`}
                               </Badge>
                             )
                           })}

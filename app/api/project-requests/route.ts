@@ -1,10 +1,45 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { LabComponent } from "@prisma/client"
+import { getUserById } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Get user from header
+    const userId = request.headers.get("x-user-id")
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
+
+    const user = await getUserById(userId)
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Filter project requests based on user role
+    let whereClause: any = {}
+    
+    if (user.role === "FACULTY") {
+      // Faculty can only see project requests where they are the faculty
+      const faculty = await prisma.faculty.findUnique({
+        where: { user_id: userId },
+      })
+      if (faculty) {
+        whereClause.faculty_id = faculty.id
+      }
+    } else if (user.role === "STUDENT") {
+      // Students can only see their own project requests
+      const student = await prisma.student.findUnique({
+        where: { user_id: userId },
+      })
+      if (student) {
+        whereClause.student_id = student.id
+      }
+    }
+    // For admin or other roles, show all project requests (no filter)
+
     const projectRequests = await prisma.projectRequest.findMany({
+      where: whereClause,
       include: {
         project: true,
         student: {

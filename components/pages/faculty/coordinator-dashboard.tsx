@@ -52,25 +52,33 @@ import {
 
 interface ComponentRequest {
   id: string
-  student: {
+  student?: {
     user: { name: string; email: string }
     student_id: string
+  }
+  requesting_faculty?: {
+    user: { name: string; email: string }
   }
   component: {
     component_name: string
     domain?: { name: string }
   }
-  project: { name: string }
   quantity: number
   request_date: string
   required_date: string
-  due_date?: string
-  collection_date?: string
-  return_date?: string
   status: string
   notes?: string
   faculty_notes?: string
   purpose: string
+  project?: {
+    name: string
+  }
+  due_date?: string
+  collection_date?: string
+  return_date?: string
+  faculty?: {
+    user: { name: string; email: string }
+  }
   fine_amount?: number
   fine_paid?: boolean
   payment_proof?: string
@@ -99,6 +107,9 @@ interface LibraryRequest {
   fine_amount?: number
   fine_paid?: boolean
   payment_proof?: string
+  faculty?: {
+    user: { name: string; email: string }
+  }
 }
 
 type RequestUnion = ComponentRequest | LibraryRequest
@@ -385,6 +396,30 @@ export function CoordinatorDashboard() {
   const getDomainName = (request: RequestUnion): string => {
     const domainName = isComponentRequest(request) ? request.component.domain?.name : request.item.domain?.name
     return domainName || "Unassigned"
+  }
+
+  const getRequesterName = (request: RequestUnion): string => {
+    if (isComponentRequest(request)) {
+      return request.student?.user.name || request.requesting_faculty?.user.name || "Unknown"
+    } else {
+      return request.student?.user.name || request.faculty?.user.name || "Unknown"
+    }
+  }
+
+  const getRequesterEmail = (request: RequestUnion): string => {
+    if (isComponentRequest(request)) {
+      return request.student?.user.email || request.requesting_faculty?.user.email || "Unknown"
+    } else {
+      return request.student?.user.email || request.faculty?.user.email || "Unknown"
+    }
+  }
+
+  const getRequesterType = (request: RequestUnion): string => {
+    if (isComponentRequest(request)) {
+      return request.student ? "Student" : "Faculty"
+    } else {
+      return request.student ? "Student" : "Faculty"
+    }
   }
 
   // Helper functions to determine what to show based on domain assignments

@@ -37,12 +37,12 @@ export default function HomePage() {
   console.log("Rendering dashboard for user role:", user.role)
 
   // Render appropriate dashboard based on user role
-  switch (user.role.toLowerCase()) {
-    case "admin":
+  switch (user.role) {
+    case "ADMIN":
       return <AdminDashboard />
-    case "faculty":
+    case "FACULTY":
       return <FacultyDashboard />
-    case "student":
+    case "STUDENT":
       return <StudentDashboard />
     default:
       console.log("Unknown role, rendering LoginForm. Role:", user.role)

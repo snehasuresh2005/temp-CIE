@@ -2,9 +2,47 @@ import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getUserById } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Get user from header
+    const userId = request.headers.get("x-user-id")
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
+
+    const user = await getUserById(userId)
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Filter projects based on user role
+    let whereClause: any = {}
+    
+    if (user.role === "FACULTY") {
+      // Faculty can only see projects they created
+      whereClause.created_by = userId
+    } else if (user.role === "STUDENT") {
+      // Students can see projects they created or are enrolled in
+      const student = await prisma.student.findUnique({
+        where: { user_id: userId },
+      })
+      if (student) {
+        const enrollments = await prisma.enrollment.findMany({
+          where: { student_id: student.id },
+          select: { course_id: true },
+        })
+        const courseIds = enrollments.map((e) => e.course_id)
+        
+        whereClause.OR = [
+          { created_by: userId },
+          { course_id: { in: courseIds } }
+        ]
+      }
+    }
+    // For admin or other roles, show all projects (no filter)
+
     const projects = await prisma.project.findMany({
+      where: whereClause,
       include: {
         submissions: {
           include: {
@@ -109,7 +147,7 @@ export async function POST(request: NextRequest) {
       user_email // We'll get this from the request for now
     } = body
 
-    if (!name || !course_id || !expected_completion_date || !user_email) {
+    if (!name || !expected_completion_date || !user_email) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -127,12 +165,16 @@ export async function POST(request: NextRequest) {
     let project_data: any = {
       name,
       description: description || "",
-      course_id,
       components_needed: components_needed || [],
       expected_completion_date: new Date(expected_completion_date),
       type,
       created_date: new Date(),
       modified_date: new Date(),
+    }
+
+    // Only include course_id if it's provided
+    if (course_id) {
+      project_data.course_id = course_id
     }
 
     if (user.role === "FACULTY") {
@@ -142,7 +184,7 @@ export async function POST(request: NextRequest) {
       }
       created_by = user.id
       project_data.created_by = created_by
-      project_data.status = "PENDING" // Faculty projects are immediately available
+      project_data.status = "PENDING" // Faculty projects need coordinator approval
     } else if (user.role === "STUDENT") {
       // Student creating a project proposal
       if (!user.student) {
