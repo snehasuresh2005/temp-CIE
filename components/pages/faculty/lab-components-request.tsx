@@ -261,41 +261,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
           "x-user-id": user?.id || "",
         },
         body: JSON.stringify({
-          status: "PENDING_RETURN",  // Step 1: Faculty requests return
-          return_date: new Date().toISOString(),
-        }),
-      })
-
-      if (response.ok) {
-        toast({
-          title: "Return Request Submitted",
-          description: "Your return request has been submitted and is pending coordinator approval",
-        })
-        setReturnDialogOpen(null)
-        fetchData()
-      } else {
-        throw new Error("Failed to submit return request")
-      }
-    } catch (error) {
-      console.error("Error submitting return request:", error)
-      toast({
-        title: "Error",
-        description: "Failed to submit return request",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleUserReturned = async (requestId: string) => {
-    try {
-      const response = await fetch(`/api/component-requests/${requestId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": user?.id || "",
-        },
-        body: JSON.stringify({
-          status: "USER_RETURNED",  // Step 2: User confirms they physically returned it
+          status: "USER_RETURNED",  // Faculty confirms they have returned the component
           return_date: new Date().toISOString(),
         }),
       })
@@ -303,7 +269,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
       if (response.ok) {
         toast({
           title: "Return Confirmed",
-          description: "You have confirmed the component return. Waiting for coordinator verification.",
+          description: "You have confirmed returning the component. Awaiting coordinator verification.",
         })
         setReturnDialogOpen(null)
         fetchData()
@@ -320,6 +286,8 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
     }
   }
 
+
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
@@ -330,8 +298,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
         return "bg-red-100 text-red-800"
       case "COLLECTED":
         return "bg-blue-100 text-blue-800"
-      case "PENDING_RETURN":
-        return "bg-orange-100 text-orange-800"
+
       case "USER_RETURNED":
         return "bg-purple-100 text-purple-800"
       case "RETURNED":
@@ -353,8 +320,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
         return <XCircle className="h-4 w-4" />
       case "collected":
         return <Package className="h-4 w-4" />
-      case "pending_return":
-        return <Clock className="h-4 w-4" />
+
       case "user_returned":
         return <CheckCircle className="h-4 w-4" />
       case "returned":
@@ -808,17 +774,6 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                             variant="outline"
                             onClick={() => setReturnDialogOpen(request.id)}
                           >
-                            Request Return
-                          </Button>
-                        )}
-                        
-                        {request.status === "PENDING_RETURN" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleUserReturned(request.id)}
-                            className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-300"
-                          >
                             I Returned It
                           </Button>
                         )}
@@ -859,9 +814,9 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
       <Dialog open={!!returnDialogOpen} onOpenChange={(open) => !open && setReturnDialogOpen(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Request Component Return</DialogTitle>
+            <DialogTitle>Confirm Component Return</DialogTitle>
             <DialogDescription>
-              Are you sure you want to request return of this component? The coordinator will need to verify and approve the return.
+              Please confirm that you have physically returned this component to the lab. The coordinator will then verify and complete the return process.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-2">
@@ -869,7 +824,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
               Cancel
             </Button>
             <Button onClick={() => returnDialogOpen && handleReturnComponent(returnDialogOpen)}>
-              Submit Return Request
+              Yes, I Returned It
             </Button>
           </div>
         </DialogContent>
