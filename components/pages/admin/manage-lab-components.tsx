@@ -1112,7 +1112,7 @@ export function ManageLabComponents() {
           </Card>
         ) : (
           filteredComponents.map((component) => (
-            <Card key={component.id} className="hover:shadow-lg transition-shadow">
+            <Card key={component.id} className="flex flex-col h-full hover:shadow-lg transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -1132,8 +1132,8 @@ export function ManageLabComponents() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="flex flex-col flex-grow">
+                <div className="space-y-4 flex-grow">
                   {/* Image Display with Fade Animation */}
                   {(component.imageUrl || component.backImageUrl) && (
                     <div className="relative w-full h-64">
@@ -1242,38 +1242,34 @@ export function ManageLabComponents() {
                       <p className="text-sm text-gray-600 line-clamp-2">{component.component_specification}</p>
                     </div>
                   )}
-
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingComponent(component)
-                        setIsEditDialogOpen(true)
-                        // Set image previews if images exist
-                        if (component.imageUrl) {
-                          setFrontImagePreview(component.imageUrl)
-                        }
-                        if (component.backImageUrl) {
-                          setBackImagePreview(component.backImageUrl)
-                        }
-                      }}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setComponentToDelete(component)
-                        setIsDeleteDialogOpen(true)
-                      }}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                </div>
+                <div className="flex justify-start gap-2 pt-2">
+                  <button
+                    className="edit-btn flex items-center"
+                    type="button"
+                    onClick={() => {
+                      setEditingComponent(component)
+                      setIsEditDialogOpen(true)
+                      if (component.imageUrl) {
+                        setFrontImagePreview(component.imageUrl)
+                      }
+                      if (component.backImageUrl) {
+                        setBackImagePreview(component.backImageUrl)
+                      }
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-1" /> Edit
+                  </button>
+                  <button
+                    className="delete-btn flex items-center"
+                    type="button"
+                    onClick={() => {
+                      setComponentToDelete(component)
+                      setIsDeleteDialogOpen(true)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                  </button>
                 </div>
               </CardContent>
             </Card>

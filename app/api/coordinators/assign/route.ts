@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     let domain = await prisma.domain.findFirst({
       where: {
         name: {
-          contains: domain_name,
+          contains: domain_name === 'electronics' ? 'Electronics' : domain_name,
           mode: 'insensitive'
         }
       }
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       // Create the domain if it doesn't exist
       const domainNames = {
         library: "Library",
-        electronics: "Electronics Lab", 
+        electronics: "Electronics", // Ensure this matches the frontend and setup script
         mechanical: "Mechanical Lab",
         computer: "Computer Lab",
         physics: "Physics Lab",

@@ -16,23 +16,23 @@ async function setupDomains() {
       }
     })
 
-    const labComponentsDomain = await prisma.domain.upsert({
-      where: { name: 'Lab Components' },
+    const electronicsDomain = await prisma.domain.upsert({
+      where: { name: 'Electronics' },
       update: {},
       create: {
-        name: 'Lab Components',
-        description: 'Manages laboratory equipment, components, and hardware'
+        name: 'Electronics',
+        description: 'Electronic components and circuits'
       }
     })
 
     console.log('✅ Domains created:')
     console.log(`   - ${libraryDomain.name} (${libraryDomain.id})`)
-    console.log(`   - ${labComponentsDomain.name} (${labComponentsDomain.id})`)
+    console.log(`   - ${electronicsDomain.name} (${electronicsDomain.id})`)
 
-    // Update existing lab components to assign them to the Lab Components domain
+    // Update existing lab components to assign them to the Electronics domain
     const labComponentsUpdated = await prisma.labComponent.updateMany({
       where: { domain_id: null },
-      data: { domain_id: labComponentsDomain.id }
+      data: { domain_id: electronicsDomain.id }
     })
 
     // Update existing library items to assign them to the Library domain
@@ -41,7 +41,7 @@ async function setupDomains() {
       data: { domain_id: libraryDomain.id }
     })
 
-    console.log(`✅ Updated ${labComponentsUpdated.count} lab components to Lab Components domain`)
+    console.log(`✅ Updated ${labComponentsUpdated.count} lab components to Electronics domain`)
     console.log(`✅ Updated ${libraryItemsUpdated.count} library items to Library domain`)
 
     console.log('\n🎉 Domain setup completed successfully!')

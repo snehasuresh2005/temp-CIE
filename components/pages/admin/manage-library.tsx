@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -69,7 +69,26 @@ function formatLocation(str: string) {
     .join(" ")
 }
 
-export function ManageLibrary() {
+function DynamicHeading({ children }: { children: string }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const [isOverflow, setIsOverflow] = useState(false);
+  useEffect(() => {
+    if (headingRef.current) {
+      setIsOverflow(headingRef.current.scrollWidth > headingRef.current.clientWidth);
+    }
+  }, [children]);
+  return (
+    <h3
+      ref={headingRef}
+      className={`font-medium truncate w-full ${isOverflow ? 'text-xs' : 'text-lg'}`}
+      title={children}
+    >
+      {children}
+    </h3>
+  );
+}
+
+function ManageLibrary() {
   const [items, setItems] = useState<LibraryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -792,6 +811,16 @@ export function ManageLibrary() {
         <div>
           <h3 className="text-3xl font-bold text-gray-900">Library Items Management</h3>
         </div>
+      </div>
+      {/* Search Bar */}
+      <div className="flex items-center justify-between gap-4">
+        <Input
+          type="text"
+          placeholder="Search books..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="max-w-xs"
+        />
         <div className="flex space-x-2">
           <Button onClick={fetchItems} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -1190,283 +1219,300 @@ export function ManageLibrary() {
           </Card>
         ) : (
           filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-5 w-5 text-gray-500" />
-                    <h3 className="text-lg font-semibold">{item.item_name}</h3>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setItemToView(item)
-                      setIsInfoDialogOpen(true)
-                    }}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Image Display with Fade Animation */}
-                  {(item.imageUrl || item.backImageUrl) && (
-                    <div className="relative w-full h-64">
-                      {/* Front Image */}
-                      <div 
-                        className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                          imageStates[item.id] ? 'opacity-0' : 'opacity-100'
-                        }`}
-                      >
-                        <img
-                          src={item.imageUrl || '/placeholder.jpg'}
-                          alt={`Front view of ${item.item_name}`}
-                          className="w-full h-full object-contain rounded-lg bg-gray-50"
-                        />
-                      </div>
-                      {/* Back Image */}
-                      {item.backImageUrl && (
-                        <div 
-                          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                            imageStates[item.id] ? 'opacity-100' : 'opacity-0'
-                          }`}
-                        >
-                          <img
-                            src={item.backImageUrl}
-                            alt={`Back view of ${item.item_name}`}
-                            className="w-full h-full object-contain rounded-lg bg-gray-50"
-                          />
-                        </div>
-                      )}
-                      {/* Navigation Buttons */}
-                      {item.backImageUrl && (
-                        <>
-                          {/* Show right arrow when on front image */}
-                          {!imageStates[item.id] && (
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
-                              onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
-                            >
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {/* Show left arrow when on back image */}
-                          {imageStates[item.id] && (
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
-                              onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </>
-                      )}
-                      {/* Image Indicator */}
-                      {item.backImageUrl && (
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
-                          <div 
-                            className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                              !imageStates[item.id] ? 'bg-white' : 'bg-white/50'
-                            }`}
-                          />
-                          <div 
-                            className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                              imageStates[item.id] ? 'bg-white' : 'bg-white/50'
-                            }`}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="mb-2">
-                    <Label className="text-sm font-medium text-gray-500">Description</Label>
-                    <p className="text-sm text-gray-600 line-clamp-2">{item.item_description}</p>
-                  </div>
-                  {item.item_specification && (
-                    <div className="mb-2">
-                      <Label className="text-sm font-medium text-gray-500">Specifications</Label>
-                      <p className="text-sm text-gray-700">{item.item_specification}</p>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
-                    <div><span className="font-semibold">Total:</span> {item.item_quantity}</div>
-                    <div><span className="font-semibold">Available:</span> {item.availableQuantity}</div>
-                    <div><span className="font-semibold">Location:</span> {item.item_location}</div>
-                  </div>
-                  <div className="flex space-x-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingItem(item)
-                        setIsEditDialogOpen(true)
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-1" /> Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setItemToDelete(item)
-                        setIsDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" /> Delete
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <LibraryItemCard
+              key={item.id}
+              item={item}
+              setItemToView={setItemToView}
+              setIsInfoDialogOpen={setIsInfoDialogOpen}
+              setEditingItem={setEditingItem}
+              setIsEditDialogOpen={setIsEditDialogOpen}
+              setItemToDelete={setItemToDelete}
+              setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+              imageStates={imageStates}
+              setImageStates={setImageStates}
+            />
           ))
         )}
-      </div>
+        </div>
 
-      {/* Info Dialog */}
-      <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-600" />
-              Item Details
-            </DialogTitle>
-            <DialogDescription>
-              Detailed information about the library item including purchase details and audit trail.
-            </DialogDescription>
-          </DialogHeader>
-          {itemToView && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Basic Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Name</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_name}</div>
+        {/* Info Dialog */}
+        <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-blue-600" />
+                Item Details
+              </DialogTitle>
+              <DialogDescription>
+                Detailed information about the library item including purchase details and audit trail.
+              </DialogDescription>
+            </DialogHeader>
+            {itemToView && (
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Name</Label>
+                      <div className="text-base font-medium text-gray-900">{itemToView.item_name}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Category</Label>
+                      <div className="text-base font-medium text-gray-900">{itemToView.item_category}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Location</Label>
+                      <div className="text-base font-medium text-gray-900">{itemToView.item_location}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Tag ID</Label>
+                      <div className="text-base font-medium text-gray-900">{itemToView.item_tag_id || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
+                      <div className="text-base font-medium text-gray-900">{itemToView.item_quantity}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Available</Label>
+                      <div className="text-base font-medium text-gray-900">{itemToView.availableQuantity}</div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Category</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_category}</div>
+                  <div className="mt-4">
+                    <Label className="text-xs font-medium text-gray-500">Description</Label>
+                    <div className="text-sm text-gray-700">{itemToView.item_description}</div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Location</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_location}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Tag ID</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_tag_id || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_quantity}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Available</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.availableQuantity}</div>
+                  {itemToView.item_specification && (
+                    <div className="mt-2">
+                      <Label className="text-xs font-medium text-gray-500">Specification</Label>
+                      <div className="text-sm text-gray-700">{itemToView.item_specification}</div>
+                    </div>
+                  )}
+                </div>
+                {/* Purchase Details */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Receipt className="h-5 w-5" />
+                    Purchase Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
+                      <div className="text-base text-gray-900">{itemToView.invoice_number || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchased From</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchased_from || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Date</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchase_date || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchase_value || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Currency</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchase_currency || '-'}</div>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-4">
-                  <Label className="text-xs font-medium text-gray-500">Description</Label>
-                  <div className="text-sm text-gray-700">{itemToView.item_description}</div>
-                </div>
-                {itemToView.item_specification && (
-                  <div className="mt-2">
-                    <Label className="text-xs font-medium text-gray-500">Specification</Label>
-                    <div className="text-sm text-gray-700">{itemToView.item_specification}</div>
+                {/* Audit Trail */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <History className="h-5 w-5" />
+                    Audit Trail
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created By</Label>
+                      <div className="text-base text-gray-900">{itemToView.created_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created At</Label>
+                      <div className="text-base text-gray-900">{itemToView.created_at || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
+                      <div className="text-base text-gray-900">{itemToView.modified_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
+                      <div className="text-base text-gray-900">{itemToView.modified_at || '-'}</div>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
-              {/* Purchase Details */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
-                  Purchase Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
-                    <div className="text-base text-gray-900">{itemToView.invoice_number || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchased From</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchased_from || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchase Date</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_date || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_value || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Currency</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_currency || '-'}</div>
-                  </div>
-                </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Library Item</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this item? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => itemToDelete && handleDeleteItem(itemToDelete.id)}
+              >
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    
+  )
+}
+
+interface LibraryItemCardProps {
+  item: LibraryItem;
+  setItemToView: React.Dispatch<React.SetStateAction<LibraryItem | null>>;
+  setIsInfoDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setEditingItem: React.Dispatch<React.SetStateAction<LibraryItem | null>>;
+  setIsEditDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setItemToDelete: React.Dispatch<React.SetStateAction<LibraryItem | null>>;
+  setIsDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  imageStates: Record<string, boolean>;
+  setImageStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+}
+
+function LibraryItemCard({ item, setItemToView, setIsInfoDialogOpen, setEditingItem, setIsEditDialogOpen, setItemToDelete, setIsDeleteDialogOpen, imageStates, setImageStates }: LibraryItemCardProps) {
+  return (
+    <Card key={item.id} className="hover:shadow-lg transition-shadow">
+      <CardHeader className="pb-4 relative">
+        <div className="flex items-center space-x-2">
+          <Package className="h-5 w-5 text-gray-500" />
+          <DynamicHeading>{item.item_name}</DynamicHeading>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            setItemToView(item)
+            setIsInfoDialogOpen(true)
+          }}
+          className="absolute top-2 right-2 h-7 w-7 p-0 text-blue-600 hover:text-blue-700"
+          aria-label="Preview Info"
+        >
+          <Info className="h-4 w-4" />
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {/* Image Display with Fade Animation */}
+          {(item.imageUrl || item.backImageUrl) && (
+            <div className="relative w-full h-64">
+              {/* Front Image */}
+              <div 
+                className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
+                  imageStates[item.id] ? 'opacity-0' : 'opacity-100'
+                }`}
+              >
+                <img
+                  src={item.imageUrl || '/placeholder.jpg'}
+                  alt={`Front view of ${item.item_name}`}
+                  className="w-full h-full object-contain rounded-lg bg-gray-50"
+                />
               </div>
-              {/* Audit Trail */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Audit Trail
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Created By</Label>
-                    <div className="text-base text-gray-900">{itemToView.created_by || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Created At</Label>
-                    <div className="text-base text-gray-900">{itemToView.created_at || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
-                    <div className="text-base text-gray-900">{itemToView.modified_by || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
-                    <div className="text-base text-gray-900">{itemToView.modified_at || '-'}</div>
-                  </div>
+              {/* Back Image */}
+              {item.backImageUrl && (
+                <div 
+                  className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
+                    imageStates[item.id] ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  <img
+                    src={item.backImageUrl}
+                    alt={`Back view of ${item.item_name}`}
+                    className="w-full h-full object-contain rounded-lg bg-gray-50"
+                  />
                 </div>
-              </div>
+              )}
+              {/* Navigation Buttons */}
+              {item.backImageUrl && (
+                <>
+                  {/* Show right arrow when on front image */}
+                  {!imageStates[item.id] && (
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                      onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {/* Show left arrow when on back image */}
+                  {imageStates[item.id] && (
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow-md z-10"
+                      onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
+              )}
+              {/* Image Indicator */}
+              {item.backImageUrl && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                  <div 
+                    className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                      !imageStates[item.id] ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  />
+                  <div 
+                    className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                      imageStates[item.id] ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  />
+                </div>
+              )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Library Item</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this item? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => itemToDelete && handleDeleteItem(itemToDelete.id)}
+          {/* Remove description and specification from here */}
+          <div className="flex space-x-2 pt-2">
+            <button
+              className="edit-btn"
+              type="button"
+              onClick={() => {
+                setEditingItem(item)
+                setIsEditDialogOpen(true)
+              }}
             >
-              Delete
-            </Button>
+              <Edit className="h-4 w-4" /> Edit
+            </button>
+            <button
+              className="delete-btn"
+              type="button"
+              onClick={() => {
+                setItemToDelete(item)
+                setIsDeleteDialogOpen(true)
+              }}
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </button>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-} 
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default ManageLibrary; 

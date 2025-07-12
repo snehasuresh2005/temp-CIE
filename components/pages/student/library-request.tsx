@@ -489,9 +489,13 @@ export function LibraryRequest() {
                       </CardTitle>
                       <CardDescription className="text-xs">{item.item_category}</CardDescription>
                     </div>
-                    <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
-                      {getAvailabilityText(item.available_quantity, item.item_quantity)}
-                    </Badge>
+                    {getAvailabilityText(item.available_quantity, item.item_quantity) === 'Available' ? (
+                      <span className="available-tag text-xs px-1 py-0.5 ml-2 flex-shrink-0">Available</span>
+                    ) : (
+                      <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
+                        {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col p-3 pt-0">
@@ -565,12 +569,11 @@ export function LibraryRequest() {
                       </div>
                       
                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
-                        <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
-                        <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
+                        <div><span className="font-medium">Location:</span> {item.item_location}</div>
                       </div>
                       
                       <div className="text-xs text-gray-500">
-                        <span className="font-medium">Location:</span> {item.item_location}
+                        <span className="font-medium">Specifications:</span> {item.item_specification}
                       </div>
                     </div>
                   </div>

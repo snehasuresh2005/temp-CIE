@@ -173,7 +173,11 @@ export function ViewCourses() {
                       <CardDescription className="text-sm text-gray-500 mt-1 line-clamp-2">{course.course_description}</CardDescription>
                       <span className="text-xs text-gray-400 mt-1 block">{course.course_code}</span>
                     </div>
-                    <Badge variant="outline" className="ml-2 mt-1">{enrolled ? "Enrolled" : "Available"}</Badge>
+                    {enrolled ? (
+                      <Badge variant="outline" className="ml-2 mt-1">Enrolled</Badge>
+                    ) : (
+                      <span className="available-tag ml-2 mt-1 text-xs">Available</span>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col justify-between px-0 pb-0">

@@ -425,9 +425,13 @@ export function LabComponentsRequest() {
                       </CardTitle>
                       <CardDescription className="text-xs">{component.component_category}</CardDescription>
                     </div>
-                    <Badge className={`${getAvailabilityColor(component.available_quantity, component.component_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
-                      {getAvailabilityText(component.available_quantity, component.component_quantity)}
-                    </Badge>
+                    {getAvailabilityText(component.available_quantity, component.component_quantity) === 'Available' ? (
+                      <span className="available-tag text-xs px-1 py-0.5 ml-2 flex-shrink-0">Available</span>
+                    ) : (
+                      <Badge className={`${getAvailabilityColor(component.available_quantity, component.component_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
+                        {getAvailabilityText(component.available_quantity, component.component_quantity)}
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col p-3 pt-0">

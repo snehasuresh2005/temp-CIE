@@ -570,7 +570,7 @@ export function ManageClassSchedules() {
               </Card>
             ) : (
               filteredSchedules.map((schedule) => (
-                <Card key={schedule.id} className="hover:shadow-lg transition-shadow">
+                <Card key={schedule.id} className="hover:shadow-lg transition-shadow min-h-[220px]">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
@@ -579,48 +579,43 @@ export function ManageClassSchedules() {
                           <span>{schedule.course.course_name}</span>
                         </CardTitle>
                         <CardDescription>
-                          {schedule.faculty.user.name} • {schedule.room} • Section {schedule.section}
+                          {schedule.faculty.user.name} • Section {schedule.section}
                         </CardDescription>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingSchedule(schedule)
-                            setIsEditDialogOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setScheduleToDelete(schedule)
-                            setIsDeleteDialogOpen(true)
-                          }}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <span>{schedule.room}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Clock className="h-4 w-4 text-gray-400" />
+                          <span>
+                            {schedule.dayOfWeek} • {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                          </span>
+                        </div>
+                        <div className="flex space-x-2 mt-4">
+                          <button
+                            className="edit-btn"
+                            type="button"
+                            onClick={() => {
+                              setEditingSchedule(schedule)
+                              setIsEditDialogOpen(true)
+                            }}
+                          >
+                            <Edit className="h-4 w-4" /> Edit
+                          </button>
+                          <button
+                            className="delete-btn"
+                            type="button"
+                            onClick={() => {
+                              setScheduleToDelete(schedule)
+                              setIsDeleteDialogOpen(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 gap-4 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <span>
-                          {schedule.dayOfWeek} • {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        <span>{schedule.room}</span>
-                      </div>
-                    </div>
-                  </CardContent>
                 </Card>
               ))
             )}

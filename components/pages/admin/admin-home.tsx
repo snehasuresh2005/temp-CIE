@@ -84,16 +84,19 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
               <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {stats.map((stat, index) => (
+                <Card key={index} className="w-[200px] h-[110px] p-2 shadow-md rounded-lg bg-white hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200 flex flex-col justify-between">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-0">
+                    <CardTitle className="text-xs font-medium dark:text-white leading-tight">{stat.title}</CardTitle>
                 <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
                     <stat.icon className={`h-4 w-4 ${stat.color}`} />
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                  <CardContent className="py-0 px-0 flex flex-col justify-end flex-1">
+                    <div className="text-xl font-bold leading-tight">{stat.value}</div>
+                    <p className="text-xs text-muted-foreground leading-tight">{stat.description}</p>
                   </CardContent>
                 </Card>
               ))}

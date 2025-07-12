@@ -23,7 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Plus, Trash2, BookOpen, Calendar, Users, RefreshCw, List, X } from "lucide-react"
+import { Plus, Trash2, BookOpen, Calendar, Users, RefreshCw, List, X, Edit } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -634,16 +634,23 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                       <List className="h-4 w-4 mr-1" />
                       View Units
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => {
-                      setCourseToDelete(course)
-                      setIsDeleteDialogOpen(true)
-                    }}>
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => openEditDialog(course)}>
-                      Edit
-                    </Button>
+                    <button
+                      className="edit-btn"
+                      type="button"
+                      onClick={() => openEditDialog(course)}
+                    >
+                      <Edit className="h-4 w-4" /> Edit
+                    </button>
+                    <button
+                      className="delete-btn"
+                      type="button"
+                      onClick={() => {
+                        setCourseToDelete(course)
+                        setIsDeleteDialogOpen(true)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete
+                    </button>
                   </div>
                 </div>
               </CardContent>

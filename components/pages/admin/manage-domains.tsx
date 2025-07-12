@@ -355,9 +355,13 @@ export function ManageDomains() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge variant={isCoordinator ? "default" : "secondary"} className="text-xs">
-                        {isCoordinator ? "Coordinator" : "Available"}
-                      </Badge>
+                      {isCoordinator ? (
+                        <Badge variant="default" className="text-xs">
+                          Coordinator
+                        </Badge>
+                      ) : (
+                        <span className="available-tag text-xs">Available</span>
+                      )}
                       {facultyAssignments.length > 1 && (
                         <p className="text-xs text-gray-500 mt-1">{facultyAssignments.length} domains</p>
                       )}

@@ -610,16 +610,16 @@ export function LibraryDashboard() {
                         return (
                           <Card 
                             key={item.id} 
-                            className={`cursor-pointer transition-shadow ${
+                            className={`flex flex-col h-full cursor-pointer transition-shadow ${
                               isUnavailable
                                 ? 'opacity-60 bg-gray-50 border-gray-200' 
                                 : 'hover:shadow-md'
                             }`}
                           >
-                            <CardContent className="p-3">
-                              <div className="space-y-3">
-                                {/* Book cover with proper aspect ratio */}
-                                <div className={`w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden relative ${
+                            <CardContent className="flex flex-col flex-grow p-3">
+                              <div className="space-y-3 flex-grow">
+                                {/* Book cover always at the top */}
+                                <div className={`w-full h-40 bg-gray-100 rounded-lg overflow-hidden relative ${
                                   isUnavailable ? 'filter grayscale' : ''
                                 }`}>
                                   <img
@@ -649,9 +649,9 @@ export function LibraryDashboard() {
                                     </div>
                                   )}
                                 </div>
-                                
+                                {/* Heading, category, description below image */}
                                 <div className="space-y-1">
-                                  <h3 className={`font-medium text-sm line-clamp-2 leading-tight ${
+                                  <h3 className={`font-medium text-xs truncate leading-tight ${
                                     isUnavailable ? 'text-gray-500' : ''
                                   }`}>
                                     {item.item_name}
@@ -691,7 +691,7 @@ export function LibraryDashboard() {
                                     Total: {item.item_quantity}
                                   </span>
                                 </div>
-                                
+                              </div>
                                 <Button
                                   size="sm"
                                   className={`w-full h-8 text-xs ${
@@ -717,7 +717,6 @@ export function LibraryDashboard() {
                                         : 'Reserve'
                                   }
                                 </Button>
-                              </div>
                             </CardContent>
                           </Card>
                         )

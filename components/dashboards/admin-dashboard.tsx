@@ -11,7 +11,7 @@ import { ManageLabComponents } from "@/components/pages/admin/manage-lab-compone
 import { ManageLocations } from "@/components/pages/admin/manage-locations"
 import { ManageClassSchedules } from "@/components/pages/admin/manage-class-schedules"
 import { UserProfile } from "@/components/common/user-profile"
-import { ManageLibrary } from "@/components/pages/admin/manage-library"
+import ManageLibrary from "@/components/pages/admin/manage-library"
 import { ManageDomains } from "@/components/pages/admin/manage-domains"
 
 const menuItems = [

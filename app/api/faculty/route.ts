@@ -118,3 +118,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const facultyId = searchParams.get('id');
+    console.log('DELETE /api/faculty called with id:', facultyId);
+    if (!facultyId) {
+      return NextResponse.json({ error: 'Missing faculty id' }, { status: 400 });
+    }
+    // Find faculty by id
+    const faculty = await prisma.faculty.findUnique({ where: { id: facultyId } });
+    console.log('Faculty found:', faculty);
+    if (!faculty) {
+      return NextResponse.json({ error: 'Faculty not found' }, { status: 404 });
+    }
+    // Delete the user account as well
+    await prisma.$transaction([
+      prisma.faculty.delete({ where: { id: facultyId } }),
+      prisma.user.delete({ where: { id: faculty.user_id } })
+    ]);
+    return NextResponse.json({ success: true, message: 'Faculty deleted successfully' });
+  } catch (error) {
+    console.error('Delete faculty error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

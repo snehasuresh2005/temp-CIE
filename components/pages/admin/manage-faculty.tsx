@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Mail, Phone, RefreshCw } from "lucide-react"
+import { Plus, Mail, Phone, RefreshCw, Edit, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Faculty {
@@ -56,6 +56,8 @@ export function ManageFaculty() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
+  const [editFaculty, setEditFaculty] = useState<Faculty | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const [newFaculty, setNewFaculty] = useState({
     name: "",
@@ -448,7 +450,7 @@ export function ManageFaculty() {
             const facultyCourses = getFacultyCourses(member.id)
 
             return (
-              <Card key={member.id} className="hover:shadow-lg transition-shadow">
+              <Card key={member.id} className="hover:shadow-lg transition-shadow min-h-[420px] pb-8">
                 <CardHeader>
                   <div className="flex items-center gap-4">
                     <img
@@ -517,11 +519,121 @@ export function ManageFaculty() {
                     </div>
                   </div>
                 </CardContent>
+                <div className="flex space-x-2 pt-2 align-center ml-5">
+                  <button
+                    className="edit-btn"
+                    type="button"
+                    onClick={() => {
+                      setEditFaculty(member);
+                      setIsEditDialogOpen(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-1" /> Edit
+                  </button>
+                  <button
+                    className="delete-btn"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(`/api/faculty?id=${member.id}`, {
+                          method: 'DELETE',
+                        });
+                        if (response.ok) {
+                          setFaculty((prev) => prev.filter((f) => f.id !== member.id));
+                          toast({ title: 'Deleted', description: `Faculty ${member.user.name} deleted.` });
+                        } else {
+                          toast({ title: 'Error', description: `Failed to delete faculty ${member.user.name}.`, variant: 'destructive' });
+                        }
+                      } catch (error) {
+                        toast({ title: 'Error', description: `Failed to delete faculty ${member.user.name}.`, variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                  </button>
+                </div>
               </Card>
             )
           })
         )}
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Faculty Member</DialogTitle>
+            <DialogDescription>Update the details for the faculty member</DialogDescription>
+          </DialogHeader>
+          {editFaculty && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Full Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editFaculty.user.name}
+                  onChange={e => setEditFaculty(f => f ? { ...f, user: { ...f.user, name: e.target.value } } : f)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">Email *</Label>
+                <Input
+                  id="edit-email"
+                  value={editFaculty.user.email}
+                  onChange={e => setEditFaculty(f => f ? { ...f, user: { ...f.user, email: e.target.value } } : f)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input
+                  id="edit-phone"
+                  value={editFaculty.user.phone || ''}
+                  onChange={e => setEditFaculty(f => f ? { ...f, user: { ...f.user, phone: e.target.value } } : f)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-department">Department *</Label>
+                <Input
+                  id="edit-department"
+                  value={editFaculty.department}
+                  onChange={e => setEditFaculty(f => f ? { ...f, department: e.target.value } : f)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-office">Office</Label>
+                <Input
+                  id="edit-office"
+                  value={editFaculty.office}
+                  onChange={e => setEditFaculty(f => f ? { ...f, office: e.target.value } : f)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-specialization">Specialization</Label>
+                <Input
+                  id="edit-specialization"
+                  value={editFaculty.specialization}
+                  onChange={e => setEditFaculty(f => f ? { ...f, specialization: e.target.value } : f)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-officeHours">Office Hours</Label>
+                <Input
+                  id="edit-officeHours"
+                  value={editFaculty.officeHours}
+                  onChange={e => setEditFaculty(f => f ? { ...f, officeHours: e.target.value } : f)}
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                <Button onClick={() => {
+                  setFaculty(prev => prev.map(f => f.id === editFaculty.id ? editFaculty : f));
+                  setIsEditDialogOpen(false);
+                  toast({ title: 'Updated', description: `Faculty ${editFaculty.user.name} updated.` });
+                }}>Save</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

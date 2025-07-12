@@ -566,9 +566,15 @@ export function ManageLocations() {
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {locations.map((location) => (
-            <Card key={location.id} className="overflow-hidden">
+            <Card key={location.id} className="overflow-hidden relative flex flex-col" style={{ minHeight: '370px' }}>
+              {/* Tag above image, not overlapping */}
+              {location.is_available && (
+                <div className="flex justify-end px-4 pt-4">
+                  <span className="available-tag shadow-md">Available</span>
+                </div>
+              )}
               {location.images.length > 0 && (
-                <div className="relative h-48 group bg-gray-50 flex items-center justify-center">
+                <div className="h-48 group bg-gray-50 flex items-center justify-center">
                   <Carousel className="w-full h-full">
                     <CarouselContent>
                       {location.images.map((image, index) => (
@@ -629,29 +635,28 @@ export function ManageLocations() {
                 )}
 
                 <div className="flex items-center justify-between pt-2">
-                  <Badge variant={location.is_available ? "default" : "secondary"}>
-                    {location.is_available ? 'Available' : 'Unavailable'}
-                  </Badge>
                   
                   <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
+                    <button
+                      className="edit-btn"
+                      type="button"
                       onClick={() => openEditDialog(location)}
                     >
                       <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                    variant="outline"
+                      Edit
+                    </button>
+                    <button
+                      className="delete-btn"
+                      type="button"
                       onClick={() => { setLocationToDelete(location); setDeleteDialogOpen(true); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
         ))}
       </div>
       )}

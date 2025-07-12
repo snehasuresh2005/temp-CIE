@@ -6,6 +6,98 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.cie-card {
+  background: #fff;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px 0 rgba(16, 30, 54, 0.06);
+  padding: 1 rem;
+  transition: box-shadow 0.2s;
+  width: 400px;
+  height: 600px;
+}
+.cie-card:hover {
+  box-shadow: 0 4px 16px 0 rgba(16, 30, 54, 0.12);
+}
+
+.available-tag {
+  display: inline-block;
+  background-color: #34d399; /* Tailwind emerald-400 */
+  color: #065f46; /* Tailwind emerald-900 */
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: 9999px;
+  padding: 0.25rem 1rem;
+  line-height: 1.5;
+  transition: background 0.2s, color 0.2s;
+}
+
+.edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  background: #fff;
+  color: #222;
+  border: 1px solid #d1d5db; /* Tailwind gray-300 */
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.5rem 1.1rem;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  cursor: pointer;
+  
+}
+.edit-btn:hover, .edit-btn:focus {
+  background: #f3f4f6; /* Tailwind gray-100 */
+  border-color: #a1a1aa; /* Tailwind gray-400 */
+}
+
+.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  background: #ef4444; /* Tailwind red-500 */
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.5rem 1.1rem;
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+}
+.delete-btn:hover, .delete-btn:focus {
+  background: #dc2626; /* Tailwind red-600 */
+}
+
+@media (prefers-color-scheme: dark) {
+  .cie-card {
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+  .available-tag {
+    background-color: #34d399;
+    color: #022c22; /* darker text for dark mode */
+  }
+  .edit-btn {
+    background: #fff;
+    color: #18181b;
+    border: 1px solid #d1d5db; /* Tailwind gray-300 */
+  }
+  .edit-btn:hover, .edit-btn:focus {
+    background: #f3f4f6;
+    border-color: #a1a1aa; /* Tailwind gray-400 */
+  }
+  .delete-btn {
+    background: #dc2626;
+    color: #fff;
+  }
+  .delete-btn:hover, .delete-btn:focus {
+    background: #b91c1c;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
