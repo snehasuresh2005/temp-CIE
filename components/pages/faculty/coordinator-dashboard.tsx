@@ -43,6 +43,7 @@ import { LibraryManagement } from "@/components/pages/faculty/library-management
 import { LibraryInventoryStatus } from "@/components/pages/faculty/library-inventory-status"
 import { LabInventoryStatus } from "@/components/pages/faculty/lab-inventory-status"
 import { SimplifiedLibraryManagement } from "@/components/pages/faculty/simplified-library-management"
+import { LabComponentsManagement } from "./lab-components-management"
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -129,7 +130,8 @@ export function CoordinatorDashboard() {
   const [libraryRequests, setLibraryRequests] = useState<LibraryRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [facultyNotes, setFacultyNotes] = useState("")
-  const [activeTab, setActiveTab] = useState("analytics")
+  // Set default tab to 'analytics'
+  const [activeTab, setActiveTab] = useState('analytics')
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "due" | "not-due">("all")
 
@@ -145,10 +147,28 @@ export function CoordinatorDashboard() {
   // New state for selected domain
   const [selectedDomain, setSelectedDomain] = useState(coordinatorDomains[0])
 
+  // Add role selection state
+  const [selectedRole, setSelectedRole] = useState<'library' | 'lab' | null>(null)
+
   useEffect(() => {
     fetchRequests()
     fetchCoordinatorDomains()
   }, [])
+
+  // Auto-select role if faculty has only one role
+  useEffect(() => {
+    if (coordinatorDomains.length > 0 && !selectedRole) {
+      const hasLibraryRole = coordinatorDomains.some(domain => domain.hasLibraryItems)
+      const hasLabRole = coordinatorDomains.some(domain => domain.hasLabComponents)
+      
+      if (hasLibraryRole && !hasLabRole) {
+        setSelectedRole('library')
+      } else if (hasLabRole && !hasLibraryRole) {
+        setSelectedRole('lab')
+      }
+      // If both roles exist, don't auto-select - let user choose
+    }
+  }, [coordinatorDomains, selectedRole])
 
   const fetchCoordinatorDomains = async () => {
     try {
@@ -354,6 +374,8 @@ export function CoordinatorDashboard() {
           <Badge className={`bg-green-100 text-green-800 ${baseClass}`}>Collected</Badge>
       case "PENDING_RETURN":
         return <Badge className={`bg-orange-100 text-orange-800 ${baseClass}`}>Return Requested</Badge>
+      case "USER_RETURNED":
+        return <Badge className={`bg-purple-100 text-purple-800 ${baseClass}`}>Student Confirmed Return</Badge>
       case "RETURNED":
         return <Badge className={`bg-green-100 text-green-800 ${baseClass}`}>Returned</Badge>
       case "REJECTED":
@@ -446,6 +468,121 @@ export function CoordinatorDashboard() {
     return coordinatorDomains.filter(domain => domain.hasLabComponents)
   }
 
+  // Determine if user is a lab coordinator
+  const isLabCoordinator = coordinatorDomains.some(domain => domain.hasLabComponents)
+
+  // Determine if user is a library coordinator
+  const isLibraryCoordinator = coordinatorDomains.some(domain => domain.hasLibraryItems)
+
+  // Add tabs for management based on selected coordinator role
+  const dashboardTabs = [
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'collection', label: 'Awaiting Collection' },
+    { id: 'returns', label: 'Active Loans' },
+    { id: 'history', label: 'History' },
+  ];
+  
+  // Add lab-specific tabs for lab coordinators
+  if (selectedRole === 'lab' && isLabCoordinator) {
+    dashboardTabs.splice(1, 0, { id: 'pending-requests', label: 'Pending Requests' });
+  }
+  
+  if (selectedRole === 'library' && isLibraryCoordinator) {
+    dashboardTabs.push({ id: 'library-management', label: 'Library Management' });
+  }
+  if (selectedRole === 'lab' && isLabCoordinator) {
+    dashboardTabs.push({ id: 'overdue', label: 'Overdue' });
+  }
+
+  // Helper: get assigned lab domain IDs and names
+  const assignedLabDomainIds = coordinatorDomains.filter(d => d.hasLabComponents && d.id).map(d => d.id);
+  const assignedLabDomainNames = coordinatorDomains.filter(d => d.hasLabComponents && d.name).map(d => d.name?.toLowerCase?.());
+
+  // Role-based data filtering functions
+  const getRoleSpecificRequests = () => {
+    if (selectedRole === 'library') {
+      return {
+        requests: libraryRequests as RequestUnion[],
+        pendingRequests: pendingLibraryRequests as RequestUnion[],
+        collectionRequests: collectionLibraryRequests as RequestUnion[],
+        returnRequests: returnLibraryRequests as RequestUnion[],
+        historyRequests: libraryRequests.filter(req => req.status === 'RETURNED' || req.status === 'REJECTED') as RequestUnion[],
+        roleName: 'Library'
+      }
+    } else if (selectedRole === 'lab') {
+      // Filter componentRequests to only those for assigned lab domains
+      const filteredComponentRequests = componentRequests.filter(req => {
+        const domain = req.component?.domain;
+        if (!domain) {
+          console.log('Request has no domain:', req.id, req.component?.component_name);
+          return false;
+        }
+        
+        const domainId = (domain as any).id || (domain as any).domain_id;
+        const domainName = (domain as any).name?.toLowerCase?.();
+        
+        const hasMatchingDomainId = domainId && assignedLabDomainIds.includes(domainId);
+        const hasMatchingDomainName = domainName && assignedLabDomainNames.includes(domainName);
+        
+        const isMatch = hasMatchingDomainId || hasMatchingDomainName;
+        
+        if (!isMatch) {
+          console.log('Request filtered out:', req.id, req.component?.component_name, 'Domain:', domainName, 'Assigned domains:', assignedLabDomainNames);
+        }
+        
+        return isMatch;
+      });
+      
+      console.log('Total component requests:', componentRequests.length);
+      console.log('Filtered component requests:', filteredComponentRequests.length);
+      console.log('Assigned lab domain IDs:', assignedLabDomainIds);
+      console.log('Assigned lab domain names:', assignedLabDomainNames);
+      
+      // Lab component request status mapping:
+      // Pending Requests: PENDING
+      // Awaiting Collection: APPROVED
+      // Active Loans: COLLECTED, USER_RETURNED (for coordinator confirmation)
+      // Pending Returns: PENDING_RETURN
+      // History: RETURNED, REJECTED
+      const pending = filteredComponentRequests.filter(req => req.status === 'PENDING') as RequestUnion[];
+      const collection = filteredComponentRequests.filter(req => req.status === 'APPROVED') as RequestUnion[];
+      const active = filteredComponentRequests.filter(req => req.status === 'COLLECTED' || req.status === 'USER_RETURNED') as RequestUnion[];
+      const pendingReturns = filteredComponentRequests.filter(req => req.status === 'PENDING_RETURN') as RequestUnion[];
+      const history = filteredComponentRequests.filter(req => req.status === 'RETURNED' || req.status === 'REJECTED') as RequestUnion[];
+      
+      console.log('Pending requests:', pending.length);
+      console.log('Collection requests:', collection.length);
+      console.log('Active requests:', active.length);
+      console.log('Pending returns:', pendingReturns.length);
+      console.log('History requests:', history.length);
+      
+      return {
+        requests: filteredComponentRequests as RequestUnion[],
+        pendingRequests: pending,
+        collectionRequests: collection,
+        returnRequests: active,
+        pendingReturnRequests: pendingReturns,
+        historyRequests: history,
+        roleName: 'Lab'
+      }
+    }
+    return {
+      requests: [] as RequestUnion[],
+      pendingRequests: [] as RequestUnion[],
+      collectionRequests: [] as RequestUnion[],
+      returnRequests: [] as RequestUnion[],
+      pendingReturnRequests: [] as RequestUnion[],
+      historyRequests: [] as RequestUnion[],
+      roleName: ''
+    }
+  }
+
+  const { requests, pendingRequests, collectionRequests, returnRequests, pendingReturnRequests, historyRequests, roleName } = getRoleSpecificRequests()
+
+  // Check if faculty has multiple roles
+  const hasMultipleRoles = coordinatorDomains.some(domain => domain.hasLibraryItems) && 
+                          coordinatorDomains.some(domain => domain.hasLabComponents)
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -454,218 +591,215 @@ export function CoordinatorDashboard() {
     )
   }
 
-  // Filtered active loans based on search term and status filter
-  const filteredActiveLoans = [...returnComponentRequests, ...returnLibraryRequests].filter(request => {
-    const borrowerName = request.student?.user?.name?.toLowerCase() || ""
-    const srn = request.student?.student_id?.toLowerCase() || ""
-    const itemName = getItemName(request).toLowerCase()
-    const searchTermLower = searchTerm.toLowerCase()
-    
-    // Search filter (borrower name, SRN, or book name)
-    const matchesSearch = borrowerName.includes(searchTermLower) || 
-                         srn.includes(searchTermLower) || 
-                         itemName.includes(searchTermLower)
-    
-    // Status filter
-    if (statusFilter === "all") {
-      return matchesSearch
-    } else if (statusFilter === "due") {
-      return matchesSearch && isOverdue(request.due_date)
-    } else if (statusFilter === "not-due") {
-      return matchesSearch && !isOverdue(request.due_date)
-    }
-    
-    return matchesSearch
-  })
-
+  // Always render the tabbed dashboard interface below
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">CIE Team Coordinator Dashboard</h1>
       </div>
 
-      {/* Domain Selection Tabs */}
-      {coordinatorDomains.length > 1 && (
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            {coordinatorDomains.map((domain) => (
-              <button
-                key={domain.id}
-                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  selectedDomain?.id === domain.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-                onClick={() => setSelectedDomain(domain)}
-              >
-                <div className="flex items-center space-x-2">
-                  {domain.hasLibraryItems && <BookOpen className="h-4 w-4" />}
-                  {domain.hasLabComponents && <Package className="h-4 w-4" />}
-                  <span>{domain.name}</span>
+      {/* Role Selection - Show when faculty has multiple roles and no role is selected */}
+      {hasMultipleRoles && !selectedRole && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Your Coordinator Role</h2>
+            <p className="text-gray-600">Choose which coordinator role you want to manage</p>
                 </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <Card 
+              className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-50 hover:border-blue-300"
+              onClick={() => setSelectedRole('library')}
+            >
+              <CardContent className="p-8 text-center">
+                <BookOpen className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Library Coordinator</h3>
+                <p className="text-gray-600 mb-4">Manage library items, requests, and inventory</p>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <Package className="h-4 w-4" />
+                  <span>Library Management</span>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+              className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-green-50 hover:border-green-300"
+              onClick={() => setSelectedRole('lab')}
+            >
+              <CardContent className="p-8 text-center">
+                <Package className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Lab Coordinator</h3>
+                <p className="text-gray-600 mb-4">Manage lab components, requests, and inventory</p>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <Package className="h-4 w-4" />
+                  <span>Lab Components Management</span>
+            </div>
+          </CardContent>
+        </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Role Selection Buttons - Show when role is selected to allow switching */}
+      {hasMultipleRoles && selectedRole && (
+        <div className="flex flex-wrap gap-4">
+          <Button
+            variant={selectedRole === 'library' ? 'default' : 'outline'}
+            onClick={() => setSelectedRole('library')}
+            className="flex items-center space-x-2"
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Library Coordinator</span>
+          </Button>
+          <Button
+            variant={selectedRole === 'lab' ? 'default' : 'outline'}
+            onClick={() => setSelectedRole('lab')}
+            className="flex items-center space-x-2"
+          >
+            <Package className="h-4 w-4" />
+            <span>Lab Coordinator</span>
+          </Button>
+            </div>
+      )}
+
+      {/* Role-Specific Dashboard Content */}
+      {selectedRole && (
+        <>
+          <div className="text-sm text-gray-600">
+            Currently managing: <span className="font-medium">{roleName} Coordinator</span>
+          </div>
+
+          {/* Debug Information for Lab Coordinators */}
+          {/* Removed debug card as per user request */}
+
+          {/* Clickable Summary Cards with Hover Effects */}
+          {/* Dashboard Horizontal Pill Cards for Library and Lab Coordinators */}
+          {(selectedRole === 'library' && isLibraryCoordinator) || (selectedRole === 'lab' && isLabCoordinator) ? (
+            <div className="flex flex-row gap-6 justify-center items-center my-6">
+              <button
+                className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
+                  ${activeTab === 'analytics' ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-400 text-purple-600' : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 bg-white text-gray-800'}`}
+                onClick={() => setActiveTab('analytics')}
+              >
+                <BarChart3 className={`h-6 w-6 mb-1 ${activeTab === 'analytics' ? 'text-purple-600' : 'text-purple-400'}`} />
+                <span className={`text-base font-medium ${activeTab === 'analytics' ? 'text-purple-600' : 'text-gray-800'}`}>Analytics</span>
               </button>
-            ))}
-          </nav>
-        </div>
-      )}
-
-      {/* Show current domain info for single domain or selected domain */}
-      {(coordinatorDomains.length === 1 || selectedDomain) && (
-        <div className="text-sm text-gray-600">
-          Coordinating: {selectedDomain?.name || coordinatorDomains[0]?.name}
-          {(selectedDomain?.hasLibraryItems || coordinatorDomains[0]?.hasLibraryItems) && 
-           (selectedDomain?.hasLabComponents || coordinatorDomains[0]?.hasLabComponents) && (
-            <span className="ml-2">
-              (Library & Lab)
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Clickable Summary Cards with Hover Effects */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-purple-100 hover:border-purple-300 ${
-            activeTab === 'analytics' ? 'ring-2 ring-purple-500 bg-purple-50 border-purple-200' : 'hover:ring-1 hover:ring-purple-200'
-          }`}
-          onClick={() => setActiveTab('analytics')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center space-x-2">
-              <BarChart3 className={`h-5 w-5 transition-colors duration-200 ${
-                activeTab === 'analytics' ? 'text-purple-600' : 'text-purple-500 group-hover:text-purple-700'
-              }`} />
-              <p className={`text-lg font-medium transition-colors duration-200 ${
-                activeTab === 'analytics' ? 'text-purple-600' : 'text-gray-600'
-              }`}>Analytics</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-100 hover:border-blue-300 ${
-            activeTab === 'collection' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' : 'hover:ring-1 hover:ring-blue-200'
-          }`}
-          onClick={() => setActiveTab('collection')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center space-x-2">
-              <CheckCircle className={`h-5 w-5 transition-colors duration-200 ${
-                activeTab === 'collection' ? 'text-blue-600' : 'text-blue-500 group-hover:text-blue-700'
-              }`} />
-              <p className={`text-lg font-medium transition-colors duration-200 ${
-                activeTab === 'collection' ? 'text-blue-600' : 'text-gray-600'
-              }`}>Awaiting Collection</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-green-100 hover:border-green-300 ${
-            activeTab === 'returns' ? 'ring-2 ring-green-500 bg-green-50 border-green-200' : 'hover:ring-1 hover:ring-green-200'
-          }`}
-          onClick={() => setActiveTab('returns')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center space-x-2">
-              <Package className={`h-5 w-5 transition-colors duration-200 ${
-                activeTab === 'returns' ? 'text-green-600' : 'text-green-500 group-hover:text-green-700'
-              }`} />
-              <p className={`text-lg font-medium transition-colors duration-200 ${
-                activeTab === 'returns' ? 'text-green-600' : 'text-gray-600'
-              }`}>Active Loans</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-orange-100 hover:border-orange-300 ${
-            activeTab === 'history' ? 'ring-2 ring-orange-500 bg-orange-50 border-orange-200' : 'hover:ring-1 hover:ring-orange-200'
-          }`}
+              {selectedRole === 'lab' && isLabCoordinator && (
+                <button
+                  className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
+                    ${activeTab === 'pending-requests' ? 'border-yellow-500 bg-yellow-50 ring-2 ring-yellow-400 text-yellow-600' : 'border-gray-200 hover:border-yellow-300 hover:bg-yellow-50 bg-white text-gray-800'}`}
+                  onClick={() => setActiveTab('pending-requests')}
+                >
+                  <Clock className={`h-6 w-6 mb-1 ${activeTab === 'pending-requests' ? 'text-yellow-600' : 'text-yellow-400'}`} />
+                  <span className={`text-base font-medium ${activeTab === 'pending-requests' ? 'text-yellow-600' : 'text-gray-800'}`}>Pending Requests</span>
+                </button>
+              )}
+              <button
+                className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
+                  ${activeTab === 'collection' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-400 text-blue-600' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 bg-white text-gray-800'}`}
+                onClick={() => setActiveTab('collection')}
+              >
+                <CheckCircle className={`h-6 w-6 mb-1 ${activeTab === 'collection' ? 'text-blue-600' : 'text-blue-400'}`} />
+                <span className={`text-base font-medium ${activeTab === 'collection' ? 'text-blue-600' : 'text-gray-800'}`}>Awaiting Collection</span>
+              </button>
+              <button
+                className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
+                  ${activeTab === 'returns' ? 'border-green-500 bg-green-50 ring-2 ring-green-400 text-green-600' : 'border-gray-200 hover:border-green-300 hover:bg-green-50 bg-white text-gray-800'}`}
+                onClick={() => setActiveTab('returns')}
+              >
+                <Package className={`h-6 w-6 mb-1 ${activeTab === 'returns' ? 'text-green-600' : 'text-green-400'}`} />
+                <span className={`text-base font-medium ${activeTab === 'returns' ? 'text-green-600' : 'text-gray-800'}`}>Active Loans</span>
+              </button>
+              <button
+                className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
+                  ${activeTab === 'history' ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-400 text-orange-600' : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50 bg-white text-gray-800'}`}
           onClick={() => setActiveTab('history')}
         >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center space-x-2">
-              <Clock className={`h-5 w-5 transition-colors duration-200 ${
-                activeTab === 'history' ? 'text-orange-600' : 'text-orange-500 group-hover:text-orange-700'
-              }`} />
-              <p className={`text-lg font-medium transition-colors duration-200 ${
-                activeTab === 'history' ? 'text-orange-600' : 'text-gray-600'
-              }`}>History</p>
+                <Clock className={`h-6 w-6 mb-1 ${activeTab === 'history' ? 'text-orange-600' : 'text-orange-400'}`} />
+                <span className={`text-base font-medium ${activeTab === 'history' ? 'text-orange-600' : 'text-gray-800'}`}>History</span>
+              </button>
+              <button
+                className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
+                  ${activeTab === 'overdue' ? 'border-red-500 bg-red-50 ring-2 ring-red-400 text-red-600' : 'border-gray-200 hover:border-red-300 hover:bg-red-50 bg-white text-gray-800'}`}
+                onClick={() => setActiveTab('overdue')}
+              >
+                <AlertTriangle className={`h-6 w-6 mb-1 ${activeTab === 'overdue' ? 'text-red-600' : 'text-red-400'}`} />
+                <span className={`text-base font-medium ${activeTab === 'overdue' ? 'text-red-600' : 'text-gray-800'}`}>Overdue</span>
+              </button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : null}
 
-      {/* Dynamic Content Based on Selected Tab */}
-      {activeTab === 'analytics' && (
+          {/* Dashboard Tabs - removed as per user request, navigation is now only via cards */}
+
+          {/* Tab Content */}
+          {activeTab === 'analytics' && selectedRole && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
-          <p className="text-gray-600">Insights and statistics for your coordinator domains</p>
+              <h2 className="text-xl font-semibold">{roleName} Analytics Dashboard</h2>
+              <p className="text-gray-600">Insights and statistics for your {roleName.toLowerCase()} coordinator domains</p>
           
           {/* Analytics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total {roleName} Requests</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{componentRequests.length + libraryRequests.length}</div>
+                    <div className="text-2xl font-bold">{requests.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  Library: {libraryRequests.length} | Lab: {componentRequests.length}
+                      {roleName} requests only
                 </p>
               </CardContent>
             </Card>
             
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Items</CardTitle>
+                    <CardTitle className="text-sm font-medium">Active {roleName} Items</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{returnComponentRequests.length + returnLibraryRequests.length}</div>
+                    <div className="text-2xl font-bold">{returnRequests.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  Currently borrowed items
+                      Currently borrowed {roleName.toLowerCase()} items
                 </p>
               </CardContent>
             </Card>
             
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Overdue Items</CardTitle>
+                    <CardTitle className="text-sm font-medium">Overdue {roleName} Items</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">
-                  {[...returnComponentRequests, ...returnLibraryRequests].filter(req => isOverdue(req.due_date)).length}
+                      {returnRequests.filter(req => isOverdue(req.due_date)).length}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Items past due date
+                      {roleName} items past due date
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Request Status Distribution */}
+              {/* Request Status Overview */}
           <Card>
             <CardHeader>
-              <CardTitle>Request Status Overview</CardTitle>
-              <CardDescription>Distribution of all requests by status</CardDescription>
+                  <CardTitle>{roleName} Request Status Overview</CardTitle>
+                  <CardDescription>Distribution of {roleName.toLowerCase()} requests by status</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {[
-                  { status: 'PENDING', count: pendingComponentRequests.length + pendingLibraryRequests.length, color: 'bg-yellow-500' },
-                  { status: 'APPROVED', count: collectionComponentRequests.length + collectionLibraryRequests.length, color: 'bg-blue-500' },
-                  { status: 'COLLECTED', count: returnComponentRequests.length + returnLibraryRequests.length, color: 'bg-green-500' },
-                  { status: 'RETURNED', count: [...componentRequests, ...libraryRequests].filter(req => req.status === "RETURNED").length, color: 'bg-gray-500' },
-                  { status: 'REJECTED', count: [...componentRequests, ...libraryRequests].filter(req => req.status === "REJECTED").length, color: 'bg-red-500' },
+                      { status: 'PENDING', count: pendingRequests.length, color: 'bg-yellow-500' },
+                      { status: 'APPROVED', count: collectionRequests.length, color: 'bg-blue-500' },
+                      { status: 'COLLECTED', count: returnRequests.length, color: 'bg-green-500' },
+                      { status: 'RETURNED', count: requests.filter(req => req.status === "RETURNED").length, color: 'bg-gray-500' },
+                      { status: 'REJECTED', count: requests.filter(req => req.status === "REJECTED").length, color: 'bg-red-500' },
                 ].map(({ status, count, color }) => (
                   <div key={status} className="flex items-center justify-between">
                     <div className="text-sm font-medium text-gray-700 capitalize">{status}</div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5 mx-3">
-                      <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${(count / (componentRequests.length + libraryRequests.length)) * 100}%` }}></div>
+                          <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${requests.length > 0 ? (count / requests.length) * 100 : 0}%` }}></div>
                     </div>
                     <div className="text-sm font-medium text-gray-700">{count}</div>
                   </div>
@@ -676,12 +810,21 @@ export function CoordinatorDashboard() {
         </div>
       )}
 
-      {activeTab === 'collection' && (
+          {activeTab === 'collection' && selectedRole && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Collection Management</h2>
-          <p className="text-gray-600">Verify if students have collected their approved items</p>
-          
-          {[...collectionComponentRequests, ...collectionLibraryRequests].map((request) => (
+              <h2 className="text-xl font-semibold">{roleName} Collection Management</h2>
+              <p className="text-gray-600">Verify if students have collected their approved {roleName.toLowerCase()} items</p>
+              
+              {collectionRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No items awaiting collection</h3>
+                    <p className="text-gray-600">All approved {roleName.toLowerCase()} items have been collected.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                collectionRequests.map((request) => (
             <Card key={request.id} className="border-l-4 border-l-blue-400">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -690,103 +833,208 @@ export function CoordinatorDashboard() {
                   </CardTitle>
                   {getStatusBadge(request.status)}
                 </div>
-                <CardDescription>
-                  Domain: {getDomainName(request)}
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+                    <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
+                          <div className="space-y-1 text-sm">
                     <div className="flex items-center space-x-2">
                       <User className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium">
-                        {request.student?.user?.name || request.faculty?.user?.name || "Unknown User"}
-                      </span>
+                              <span>{getRequesterName(request)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Mail className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterEmail(request)}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        {request.student?.student_id ? `SRN: ${request.student.student_id}` : "Faculty Request"}
-                      </span>
+                              <span>{getRequesterType(request)}</span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Package className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">Quantity: {request.quantity}</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">Required: {new Date(request.required_date).toLocaleDateString()}</span>
+                        
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
+                          <div className="space-y-1 text-sm">
+                            <div>Quantity: {request.quantity}</div>
+                            <div>Purpose: {request.purpose}</div>
+                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
+                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex space-x-2">
+                      <div className="mt-4 flex space-x-2">
                   <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-red-600"
                     onClick={() => {
-                      if (isComponentRequest(request)) {
-                        handleUpdateComponentRequest(request.id, "REJECTED", "Student did not collect item")
+                            if (selectedRole === 'library') {
+                              handleUpdateLibraryRequest(request.id, "COLLECTED")
                       } else {
-                        handleUpdateLibraryRequest(request.id, "REJECTED", "Student did not collect item")
+                              handleUpdateComponentRequest(request.id, "COLLECTED")
                       }
                     }}
+                          className="bg-green-600 hover:bg-green-700"
                   >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Not Collected
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Mark as Collected
                   </Button>
                   
                   <Button 
-                    size="sm"
+                          variant="outline"
                     onClick={() => {
-                      if (isComponentRequest(request)) {
-                        handleUpdateComponentRequest(request.id, "COLLECTED")
+                            if (selectedRole === 'library') {
+                              handleUpdateLibraryRequest(request.id, "REJECTED")
                       } else {
-                        handleUpdateLibraryRequest(request.id, "COLLECTED")
+                              handleUpdateComponentRequest(request.id, "REJECTED")
                       }
                     }}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
                   >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Collected
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject Request
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          ))}
+                ))
+              )}
+            </div>
+          )}
 
-          {collectionComponentRequests.length === 0 && collectionLibraryRequests.length === 0 && (
+          {activeTab === 'pending-requests' && selectedRole === 'lab' && isLabCoordinator && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Lab Pending Requests</h2>
+              <p className="text-gray-600">Review and approve/reject new lab component requests from students</p>
+              
+              {pendingRequests.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No items awaiting collection</h3>
-                <p className="text-gray-600">All approved items have been collected.</p>
+                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No pending requests</h3>
+                    <p className="text-gray-600">All lab component requests have been processed.</p>
               </CardContent>
             </Card>
+              ) : (
+                pendingRequests.map((request) => (
+                  <Card key={request.id} className="border-l-4 border-l-yellow-400">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">
+                          {getItemName(request)}
+                        </CardTitle>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterName(request)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Mail className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterEmail(request)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterType(request)}</span>
+                            </div>
+                            {request.student?.student_id && (
+                              <div className="flex items-center space-x-2">
+                                <FileText className="h-4 w-4 text-gray-500" />
+                                <span>SRN: {request.student.student_id}</span>
+                              </div>
           )}
         </div>
-      )}
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
+                          <div className="space-y-1 text-sm">
+                            <div>Quantity: {request.quantity}</div>
+                            <div>Purpose: {request.purpose}</div>
+                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
+                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
+                            {isComponentRequest(request) && request.project?.name && (
+                              <div>Project: {request.project.name}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex space-x-2">
+                        <Button 
+                          onClick={() => handleUpdateComponentRequest(request.id, "APPROVED")}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve Request
+                        </Button>
+                        
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleUpdateComponentRequest(request.id, "REJECTED")}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject Request
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
 
-      {activeTab === 'returns' && (
+          {activeTab === 'returns' && selectedRole && (
         <div className="space-y-4">
-          {[...returnComponentRequests, ...returnLibraryRequests].length === 0 ? (
+              {/* Define filteredActiveLoans here */}
+              {(() => {
+                // Combine all active loans for the selected role
+                let activeLoans = returnRequests;
+                // Filter by search term
+                if (searchTerm.trim() !== "") {
+                  const lower = searchTerm.toLowerCase();
+                  activeLoans = activeLoans.filter(request => {
+                    const name = getRequesterName(request).toLowerCase();
+                    const srn = request.student?.student_id?.toLowerCase?.() || "";
+                    const item = getItemName(request).toLowerCase();
+                    return name.includes(lower) || srn.includes(lower) || item.includes(lower);
+                  });
+                }
+                // Filter by due status
+                if (statusFilter === "due") {
+                  activeLoans = activeLoans.filter(request => isOverdue(request.due_date));
+                } else if (statusFilter === "not-due") {
+                  activeLoans = activeLoans.filter(request => !isOverdue(request.due_date));
+                }
+                // Assign to local variable for rendering
+                const filteredActiveLoans = activeLoans;
+                return (
+                  filteredActiveLoans.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No active loans</h3>
-                <p className="text-gray-600">All items have been returned.</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No active {roleName.toLowerCase()} loans</h3>
+                        <p className="text-gray-600">All {roleName.toLowerCase()} items have been returned.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
+                      <h2 className="text-xl font-semibold">{roleName} Active Loans</h2>
+                      <p className="text-gray-600">Manage currently borrowed {roleName.toLowerCase()} items</p>
+                      
               {/* Search and Filter Bar */}
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Search className="h-4 w-4 text-gray-500" />
                   <Input
-                    placeholder="Search by borrower name, SRN, or book name..."
+                            placeholder={`Search by borrower name, SRN, or ${roleName.toLowerCase()} name...`}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="max-w-sm"
@@ -833,7 +1081,7 @@ export function CoordinatorDashboard() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[250px]">Borrower</TableHead>
-                        <TableHead className="w-[200px]">Item</TableHead>
+                                <TableHead className="w-[200px]">{roleName} Item</TableHead>
                         <TableHead className="w-[80px]">Qty</TableHead>
                         <TableHead className="w-[120px]">Status</TableHead>
                         <TableHead className="w-[100px]">Collected</TableHead>
@@ -848,7 +1096,6 @@ export function CoordinatorDashboard() {
                         const daysOverdue = getDaysOverdue(request.due_date)
                         const borrower = request.student?.user?.name || request.faculty?.user?.name || "Unknown"
                         const borrowerId = request.student?.student_id || "Faculty"
-                        
                         return (
                           <TableRow key={request.id} className="hover:bg-gray-50">
                             <TableCell>
@@ -905,6 +1152,8 @@ export function CoordinatorDashboard() {
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-1">
+                                        {request.status === "COLLECTED" && (
+                                          <>
                                 <Button 
                                   size="sm"
                                   variant="outline"
@@ -914,34 +1163,32 @@ export function CoordinatorDashboard() {
                                   <RefreshCw className="h-3 w-3 mr-1" />
                                   Renew
                                 </Button>
-                                
-                                {request.status === "PENDING_RETURN" && request.fine_amount && request.fine_amount > 0 ? (
+                                <Button
+                                  size="sm"
+                                  className="bg-zinc-900 hover:bg-zinc-800 text-white"
+                                  onClick={() => selectedRole === 'library' ? handleUpdateLibraryRequest(request.id, "RETURNED") : handleUpdateComponentRequest(request.id, "RETURNED")}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Mark as Returned
+                                </Button>
+                                          </>
+                                        )}
+                                        
+                                        {request.status === "USER_RETURNED" && (
+                                          // Student has confirmed return, coordinator can confirm collection
                                   <Button 
                                     size="sm"
+                                            className="bg-green-600 hover:bg-green-700"
                                     onClick={() => {
-                                      if (isComponentRequest(request)) {
-                                        handleUpdateComponentRequest(request.id, "RETURNED", undefined, true)
-                                      } else {
-                                        handleUpdateLibraryRequest(request.id, "RETURNED", undefined, true)
-                                      }
-                                    }}
-                                  >
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Return
-                                  </Button>
-                                ) : (
-                                  <Button 
-                                    size="sm"
-                                    onClick={() => {
-                                      if (isComponentRequest(request)) {
-                                        handleUpdateComponentRequest(request.id, "RETURNED")
-                                      } else {
+                                              if (selectedRole === 'library') {
                                         handleUpdateLibraryRequest(request.id, "RETURNED")
+                                              } else {
+                                                handleUpdateComponentRequest(request.id, "RETURNED")
                                       }
                                     }}
                                   >
                                     <CheckCircle className="h-3 w-3 mr-1" />
-                                    Return
+                                            Confirm Return
                                   </Button>
                                 )}
                               </div>
@@ -953,15 +1200,168 @@ export function CoordinatorDashboard() {
                   </Table>
                 </CardContent>
               </Card>
+                    </div>
+                  )
+                );
+              })()}
             </div>
           )}
+
+          {activeTab === 'overdue' && selectedRole && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Overdue {roleName} Items</h2>
+              <p className="text-gray-600">Manage {roleName.toLowerCase()} items that are overdue and need to be returned.</p>
+              
+              {returnRequests.filter(req => isOverdue(req.due_date)).length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No overdue {roleName.toLowerCase()} items</h3>
+                    <p className="text-gray-600">All {roleName.toLowerCase()} items have been returned or are on time.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                returnRequests.filter(req => isOverdue(req.due_date)).map((request) => (
+                  <Card key={request.id} className="border-l-4 border-l-red-400">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">
+                          {getItemName(request)}
+                        </CardTitle>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterName(request)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Mail className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterEmail(request)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterType(request)}</span>
+                            </div>
+                            {request.student?.student_id && (
+                              <div className="flex items-center space-x-2">
+                                <FileText className="h-4 w-4 text-gray-500" />
+                                <span>SRN: {request.student.student_id}</span>
         </div>
       )}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
+                          <div className="space-y-1 text-sm">
+                            <div>Quantity: {request.quantity}</div>
+                            <div>Purpose: {request.purpose}</div>
+                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
+                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
+                            <div>Due Date: {request.due_date ? new Date(request.due_date).toLocaleDateString() : "Not set"}</div>
+                            {request.return_date && (
+                              <div>Returned: {new Date(request.return_date).toLocaleDateString()}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex space-x-2">
+                        <Button 
+                          onClick={() => handleUpdateComponentRequest(request.id, "COLLECTED")}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Mark as Collected
+                        </Button>
+                        
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleUpdateComponentRequest(request.id, "REJECTED")}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject Return
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
 
-      {activeTab === 'history' && (
+          {activeTab === 'history' && selectedRole && (
         <div className="space-y-4">
-          <SimplifiedLibraryManagement />
+              <h2 className="text-xl font-semibold">{roleName} History</h2>
+              <p className="text-gray-600">View historical {roleName.toLowerCase()} requests and transactions</p>
+              {historyRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No historical requests</h3>
+                    <p className="text-gray-600">No completed or rejected {roleName.toLowerCase()} requests found.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                historyRequests.map((request) => (
+                  <Card key={request.id} className="border-l-4 border-l-gray-400">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">
+                          {getItemName(request)}
+                        </CardTitle>
+                        {getStatusBadge(request.status)}
         </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterName(request)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Mail className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterEmail(request)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-4 w-4 text-gray-500" />
+                              <span>{getRequesterType(request)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
+                          <div className="space-y-1 text-sm">
+                            <div>Quantity: {request.quantity}</div>
+                            <div>Purpose: {request.purpose}</div>
+                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
+                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
+                            {request.return_date && (
+                              <div>Returned: {new Date(request.return_date).toLocaleDateString()}</div>
+                            )}
+                            {request.status === 'REJECTED' && (
+                              <div className="text-red-600">Rejected</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
