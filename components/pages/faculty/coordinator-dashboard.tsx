@@ -73,6 +73,7 @@ interface ComponentRequest {
   purpose: string
   project?: {
     name: string
+    completion_date?: string
   }
   due_date?: string
   collection_date?: string
@@ -324,42 +325,91 @@ export function CoordinatorDashboard() {
     }
   }
 
-  // Add renewal functionality
-  const handleRenewRequest = async (requestId: string) => {
+  const handleMarkAsCollected = async (request: any) => {
     try {
-      const newDueDate = new Date()
-      newDueDate.setDate(newDueDate.getDate() + 14) // Extend by 14 days
-      
-      const response = await fetch(`/api/library-requests/${requestId}`, {
+      const today = new Date();
+      // Use the original required_date as the due date
+      let dueDate = request.required_date ? new Date(request.required_date) : today;
+      const response = await fetch(`/api/component-requests/${request.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "x-user-id": user?.id || ""
         },
-        body: JSON.stringify({ 
-          due_date: newDueDate.toISOString(),
-          faculty_notes: `Renewed for 14 days by coordinator on ${new Date().toLocaleDateString()}`
+        body: JSON.stringify({
+          status: "COLLECTED",
+          collection_date: today.toISOString(),
+          due_date: dueDate.toISOString(),
+          faculty_notes: `Marked as collected on ${today.toLocaleDateString()}`
         })
-      })
-
+      });
       if (response.ok) {
-        await fetchRequests()
+        await fetchRequests();
+        toast({
+          title: "Marked as Collected",
+          description: `Collected on ${today.toLocaleDateString()} with due date ${dueDate.toLocaleDateString()}`
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to mark as collected",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRenewRequest = async (requestId: string, currentDueDate?: string) => {
+    try {
+      let baseDate = currentDueDate ? new Date(currentDueDate) : new Date();
+      baseDate.setDate(baseDate.getDate() + 14); // Extend by 14 days
+      let response;
+      if (selectedRole === 'lab') {
+        response = await fetch(`/api/component-requests/${requestId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": user?.id || ""
+          },
+          body: JSON.stringify({
+            due_date: baseDate.toISOString(),
+            faculty_notes: `Renewed for 14 days by coordinator on ${new Date().toLocaleDateString()}`
+          })
+        });
+      } else {
+        response = await fetch(`/api/library-requests/${requestId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": user?.id || ""
+          },
+          body: JSON.stringify({
+            due_date: baseDate.toISOString(),
+            faculty_notes: `Renewed for 14 days by coordinator on ${new Date().toLocaleDateString()}`
+          })
+        });
+      }
+      if (response.ok) {
+        await fetchRequests();
         toast({
           title: "Item Renewed",
-          description: `Due date extended to ${newDueDate.toLocaleDateString()}`
-        })
+          description: `Due date extended to ${baseDate.toLocaleDateString()}`
+        });
       } else {
-        const error = await response.json()
-        throw new Error(error.error)
+        const error = await response.json();
+        throw new Error(error.error);
       }
     } catch (error) {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to renew item",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const getStatusBadge = (status: string, isOverdueItem?: boolean) => {
     const baseClass = "font-medium"
@@ -489,9 +539,6 @@ export function CoordinatorDashboard() {
   
   if (selectedRole === 'library' && isLibraryCoordinator) {
     dashboardTabs.push({ id: 'library-management', label: 'Library Management' });
-  }
-  if (selectedRole === 'lab' && isLabCoordinator) {
-    dashboardTabs.push({ id: 'overdue', label: 'Overdue' });
   }
 
   // Helper: get assigned lab domain IDs and names
@@ -684,16 +731,6 @@ export function CoordinatorDashboard() {
                 <BarChart3 className={`h-6 w-6 mb-1 ${activeTab === 'analytics' ? 'text-purple-600' : 'text-purple-400'}`} />
                 <span className={`text-base font-medium ${activeTab === 'analytics' ? 'text-purple-600' : 'text-gray-800'}`}>Analytics</span>
               </button>
-              {selectedRole === 'lab' && isLabCoordinator && (
-                <button
-                  className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
-                    ${activeTab === 'pending-requests' ? 'border-yellow-500 bg-yellow-50 ring-2 ring-yellow-400 text-yellow-600' : 'border-gray-200 hover:border-yellow-300 hover:bg-yellow-50 bg-white text-gray-800'}`}
-                  onClick={() => setActiveTab('pending-requests')}
-                >
-                  <Clock className={`h-6 w-6 mb-1 ${activeTab === 'pending-requests' ? 'text-yellow-600' : 'text-yellow-400'}`} />
-                  <span className={`text-base font-medium ${activeTab === 'pending-requests' ? 'text-yellow-600' : 'text-gray-800'}`}>Pending Requests</span>
-                </button>
-              )}
               <button
                 className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
                   ${activeTab === 'collection' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-400 text-blue-600' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 bg-white text-gray-800'}`}
@@ -717,14 +754,6 @@ export function CoordinatorDashboard() {
         >
                 <Clock className={`h-6 w-6 mb-1 ${activeTab === 'history' ? 'text-orange-600' : 'text-orange-400'}`} />
                 <span className={`text-base font-medium ${activeTab === 'history' ? 'text-orange-600' : 'text-gray-800'}`}>History</span>
-              </button>
-              <button
-                className={`flex flex-col items-center justify-center px-8 py-6 rounded-2xl border transition-all duration-200 shadow-sm min-w-[220px] max-w-[260px] h-[110px] text-center select-none
-                  ${activeTab === 'overdue' ? 'border-red-500 bg-red-50 ring-2 ring-red-400 text-red-600' : 'border-gray-200 hover:border-red-300 hover:bg-red-50 bg-white text-gray-800'}`}
-                onClick={() => setActiveTab('overdue')}
-              >
-                <AlertTriangle className={`h-6 w-6 mb-1 ${activeTab === 'overdue' ? 'text-red-600' : 'text-red-400'}`} />
-                <span className={`text-base font-medium ${activeTab === 'overdue' ? 'text-red-600' : 'text-gray-800'}`}>Overdue</span>
               </button>
             </div>
           ) : null}
@@ -871,7 +900,7 @@ export function CoordinatorDashboard() {
                             if (selectedRole === 'library') {
                               handleUpdateLibraryRequest(request.id, "COLLECTED")
                       } else {
-                              handleUpdateComponentRequest(request.id, "COLLECTED")
+                              handleMarkAsCollected(request)
                       }
                     }}
                           className="bg-green-600 hover:bg-green-700"
@@ -897,95 +926,6 @@ export function CoordinatorDashboard() {
                 </div>
               </CardContent>
             </Card>
-                ))
-              )}
-            </div>
-          )}
-
-          {activeTab === 'pending-requests' && selectedRole === 'lab' && isLabCoordinator && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Lab Pending Requests</h2>
-              <p className="text-gray-600">Review and approve/reject new lab component requests from students</p>
-              
-              {pendingRequests.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No pending requests</h3>
-                    <p className="text-gray-600">All lab component requests have been processed.</p>
-              </CardContent>
-            </Card>
-              ) : (
-                pendingRequests.map((request) => (
-                  <Card key={request.id} className="border-l-4 border-l-yellow-400">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">
-                          {getItemName(request)}
-                        </CardTitle>
-                        {getStatusBadge(request.status)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterName(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Mail className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterEmail(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <FileText className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterType(request)}</span>
-                            </div>
-                            {request.student?.student_id && (
-                              <div className="flex items-center space-x-2">
-                                <FileText className="h-4 w-4 text-gray-500" />
-                                <span>SRN: {request.student.student_id}</span>
-                              </div>
-          )}
-        </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div>Quantity: {request.quantity}</div>
-                            <div>Purpose: {request.purpose}</div>
-                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
-                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
-                            {isComponentRequest(request) && request.project?.name && (
-                              <div>Project: {request.project.name}</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 flex space-x-2">
-                        <Button 
-                          onClick={() => handleUpdateComponentRequest(request.id, "APPROVED")}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Approve Request
-                        </Button>
-                        
-                        <Button 
-                          variant="outline"
-                          onClick={() => handleUpdateComponentRequest(request.id, "REJECTED")}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject Request
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
                 ))
               )}
             </div>
@@ -1158,7 +1098,7 @@ export function CoordinatorDashboard() {
                                   size="sm"
                                   variant="outline"
                                   className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                  onClick={() => handleRenewRequest(request.id)}
+                                  onClick={() => handleRenewRequest(request.id, request.due_date)}
                                 >
                                   <RefreshCw className="h-3 w-3 mr-1" />
                                   Renew
@@ -1204,96 +1144,6 @@ export function CoordinatorDashboard() {
                   )
                 );
               })()}
-            </div>
-          )}
-
-          {activeTab === 'overdue' && selectedRole && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Overdue {roleName} Items</h2>
-              <p className="text-gray-600">Manage {roleName.toLowerCase()} items that are overdue and need to be returned.</p>
-              
-              {returnRequests.filter(req => isOverdue(req.due_date)).length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No overdue {roleName.toLowerCase()} items</h3>
-                    <p className="text-gray-600">All {roleName.toLowerCase()} items have been returned or are on time.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                returnRequests.filter(req => isOverdue(req.due_date)).map((request) => (
-                  <Card key={request.id} className="border-l-4 border-l-red-400">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">
-                          {getItemName(request)}
-                        </CardTitle>
-                        {getStatusBadge(request.status)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterName(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Mail className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterEmail(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <FileText className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterType(request)}</span>
-                            </div>
-                            {request.student?.student_id && (
-                              <div className="flex items-center space-x-2">
-                                <FileText className="h-4 w-4 text-gray-500" />
-                                <span>SRN: {request.student.student_id}</span>
-        </div>
-      )}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div>Quantity: {request.quantity}</div>
-                            <div>Purpose: {request.purpose}</div>
-                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
-                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
-                            <div>Due Date: {request.due_date ? new Date(request.due_date).toLocaleDateString() : "Not set"}</div>
-                            {request.return_date && (
-                              <div>Returned: {new Date(request.return_date).toLocaleDateString()}</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 flex space-x-2">
-                        <Button 
-                          onClick={() => handleUpdateComponentRequest(request.id, "COLLECTED")}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Mark as Collected
-                        </Button>
-                        
-                        <Button 
-                          variant="outline"
-                          onClick={() => handleUpdateComponentRequest(request.id, "REJECTED")}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject Return
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
             </div>
           )}
 

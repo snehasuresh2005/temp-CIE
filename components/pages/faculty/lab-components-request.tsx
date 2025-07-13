@@ -634,30 +634,34 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                                     </SelectTrigger>
                                     <SelectContent>
                                       {selectedComponent.projects.length > 0 ? (
-                                        selectedComponent.projects.map((componentProject) => {
-                                          const fullProject = projects.find(p => p.id === componentProject.id)
-                                          return (
-                                            <SelectItem
-                                              key={componentProject.id}
-                                              value={componentProject.id}
-                                              className={fullProject?.status !== "ONGOING" ? "opacity-50" : ""}
-                                            >
-                                              <div className="flex flex-col">
-                                                <div className="flex items-center gap-2">
-                                                  <span>{componentProject.name}</span>
-                                                  {fullProject?.status === "ONGOING" && (
-                                                    <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                                                      Available
-                                                    </Badge>
-                                                  )}
+                                        selectedComponent.projects
+                                          .filter(componentProject => {
+                                            const fullProject = projects.find(p => p.id === componentProject.id);
+                                            return fullProject?.status === "ONGOING";
+                                          })
+                                          .map((componentProject) => {
+                                            const fullProject = projects.find(p => p.id === componentProject.id)
+                                            return (
+                                              <SelectItem
+                                                key={componentProject.id}
+                                                value={componentProject.id}
+                                              >
+                                                <div className="flex flex-col">
+                                                  <div className="flex items-center gap-2">
+                                                    <span>{componentProject.name}</span>
+                                                    {fullProject?.status === "ONGOING" && (
+                                                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                                        Available
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                  <span className={`text-xs ${getProjectStatusColor(componentProject.id)}`}>
+                                                    {getProjectStatusText(componentProject.id)}
+                                                  </span>
                                                 </div>
-                                                <span className={`text-xs ${getProjectStatusColor(componentProject.id)}`}>
-                                                  {getProjectStatusText(componentProject.id)}
-                                                </span>
-                                              </div>
-                                            </SelectItem>
-                                          )
-                                        })
+                                              </SelectItem>
+                                            )
+                                          })
                                       ) : (
                                         <div className="p-4 text-sm text-center text-gray-500">
                                           No projects associated with this component.

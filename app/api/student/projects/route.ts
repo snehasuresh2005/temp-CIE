@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { Prisma, $Enums } from "@prisma/client"
 import { getUserById } from "@/lib/auth"
 
 export async function GET(request: Request) {
   try {
     // Get user from header
     const userId = request.headers.get("x-user-id")
+    console.log("[DEBUG] /api/student/projects userId:", userId)
     if (!userId) {
       return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
     }
@@ -32,12 +34,25 @@ export async function GET(request: Request) {
 
     const courseIds = enrollments.map((e) => e.course_id)
 
-    // Get projects for enrolled courses (faculty-assigned and student-proposed projects)
+    // Get all relevant projects
     const projects = await prisma.project.findMany({
       where: {
         OR: [
+          // All projects created by the student (any status)
+          { created_by: userId },
+          // Projects for enrolled courses
           { course_id: { in: courseIds } },
-          { created_by: userId }
+          // All approved or ongoing faculty-assigned projects
+          {
+            type: "FACULTY_ASSIGNED",
+            status: { in: [$Enums.ProjectStatus.APPROVED, $Enums.ProjectStatus.ONGOING].filter(s => s !== undefined && s !== null) }
+          },
+          // All approved student-proposed projects (with accepted_by)
+          {
+            type: "STUDENT_PROPOSED",
+            status: $Enums.ProjectStatus.APPROVED,
+            accepted_by: { not: null }
+          }
         ],
         type: { in: ["FACULTY_ASSIGNED", "STUDENT_PROPOSED"] },
       },
@@ -65,24 +80,35 @@ export async function GET(request: Request) {
         expected_completion_date: "asc",
       },
     })
+    console.log("[DEBUG] /api/student/projects raw projects:", projects)
 
     // Get faculty information for faculty-assigned projects
     const facultyAssignedProjects = projects.filter(p => p.type === "FACULTY_ASSIGNED")
-    const courseIdsForFaculty = facultyAssignedProjects.map(p => p.course_id)
+    const facultyUserIds = facultyAssignedProjects.map(p => p.created_by).filter(Boolean)
     
-    const coursesWithFaculty = await prisma.course.findMany({
+    const facultyUsers = await prisma.faculty.findMany({
       where: {
-        id: { in: courseIdsForFaculty }
+        user_id: { in: facultyUserIds }
+      },
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
       }
     })
 
-    // Create a map of course_id to faculty
-    const courseFacultyMap = {}
+    // Create a map of user_id to faculty
+    const facultyMap = facultyUsers.reduce((map, faculty) => {
+      map[faculty.user_id] = faculty
+      return map
+    }, {} as Record<string, any>)
 
     // Transform to include submission directly and faculty information
     const projectsWithSubmissions = projects.map((project) => {
-      // For faculty-assigned projects, use the course faculty as faculty_creator
-      const faculty_creator = project.type === "FACULTY_ASSIGNED" ? {} : null
+      // For faculty-assigned projects, get the faculty creator information
+      const faculty_creator = project.type === "FACULTY_ASSIGNED" && project.created_by 
+        ? facultyMap[project.created_by] 
+        : null
 
       // Destructure to remove submissions, then add faculty_creator
       const { submissions, ...projectWithoutSubmissions } = project
@@ -90,9 +116,13 @@ export async function GET(request: Request) {
       return {
         ...projectWithoutSubmissions,
         submission: submissions[0] || null,
-        faculty_creator,
+        faculty_creator: faculty_creator ? {
+          id: faculty_creator.id,
+          user: faculty_creator.user
+        } : null,
       }
     })
+    console.log("[DEBUG] /api/student/projects projectsWithSubmissions:", projectsWithSubmissions)
 
     return NextResponse.json({ projects: projectsWithSubmissions })
   } catch (error) {

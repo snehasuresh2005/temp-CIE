@@ -90,8 +90,6 @@ export function LabComponentsRequest() {
 
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
-  const [userReturnDialogOpen, setUserReturnDialogOpen] = useState<string | null>(null)
-
   useEffect(() => {
     fetchData()
   }, [user])
@@ -297,7 +295,7 @@ export function LabComponentsRequest() {
           "x-user-id": user.id
         },
         body: JSON.stringify({
-          status: "USER_RETURNED",  // Student confirms they have returned the component
+          status: "RETURNED",  // Student confirms they have returned the component
           return_date: new Date().toISOString(),
         }),
       })
@@ -332,8 +330,7 @@ export function LabComponentsRequest() {
       case "collected":
         return "bg-blue-100 text-blue-800"
 
-      case "user_returned":
-        return "bg-purple-100 text-purple-800"
+  
       case "returned":
         return "bg-gray-100 text-gray-800"
       default:
@@ -352,8 +349,6 @@ export function LabComponentsRequest() {
       case "collected":
         return <Package className="h-4 w-4" />
 
-      case "user_returned":
-        return <CheckCircle className="h-4 w-4" />
       case "returned":
         return <CheckCircle className="h-4 w-4" />
       default:
@@ -753,22 +748,11 @@ export function LabComponentsRequest() {
                         {/* Status-specific actions and messages */}
                         <div className="text-right min-w-0">
                           {request.status === "COLLECTED" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setUserReturnDialogOpen(request.id)}
-                              className="text-xs"
-                            >
-                              I Returned It
-                            </Button>
+                            <p className="text-xs text-blue-600">
+                              📦 Collected
+                            </p>
                           )}
 
-                          {request.status === "USER_RETURNED" && (
-                            <div className="text-xs text-purple-600 font-medium">
-                              Waiting for coordinator verification
-                            </div>
-                          )}
-                          
                           {request.status === "RETURNED" && (
                             <p className="text-xs text-green-600">
                               ✅ Returned
@@ -797,31 +781,6 @@ export function LabComponentsRequest() {
           </div>
         </TabsContent>
       </Tabs>
-
-      {/* User Returned Dialog */}
-      <Dialog open={!!userReturnDialogOpen} onOpenChange={(open) => !open && setUserReturnDialogOpen(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Component Return</DialogTitle>
-            <DialogDescription>
-              Please confirm that you have physically returned this component to the lab. The coordinator will then verify and complete the return process.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setUserReturnDialogOpen(null)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              if (userReturnDialogOpen) {
-                handleReturnComponent(userReturnDialogOpen)
-                setUserReturnDialogOpen(null)
-              }
-            }}>
-              Yes, I Returned It
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
