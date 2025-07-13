@@ -20,6 +20,7 @@ export function FacultyDashboard() {
   const { user } = useAuth()
   const [currentPage, setCurrentPage] = useState("home")
   const [isCoordinator, setIsCoordinator] = useState(false)
+  const [isLabCoordinator, setIsLabCoordinator] = useState(false)
 
   useEffect(() => {
     // Check if this faculty member is assigned as a coordinator
@@ -31,6 +32,9 @@ export function FacultyDashboard() {
           })
           const data = await response.json()
           setIsCoordinator(data.isCoordinator || false)
+          // Check for lab domain (case-insensitive)
+          const labDomain = data.assignedDomains?.find((d: any) => d.name?.toLowerCase().includes("lab"))
+          setIsLabCoordinator(!!labDomain && labDomain.name.toLowerCase().includes("lab"))
         } catch (error) {
           console.error("Error checking coordinator status:", error)
         }
@@ -52,12 +56,13 @@ export function FacultyDashboard() {
       { id: "library", label: "Library", icon: BookOpen },
     ]
 
-    // Add coordinator menu item if user is a coordinator
+    // Add CIE Coordinator section if user is a coordinator
     if (isCoordinator) {
       baseItems.splice(1, 0, { id: "coordinator", label: "CIE Coordinator", icon: Award })
     }
 
-    return baseItems
+    // Remove Lab Management if present (ensure it is not in the sidebar)
+    return baseItems.filter(item => item.id !== "lab-management")
   }
 
   const renderPage = () => {
@@ -66,6 +71,8 @@ export function FacultyDashboard() {
         return <FacultyHome onPageChange={setCurrentPage} />
       case "coordinator":
         return isCoordinator ? <CoordinatorDashboard /> : <FacultyHome onPageChange={setCurrentPage} />
+      case "lab-management":
+        return isLabCoordinator ? <LabComponentsManagement /> : <FacultyHome onPageChange={setCurrentPage} />
       case "courses":
         return <FacultyViewCourses />
       case "locations":
@@ -77,7 +84,7 @@ export function FacultyDashboard() {
       case "attendance":
         return <AttendanceManagement />
       case "lab-components":
-        return isCoordinator ? <LabComponentsManagement /> : <LabComponentsRequest />
+        return <LabComponentsRequest />
       case "profile":
         return <UserProfile />
       case "library":

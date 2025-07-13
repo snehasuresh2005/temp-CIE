@@ -51,25 +51,30 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Faculty profile not found" }, { status: 404 })
       }
 
-      // Faculty can see requests they've approved (as coordinator) or their own requests
+      // Faculty can see requests for their assigned domains (as coordinator) or their own requests
       if (faculty && faculty.domain_assignments.length > 0) {
         const domainIds = faculty.domain_assignments.map((assignment: any) => assignment.domain_id)
         
         requests = await prisma.componentRequest.findMany({
           where: {
             OR: [
-              { approved_by: faculty.id }, // Requests they approve as coordinator
-              { faculty_id: faculty.id },  // Their own requests
+              // Requests for components in their assigned domains (as coordinator)
               {
                 component: {
                   domain_id: { in: domainIds }
                 }
-              }
+              },
+              // Their own requests (if they made any)
+              { faculty_id: faculty.id }
             ],
             ...(status && { status: status as any })
           },
           include: {
-            component: true,
+            component: {
+              include: {
+                domain: true
+              }
+            },
             student: { include: { user: true } },
             faculty: { include: { user: true } },
             requesting_faculty: { include: { user: true } },
@@ -78,17 +83,18 @@ export async function GET(req: NextRequest) {
           orderBy: { request_date: "desc" },
         })
       } else {
-        // Faculty without domain assignments can see requests they've approved or their own requests
+        // Faculty without domain assignments can see their own requests only
         requests = await prisma.componentRequest.findMany({
           where: { 
-            OR: [
-              { approved_by: faculty.id },
-              { faculty_id: faculty.id }
-            ],
+            faculty_id: faculty.id,
             ...(status && { status: status as any })
           },
           include: {
-            component: true,
+            component: {
+              include: {
+                domain: true
+              }
+            },
             student: { include: { user: true } },
             faculty: { include: { user: true } },
             requesting_faculty: { include: { user: true } },
