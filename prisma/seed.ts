@@ -266,7 +266,7 @@ async function main() {
       component_quantity: 10,
       component_tag_id: "445RO",
       component_category: "Microcontroller",
-      component_location: "LAB C",
+      component_location: electronicsLab.name,
       image_path: "lab-images",
       front_image_id: "arduino-front.jpg",
       back_image_id: "arduino-back.jpg",
@@ -403,7 +403,7 @@ async function main() {
 
   // Create locations
   console.log('\n🏢 Creating locations...');
-  await prisma.location.create({
+  const boardRoom = await prisma.location.create({
     data: {
       name: "Board Room",
       capacity: 15,
@@ -420,7 +420,7 @@ async function main() {
     }
   });
 
-  await prisma.location.create({
+  const electronicsLab = await prisma.location.create({
     data: {
       name: "Electronics Lab",
       capacity: 30,
@@ -436,6 +436,59 @@ async function main() {
       modified_by: null,
     }
   });
+
+  const computerLab = await prisma.location.create({
+    data: {
+      name: "Computer Lab A",
+      capacity: 25,
+      description: "Computer laboratory with workstations and development tools",
+      is_available: true,
+      building: "CS Block",
+      floor: "2",
+      room_number: "201",
+      wing: "A",
+      images: ["/location-images/lab2.jpeg"],
+      location_type: "LAB",
+      created_by: adminUser.id,
+      modified_by: null,
+    }
+  });
+
+  const roboticsLab = await prisma.location.create({
+    data: {
+      name: "Robotics Lab",
+      capacity: 20,
+      description: "Robotics and automation laboratory with specialized equipment",
+      is_available: true,
+      building: "ME Block",
+      floor: "1",
+      room_number: "101",
+      wing: "B",
+      images: ["/location-images/lab3.jpeg"],
+      location_type: "LAB",
+      created_by: adminUser.id,
+      modified_by: null,
+    }
+  });
+
+  const storageRoom = await prisma.location.create({
+    data: {
+      name: "Storage Room",
+      capacity: 0,
+      description: "Storage facility for components and equipment",
+      is_available: true,
+      building: "CS Block",
+      floor: "1",
+      room_number: "105",
+      wing: "A",
+      images: [],
+      location_type: "WAREHOUSE",
+      created_by: adminUser.id,
+      modified_by: null,
+    }
+  });
+
+
 
   // Create projects
   console.log('\n📋 Creating projects...');
