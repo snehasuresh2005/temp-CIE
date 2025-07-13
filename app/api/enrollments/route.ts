@@ -7,8 +7,8 @@ export async function GET() {
       include: {
         course: {
           select: {
-            code: true,
-            name: true,
+            course_code: true,
+            course_name: true,
           },
         },
         student: {
@@ -36,24 +36,26 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { courseId, section } = body
+    const { courseId } = body
 
-    if (!courseId || !section) {
+    if (!courseId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // For now, we'll use a placeholder student ID
-    // In a real app, this would come from the authenticated user
-    const students = await prisma.student.findMany({ take: 1 })
-    if (students.length === 0) {
-      return NextResponse.json({ error: "No students found" }, { status: 400 })
+    const userId = request.headers.get("x-user-id")
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
+    const student = await prisma.student.findUnique({ where: { user_id: userId } })
+    if (!student) {
+      return NextResponse.json({ error: "Student profile not found" }, { status: 404 })
     }
 
     // Check if already enrolled
     const existingEnrollment = await prisma.enrollment.findFirst({
       where: {
         course_id: courseId,
-        student_id: students[0].id,
+        student_id: student.id,
       },
     })
 
@@ -64,15 +66,14 @@ export async function POST(request: NextRequest) {
     const enrollment = await prisma.enrollment.create({
       data: {
         course_id: courseId,
-        student_id: students[0].id,
-        section,
+        student_id: student.id,
         enrolled_at: new Date(),
       },
       include: {
         course: {
           select: {
-            code: true,
-            name: true,
+            course_code: true,
+            course_name: true,
           },
         },
       },
