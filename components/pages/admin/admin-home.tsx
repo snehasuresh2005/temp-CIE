@@ -76,7 +76,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
       color: "text-red-600",
     },
     {
-      title: "System Usage",
+      title: "System Usage(*)",
       value: `${dashboardData.stats.systemUsage}%`,
       description: "Active user rate",
       icon: TrendingUp,
@@ -143,56 +143,6 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                 ))
               )}
             </div>
-
-            {/* System Health and Analytics */}
-            {dashboardData?.systemHealth && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card className="border-green-200 bg-green-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-800">Uptime</p>
-                        <p className="text-2xl font-bold text-green-900">{dashboardData.systemHealth.uptime}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-green-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">Response Time</p>
-                        <p className="text-2xl font-bold text-blue-900">{dashboardData.systemHealth.avgResponseTime}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-blue-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-purple-200 bg-purple-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-purple-800">Error Rate</p>
-                        <p className="text-2xl font-bold text-purple-900">{dashboardData.systemHealth.errorRate}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-purple-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-orange-200 bg-orange-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-orange-800">Active Users</p>
-                        <p className="text-2xl font-bold text-orange-900">{dashboardData.systemHealth.activeConnections}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-orange-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
@@ -306,7 +256,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                                 <p className="text-xs text-gray-500">{timeAgo}</p>
                                 {activity.status && (
                                   <>
-                                    <span className="text-xs text-gray-300">•</span>
+                                <span className="text-xs text-gray-300">•</span>
                                     <span className={`text-xs px-2 py-0.5 rounded ${
                                       activity.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
                                       activity.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
@@ -314,7 +264,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                                       'bg-gray-100 text-gray-800'
                                     }`}>
                                       {activity.status}
-                                    </span>
+                                </span>
                                   </>
                                 )}
                               </div>
