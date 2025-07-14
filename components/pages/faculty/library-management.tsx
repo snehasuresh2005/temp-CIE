@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { BookOpen, RotateCcw, Loader2 } from "lucide-react"
-import { CheckCircle, Clock, AlertTriangle, Package, X, Plus, ChevronRight, ChevronLeft } from "lucide-react"
+import { CheckCircle, Clock, AlertTriangle, Package, X, Plus, ChevronRight, ChevronLeft, Info } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -85,6 +85,7 @@ export function LibraryManagement() {
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -534,6 +535,19 @@ export function LibraryManagement() {
     }
   }
 
+  const getAvailabilityColor = (available: number, total: number) => {
+    const percentage = (available / total) * 100
+    if (percentage === 0) return "bg-red-100 text-red-800"
+    if (percentage < 30) return "bg-yellow-100 text-yellow-800"
+    return "bg-green-100 text-green-800"
+  }
+
+  const getAvailabilityText = (available: number, total: number) => {
+    if (available === 0) return "Out of Stock"
+    if (available < total * 0.3) return "Low Stock"
+    return "Available"
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -731,75 +745,145 @@ export function LibraryManagement() {
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredItems.length === 0 ? (
-                    <div className="col-span-full text-center py-8">
-                      <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
-                      <p className="text-gray-600">Try adjusting your search terms.</p>
-                    </div>
-                  ) : (
-                    filteredItems.map((item) => (
-                      <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            {/* Item Image with flip functionality */}
-                            <div 
-                              className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden relative cursor-pointer"
-                              onClick={() => {
-                                if (item.back_image_url) {
-                                  setImageStates(prev => ({
-                                    ...prev,
-                                    [item.id]: !prev[item.id]
-                                  }))
-                                }
-                              }}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {filteredItems.map((item) => (
+                    <Card key={item.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+                      <CardHeader className="p-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center space-x-2 text-sm">
+                              <Package className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate">{item.item_name}</span>
+                            </CardTitle>
+                            <CardDescription className="text-xs">{item.item_category}</CardDescription>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5`}>
+                              {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                              onClick={() => setInfoDialogOpen(item.id)}
                             >
-                              <img
-                                src={imageStates[item.id] && item.back_image_url ? item.back_image_url : (item.image_url || "/placeholder.jpg")}
-                                alt={item.item_name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.src = "/placeholder.jpg"
-                                }}
-                              />
+                              <Info className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-grow flex flex-col p-3 pt-0">
+                        <div className="space-y-3 flex-grow">
+                          {/* Image Display */}
+                          {(item.image_url || item.back_image_url) && (
+                            <div className="relative w-full h-32">
+                              {/* Front Image */}
+                              <div 
+                                className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
+                                  imageStates[item.id] ? 'opacity-0' : 'opacity-100'
+                                }`}
+                              >
+                                <img
+                                  src={item.image_url || '/placeholder.jpg'}
+                                  alt={`Front view of ${item.item_name}`}
+                                  className="w-full h-full object-contain rounded-md bg-gray-50"
+                                  onError={(e) => {
+                                    e.currentTarget.src = "/placeholder.jpg"
+                                  }}
+                                />
+                              </div>
+                              
+                              {/* Back Image */}
                               {item.back_image_url && (
-                                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded text-xs">
-                                  {imageStates[item.id] ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                <div 
+                                  className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
+                                    imageStates[item.id] ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                >
+                                  <img
+                                    src={item.back_image_url}
+                                    alt={`Back view of ${item.item_name}`}
+                                    className="w-full h-full object-contain rounded-md bg-gray-50"
+                                    onError={(e) => {
+                                      e.currentTarget.src = "/placeholder.jpg"
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              
+                              {/* Navigation Buttons */}
+                              {item.back_image_url && (
+                                <>
+                                  {!imageStates[item.id] && (
+                                    <Button
+                                      variant="secondary"
+                                      size="icon"
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                                      onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
+                                    >
+                                      <ChevronRight className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {imageStates[item.id] && (
+                                    <Button
+                                      variant="secondary"
+                                      size="icon"
+                                      className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                                      onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
+                                    >
+                                      <ChevronLeft className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+                              
+                              {/* Image Indicators */}
+                              {item.back_image_url && (
+                                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                                  <div 
+                                    className={`w-1 h-1 rounded-full transition-colors duration-300 ${
+                                      !imageStates[item.id] ? 'bg-white' : 'bg-white/50'
+                                    }`}
+                                  />
+                                  <div 
+                                    className={`w-1 h-1 rounded-full transition-colors duration-300 ${
+                                      imageStates[item.id] ? 'bg-white' : 'bg-white/50'
+                                    }`}
+                                  />
                                 </div>
                               )}
                             </div>
-                            
-                            <div>
-                              <h3 className="font-medium text-sm">{item.item_name}</h3>
-                              <p className="text-xs text-gray-600 mt-1">{item.item_category}</p>
-                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.item_description}</p>
+                          )}
+                          
+                          <div className="space-y-1">
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                              <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
+                              <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
                             </div>
                             
-                            <div className="flex justify-between items-center text-xs">
-                              <span className={`font-medium ${item.available_quantity > 0 ? "text-green-600" : "text-red-600"}`}>
-                                {item.available_quantity > 0 ? `${item.available_quantity} available` : "Out of stock"}
-                              </span>
-                              <span className="text-gray-500">Total: {item.item_quantity}</span>
+                            <div className="text-xs text-gray-500">
+                              <span className="font-medium">Location:</span> {item.item_location}
                             </div>
-                            
-                            <Button
-                              size="sm"
-                              className="w-full"
-                              disabled={item.available_quantity === 0}
-                              onClick={() => {
-                                setSelectedItem(item)
-                                setIsRequestDialogOpen(true)
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Request Item
-                            </Button>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
+                        </div>
+
+                        <div className="mt-3">
+                          <Button
+                            size="sm"
+                            className="w-full h-8 text-xs"
+                            disabled={item.available_quantity === 0}
+                            onClick={() => {
+                              setSelectedItem(item)
+                              setIsRequestDialogOpen(true)
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            {item.available_quantity === 0 ? "Out of Stock" : "Request Item"}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
             </CardContent>
@@ -1178,6 +1262,84 @@ export function LibraryManagement() {
               </form>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Library Item Info Dialog */}
+      <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Library Item Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this library item
+            </DialogDescription>
+          </DialogHeader>
+          {infoDialogOpen && (() => {
+            const item = allItems.find(i => i.id === infoDialogOpen)
+            if (!item) return null
+            
+            return (
+              <div className="space-y-4">
+                {/* Item Name and Category */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-5 w-5 text-gray-500" />
+                    <h3 className="text-lg font-semibold">{item.item_name}</h3>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {item.item_category}
+                  </Badge>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Description</h4>
+                  <p className="text-sm text-gray-600">{item.item_description}</p>
+                </div>
+
+                {/* Specifications */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Specifications</h4>
+                  <p className="text-sm text-gray-600">{item.item_specification}</p>
+                </div>
+
+                {/* Availability */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-sm">Total Quantity</h4>
+                    <p className="text-lg font-semibold text-gray-900">{item.item_quantity}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-sm">Available</h4>
+                    <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {item.available_quantity}
+                    </p>
+                  </div>
+                </div>
+
+                {/* On Loan */}
+                <div className="space-y-1">
+                  <h4 className="font-medium text-sm">Currently On Loan</h4>
+                  <p className="text-lg font-semibold text-blue-600">
+                    {item.item_quantity - item.available_quantity}
+                  </p>
+                </div>
+
+                {/* Location */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Location</h4>
+                  <p className="text-sm text-gray-600">{item.item_location}</p>
+                </div>
+
+                {/* Availability Status */}
+                <div className="pt-2 border-t">
+                  <Badge className={`${item.available_quantity > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                    {item.available_quantity > 0 ? "Available" : "Out of Stock"}
+                  </Badge>
+                </div>
+              </div>
+            )
+          })()}
         </DialogContent>
       </Dialog>
     </div>
