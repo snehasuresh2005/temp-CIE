@@ -32,7 +32,7 @@ export function getOverdueDays(expectedReturnDate: string): number {
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
-type ViewType = 'available' | 'requested' | 'active' | 'overdue'
+type ViewType = 'available' | 'requests' | 'active' | 'overdue'
 
 interface LabComponent {
   id: string
@@ -303,7 +303,7 @@ export function LabComponentsRequest() {
           "x-user-id": user.id
         },
         body: JSON.stringify({
-          status: "RETURNED",  // Student confirms they have returned the component
+          status: "USER_RETURNED",  // Student confirms they have returned the component
           return_date: new Date().toISOString(),
         }),
       })
@@ -328,37 +328,40 @@ export function LabComponentsRequest() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "pending":
+    switch (status.toUpperCase()) {
+      case "PENDING":
         return "bg-yellow-100 text-yellow-800"
-      case "approved":
+      case "APPROVED":
         return "bg-green-100 text-green-800"
-      case "rejected":
+      case "REJECTED":
         return "bg-red-100 text-red-800"
-      case "collected":
+      case "COLLECTED":
         return "bg-blue-100 text-blue-800"
-
-  
-      case "returned":
-        return "bg-gray-100 text-gray-800"
+    case "USER_RETURNED":
+      return "bg-purple-100 text-purple-800"
+    case "RETURNED":
+      return "bg-gray-100 text-gray-800"
+    case "OVERDUE":
+      return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "pending":
+    switch (status.toUpperCase()) {
+      case "PENDING":
         return <Clock className="h-4 w-4" />
-      case "approved":
+      case "APPROVED":
         return <CheckCircle className="h-4 w-4" />
-      case "rejected":
+      case "REJECTED":
         return <XCircle className="h-4 w-4" />
-      case "collected":
+      case "COLLECTED":
         return <Package className="h-4 w-4" />
-
-      case "returned":
-        return <CheckCircle className="h-4 w-4" />
+    case "USER_RETURNED":
+      return <CheckCircle className="h-4 w-4" />
+    case "RETURNED":
+      return <CheckCircle className="h-4 w-4" />
       default:
         return <Clock className="h-4 w-4" />
     }
@@ -439,21 +442,21 @@ export function LabComponentsRequest() {
           
           <Card 
             className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-100 hover:border-blue-300 ${
-              currentView === 'requested' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' : 'hover:ring-1 hover:ring-blue-200'
+              currentView === 'requests' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' : 'hover:ring-1 hover:ring-blue-200'
             }`}
-            onClick={() => setCurrentView('requested')}
+            onClick={() => setCurrentView('requests')}
           >
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <ClipboardCheck className={`h-5 w-5 transition-colors duration-200 ${
-                  currentView === 'requested' ? 'text-blue-600' : 'text-blue-500 group-hover:text-blue-700'
+                  currentView === 'requests' ? 'text-blue-600' : 'text-blue-500 group-hover:text-blue-700'
                 }`} />
                 <div>
                   <p className={`text-2xl font-bold transition-colors duration-200 ${
-                    currentView === 'requested' ? 'text-blue-700' : 'text-gray-900'
+                    currentView === 'requests' ? 'text-blue-700' : 'text-gray-900'
                   }`}>{requests.length}</p>
                   <p className={`text-sm transition-colors duration-200 ${
-                    currentView === 'requested' ? 'text-blue-600' : 'text-gray-600'
+                    currentView === 'requests' ? 'text-blue-600' : 'text-gray-600'
                   }`}>My Requests</p>
                 </div>
               </div>
@@ -828,7 +831,7 @@ export function LabComponentsRequest() {
             </Card>
           </div>
         )}
-        {currentView === 'requested' && (
+        {currentView === 'requests' && (
           <div className="space-y-4">
             <Card>
               <CardHeader>
@@ -991,34 +994,6 @@ export function LabComponentsRequest() {
                           </div>
                         </div>
                         
-
-                        {/* Status-specific actions and messages */}
-                        <div className="text-right min-w-0">
-                          {request.status === "COLLECTED" && (
-                            <p className="text-xs text-blue-600">
-                              📦 Collected
-                            </p>
-                          )}
-
-                          {request.status === "RETURNED" && (
-                            <p className="text-xs text-green-600">
-                              ✅ Returned
-                            </p>
-                          )}
-                          
-                          {request.status === "REJECTED" && (
-                            <p className="text-xs text-red-600">
-                              ❌ Rejected
-                            </p>
-                          )}
-
-                          {/* Show overdue warning for collected items */}
-                          {request.status === "COLLECTED" && isOverdue(request.required_date) && (
-                            <p className="text-xs text-red-600 font-medium mt-1">
-                              ⚠️ {getOverdueDays(request.required_date)}d overdue
-                            </p>
-                          )}
-
                         <div className="flex items-center space-x-2">
                           <Badge className={`${getStatusColor(request.status)} text-xs px-2 py-1`}>
                             <div className="flex items-center space-x-1">
@@ -1065,7 +1040,6 @@ export function LabComponentsRequest() {
                               </p>
                             )}
                           </div>
-
                         </div>
                       </div>
                       {request.faculty_notes && (
@@ -1096,107 +1070,93 @@ export function LabComponentsRequest() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-2">
-              {overdueRequests.length === 0 ? (
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <AlertTriangle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <h3 className="font-medium text-gray-900 mb-1">No overdue requests</h3>
-                    <p className="text-sm text-gray-600">You have no overdue component requests.</p>
-                  </CardContent>
-                </Card>
-
-              ))
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-
-              ) : (
-                overdueRequests.map((request) => (
-                  <Card key={request.id} className="border-l-4 border-l-red-400">
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3 flex-1">
-                          <div className="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center flex-shrink-0">
-                            <Package className="h-4 w-4 text-red-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-gray-900 truncate text-sm">{request.component.component_name}</h3>
-                            <div className="flex items-center space-x-3 text-xs text-gray-500 mt-0.5">
-                              <span>Qty: {request.quantity}</span>
-                              <span>Requested: {new Date(request.request_date).toLocaleDateString()}</span>
-                              <span className={isOverdue(request.required_date) ? "text-red-600 font-medium" : ""}>
-                                Due: {new Date(request.required_date).toLocaleDateString()}
-                              </span>
-                            </div>
-                            {request.project_id && (
-                              <div className="mt-1">
-                                <p className="text-xs text-red-600">
-                                  Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
-                                </p>
+                  {overdueRequests.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <AlertTriangle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <h3 className="font-medium text-gray-900 mb-1">No overdue requests</h3>
+                        <p className="text-sm text-gray-600">You have no overdue component requests.</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    overdueRequests.map((request) => (
+                      <Card key={request.id} className="border-l-4 border-l-red-400">
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 flex-1">
+                              <div className="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center flex-shrink-0">
+                                <Package className="h-4 w-4 text-red-600" />
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Badge className={`${getStatusColor(request.status)} text-xs px-2 py-1`}>
-                            <div className="flex items-center space-x-1">
-                              {getStatusIcon(request.status)}
-                              <span>{request.status}</span>
-                            </div>
-                          </Badge>
-                          
-                          {/* Status-specific actions and messages */}
-                          <div className="text-right min-w-0">
-                            {request.status === "COLLECTED" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setUserReturnDialogOpen(request.id)}
-                                className="text-xs"
-                              >
-                                I Returned It
-                              </Button>
-                            )}
-
-                            {request.status === "USER_RETURNED" && (
-                              <div className="text-xs text-purple-600 font-medium">
-                                Waiting for coordinator verification
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-gray-900 truncate text-sm">{request.component.component_name}</h3>
+                                <div className="flex items-center space-x-3 text-xs text-gray-500 mt-0.5">
+                                  <span>Qty: {request.quantity}</span>
+                                  <span>Requested: {new Date(request.request_date).toLocaleDateString()}</span>
+                                  <span className={isOverdue(request.required_date) ? "text-red-600 font-medium" : ""}>
+                                    Due: {new Date(request.required_date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                {request.project_id && (
+                                  <div className="mt-1">
+                                    <p className="text-xs text-red-600">
+                                      Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            
-                            {request.status === "RETURNED" && (
-                              <p className="text-xs text-green-600">
-                                ✅ Returned
-                              </p>
-                            )}
-                            
-                            {request.status === "REJECTED" && (
-                              <p className="text-xs text-red-600">
-                                ❌ Rejected
-                              </p>
-                            )}
-
-                            {/* Show overdue warning for collected items */}
-                            {request.status === "COLLECTED" && isOverdue(request.required_date) && (
-                              <p className="text-xs text-red-600 font-medium mt-1">
-                                ⚠️ {getOverdueDays(request.required_date)}d overdue
-                              </p>
-                            )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge className={`${getStatusColor(request.status)} text-xs px-2 py-1`}>
+                                <div className="flex items-center space-x-1">
+                                  {getStatusIcon(request.status)}
+                                  <span>{request.status}</span>
+                                </div>
+                              </Badge>
+                              {/* Status-specific actions and messages */}
+                              <div className="text-right min-w-0">
+                                {request.status === "COLLECTED" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setUserReturnDialogOpen(request.id)}
+                                    className="text-xs"
+                                  >
+                                    I Returned It
+                                  </Button>
+                                )}
+                                {request.status === "USER_RETURNED" && (
+                                  <div className="text-xs text-purple-600 font-medium">
+                                    Waiting for coordinator verification
+                                  </div>
+                                )}
+                                {request.status === "RETURNED" && (
+                                  <p className="text-xs text-green-600">
+                                    ✅ Returned
+                                  </p>
+                                )}
+                                {request.status === "REJECTED" && (
+                                  <p className="text-xs text-red-600">
+                                    ❌ Rejected
+                                  </p>
+                                )}
+                                {/* Show overdue warning for collected items */}
+                                {request.status === "COLLECTED" && isOverdue(request.required_date) && (
+                                  <p className="text-xs text-red-600 font-medium mt-1">
+                                    ⚠️ {getOverdueDays(request.required_date)}d overdue
+                                  </p>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      {request.faculty_notes && (
-                        <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
-                          <strong>Faculty Notes:</strong> {request.faculty_notes}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+                          {request.faculty_notes && (
+                            <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                              <strong>Faculty Notes:</strong> {request.faculty_notes}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

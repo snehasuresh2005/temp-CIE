@@ -480,41 +480,37 @@ export function LibraryRequest() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {filteredItems.map((item) => (
-              <Card key={item.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
-                <CardHeader className="p-3">
+              <Card key={item.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white">
+                <CardHeader className="p-3 pb-0">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="flex items-center space-x-2 text-sm">
-                        <Package className="h-4 w-4 flex-shrink-0" />
+                      <CardTitle className="flex items-center space-x-2 text-base font-semibold">
+                        <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
                         <span className="truncate">{item.item_name}</span>
                       </CardTitle>
-                      <CardDescription className="text-xs">{item.item_category}</CardDescription>
+                      <CardDescription className="text-xs text-gray-500">{item.item_category}</CardDescription>
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
-                      <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5`}>
-                        {getAvailabilityText(item.available_quantity, item.item_quantity)}
-                      </Badge>
+                      <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-2 py-0.5 rounded-full font-medium`}>{getAvailabilityText(item.available_quantity, item.item_quantity)}</Badge>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 text-gray-400 hover:text-gray-600"
                         onClick={() => setInfoDialogOpen(item.id)}
                       >
-                        <Info className="h-3 w-3" />
+                        <Info className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col p-3 pt-0">
+                <CardContent className="flex-grow flex flex-col p-3 pt-2">
                   <div className="space-y-3 flex-grow">
                     {/* Image Display */}
                     {(item.image_url || item.back_image_url) && (
-                      <div className="relative w-full h-32">
+                      <div className="relative w-full h-32 mb-2">
                         {/* Front Image */}
                         <div 
-                          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                            imageStates[item.id] ? 'opacity-0' : 'opacity-100'
-                          }`}
+                          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}
                         >
                           <img
                             src={item.image_url || '/placeholder.jpg'}
@@ -525,13 +521,10 @@ export function LibraryRequest() {
                             }}
                           />
                         </div>
-                        
                         {/* Back Image */}
                         {item.back_image_url && (
                           <div 
-                            className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                              imageStates[item.id] ? 'opacity-100' : 'opacity-0'
-                            }`}
+                            className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-100' : 'opacity-0'}`}
                           >
                             <img
                               src={item.back_image_url}
@@ -543,7 +536,6 @@ export function LibraryRequest() {
                             />
                           </div>
                         )}
-                        
                         {/* Navigation Buttons */}
                         {item.back_image_url && (
                           <>
@@ -569,37 +561,25 @@ export function LibraryRequest() {
                             )}
                           </>
                         )}
-                        
                         {/* Image Indicators */}
                         {item.back_image_url && (
                           <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
-                            <div 
-                              className={`w-1 h-1 rounded-full transition-colors duration-300 ${
-                                !imageStates[item.id] ? 'bg-white' : 'bg-white/50'
-                              }`}
-                            />
-                            <div 
-                              className={`w-1 h-1 rounded-full transition-colors duration-300 ${
-                                imageStates[item.id] ? 'bg-white' : 'bg-white/50'
-                              }`}
-                            />
+                            <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${!imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                            <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
                           </div>
                         )}
                       </div>
                     )}
-                    
                     <div className="space-y-1">
                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
                         <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
                         <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
                       </div>
-                      
                       <div className="text-xs text-gray-500">
                         <span className="font-medium">Location:</span> {item.item_location}
                       </div>
                     </div>
                   </div>
-
                   <div className="mt-3">
                     <Dialog open={isRequestDialogOpen && selectedItem?.id === item.id} onOpenChange={(isOpen) => {
                       setIsRequestDialogOpen(isOpen)

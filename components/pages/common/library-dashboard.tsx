@@ -16,7 +16,10 @@ import {
   Search,
   Plus,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Info,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 
 // Utility functions
@@ -62,6 +65,7 @@ interface LibraryItem {
   back_image_url?: string | null
   front_image_id?: string | null
   back_image_id?: string | null
+  item_specification?: string // Added for new dialog
 }
 
 interface LibraryRequest {
@@ -108,6 +112,10 @@ export function LibraryDashboard() {
   const [currentView, setCurrentView] = useState<ViewType>('browse')
   const [currentTime, setCurrentTime] = useState(new Date())
   const { toast } = useToast()
+
+  // Add state for info dialog and image toggle
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null);
+  const [imageStates, setImageStates] = useState<Record<string, boolean>>({}); // false = front, true = back
 
   // Update time every minute for countdown display
   useEffect(() => {
@@ -606,118 +614,130 @@ export function LibraryDashboard() {
                         const isOutOfStock = item.available_quantity === 0
                         const canBorrow = canBorrowBook(item)
                         const isUnavailable = isReserved || isBorrowed || isOutOfStock
-                        
                         return (
                           <Card 
                             key={item.id} 
-                            className={`cursor-pointer transition-shadow ${
-                              isUnavailable
-                                ? 'opacity-60 bg-gray-50 border-gray-200' 
-                                : 'hover:shadow-md'
-                            }`}
+                            className={`flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white ${isUnavailable ? 'opacity-60 bg-gray-50 border-gray-200' : ''}`}
                           >
-                            <CardContent className="p-3">
-                              <div className="space-y-3">
-                                {/* Book cover with proper aspect ratio */}
-                                <div className={`w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden relative ${
-                                  isUnavailable ? 'filter grayscale' : ''
-                                }`}>
+                            <CardHeader className="p-3 pb-0">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="flex items-center space-x-2 text-base font-semibold">
+                                    <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                                    <span className="truncate">{item.item_name}</span>
+                                  </CardTitle>
+                                  <CardDescription className="text-xs text-gray-500">{item.item_category}</CardDescription>
+                                </div>
+                                <div className="flex items-center space-x-1 flex-shrink-0">
+                                  <Badge className={`text-xs px-2 py-0.5 rounded-full font-medium ${item.available_quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.available_quantity > 0 ? ` Available` : 'Out of stock'}</Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                                    onClick={() => setInfoDialogOpen(item.id)}
+                                  >
+                                    <Info className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            {/* Image Display */}
+                            {(item.image_url || item.back_image_url) && (
+                              <div className="relative w-full h-32 mb-2 px-3 pt-2">
+                                {/* Front Image */}
+                                <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}>
                                   <img
-                                    src={item.image_url || "/placeholder.jpg"}
-                                    alt={item.item_name}
-                                    className="w-full h-full object-cover"
+                                    src={item.image_url || '/placeholder.jpg'}
+                                    alt={`Front view of ${item.item_name}`}
+                                    className="w-full h-full object-contain rounded-md bg-gray-50"
                                     onError={(e) => {
                                       e.currentTarget.src = "/placeholder.jpg"
                                     }}
                                   />
-                                  {isUnavailable && (
-                                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                                      <Badge className={`text-xs ${
-                                        isReserved 
-                                          ? 'bg-blue-100 text-blue-800' 
-                                          : isBorrowed
-                                            ? 'bg-red-100 text-red-800'
-                                            : 'bg-gray-100 text-gray-800'
-                                      }`}>
-                                        {isReserved 
-                                          ? 'Reserved' 
-                                          : isBorrowed
-                                            ? 'Already Borrowed'
-                                            : 'Out of Stock'
-                                        }
-                                      </Badge>
-                                    </div>
-                                  )}
                                 </div>
-                                
-                                <div className="space-y-1">
-                                  <h3 className={`font-medium text-sm line-clamp-2 leading-tight ${
-                                    isUnavailable ? 'text-gray-500' : ''
-                                  }`}>
-                                    {item.item_name}
-                                  </h3>
-                                  <p className={`text-xs ${
-                                    isUnavailable ? 'text-gray-400' : 'text-gray-600'
-                                  }`}>
-                                    {item.item_category}
-                                  </p>
-                                  <p className={`text-xs line-clamp-2 ${
-                                    isUnavailable ? 'text-gray-400' : 'text-gray-500'
-                                  }`}>
-                                    {item.item_description}
-                                  </p>
-                                </div>
-                                
-                                <div className="flex justify-between items-center text-xs">
-                                  <span className={`font-medium ${
-                                    isUnavailable
-                                      ? 'text-gray-400' 
-                                      : item.available_quantity > 0 
-                                        ? 'text-green-600' 
-                                        : 'text-red-600'
-                                  }`}>
-                                    {isReserved 
-                                      ? 'Reserved' 
-                                      : isBorrowed
-                                        ? 'Already borrowed'
-                                        : item.available_quantity > 0 
-                                          ? `${item.available_quantity} available` 
-                                          : 'Out of stock'
-                                    }
-                                  </span>
-                                  <span className={`${
-                                    isUnavailable ? 'text-gray-400' : 'text-gray-500'
-                                  }`}>
-                                    Total: {item.item_quantity}
-                                  </span>
-                                </div>
-                                
-                                <Button
-                                  size="sm"
-                                  className={`w-full h-8 text-xs ${
-                                    isUnavailable
-                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' 
-                                      : ''
-                                  }`}
-                                  disabled={!canBorrow}
-                                  onClick={() => {
-                                    if (canBorrow) {
-                                      setSelectedItem(item)
-                                      setIsRequestDialogOpen(true)
-                                    }
-                                  }}
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  {isReserved 
-                                    ? 'Reserved' 
-                                    : isBorrowed
-                                      ? 'Already Borrowed'
-                                      : item.available_quantity === 0 
-                                        ? 'Out of Stock' 
-                                        : 'Reserve'
-                                  }
-                                </Button>
+                                {/* Back Image */}
+                                {item.back_image_url && (
+                                  <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-100' : 'opacity-0'}`}>
+                                    <img
+                                      src={item.back_image_url}
+                                      alt={`Back view of ${item.item_name}`}
+                                      className="w-full h-full object-contain rounded-md bg-gray-50"
+                                      onError={(e) => {
+                                        e.currentTarget.src = "/placeholder.jpg"
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                {/* Navigation Buttons */}
+                                {item.back_image_url && (
+                                  <>
+                                    {!imageStates[item.id] && (
+                                      <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                                        onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
+                                      >
+                                        <ChevronRight className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                    {imageStates[item.id] && (
+                                      <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                                        onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
+                                      >
+                                        <ChevronLeft className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                                {/* Image Indicators */}
+                                {item.back_image_url && (
+                                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                                    <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${!imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                                    <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                                  </div>
+                                )}
                               </div>
+                            )}
+                            <CardContent className="flex-grow flex flex-col p-3 pt-2">
+                              {/* Remove space-y-3 from the details area to eliminate extra gap */}
+                              <div className="flex-grow">
+                                <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                                  <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
+                                  <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0">
+                                  <span className="font-medium">Location:</span> {item.item_location}
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                className={`w-full h-8 text-xs mt-3 ${
+                                  isUnavailable
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' 
+                                    : ''
+                                }`}
+                                disabled={!canBorrow}
+                                onClick={() => {
+                                  if (canBorrow) {
+                                    setSelectedItem(item)
+                                    setIsRequestDialogOpen(true)
+                                  }
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                {isReserved 
+                                  ? 'Reserved' 
+                                  : isBorrowed
+                                    ? 'Already Borrowed'
+                                    : item.available_quantity === 0 
+                                      ? 'Out of Stock' 
+                                      : 'Reserve'
+                                }
+                              </Button>
                             </CardContent>
                           </Card>
                         )
@@ -916,6 +936,113 @@ export function LibraryDashboard() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Info Dialog for (i) button */}
+      <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Library Item Details</DialogTitle>
+          </DialogHeader>
+          {infoDialogOpen && (() => {
+            const item = items.find(i => i.id === infoDialogOpen)
+            if (!item) return null
+            return (
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Left: Details */}
+                <div className="flex-1 space-y-4 min-w-0">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{item.item_name}</h2>
+                    <p className="text-sm text-gray-500">{item.item_category}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-sm">Total Quantity</h4>
+                      <p className="text-lg font-semibold text-gray-900">{item.item_quantity}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm">Available</h4>
+                      <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>{item.available_quantity}</p>
+                    </div>
+                  </div>
+                  {item.item_description && (
+                    <div>
+                      <h4 className="font-medium text-sm">Description</h4>
+                      <p className="text-sm text-gray-600">{item.item_description}</p>
+                    </div>
+                  )}
+                  {item.item_specification && (
+                    <div>
+                      <h4 className="font-medium text-sm">Specifications</h4>
+                      <p className="text-sm text-gray-600">{item.item_specification}</p>
+                    </div>
+                  )}
+                </div>
+                {/* Right: Image Preview with toggle */}
+                <div className="flex flex-col items-center justify-center w-full md:w-64">
+                  <div className="relative w-full h-64">
+                    {/* Front Image */}
+                    <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}>
+                      <img
+                        src={item.image_url || '/placeholder.jpg'}
+                        alt={`Front view of ${item.item_name}`}
+                        className="w-full h-full object-contain rounded-md bg-gray-50"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.jpg"
+                        }}
+                      />
+                    </div>
+                    {/* Back Image */}
+                    {item.back_image_url && (
+                      <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-100' : 'opacity-0'}`}>
+                        <img
+                          src={item.back_image_url}
+                          alt={`Back view of ${item.item_name}`}
+                          className="w-full h-full object-contain rounded-md bg-gray-50"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.jpg"
+                          }}
+                        />
+                      </div>
+                    )}
+                    {/* Navigation Buttons */}
+                    {item.back_image_url && (
+                      <>
+                        {!imageStates[item.id] && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                            onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
+                          >
+                            <ChevronRight className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {imageStates[item.id] && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                            onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
+                          >
+                            <ChevronLeft className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    {/* Image Indicators */}
+                    {item.back_image_url && (
+                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                        <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${!imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                        <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

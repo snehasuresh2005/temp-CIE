@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import React from "react"
 
 // Utility functions - declared at module scope for hoisting
 export function isOverdue(expectedReturnDate: string): boolean {
@@ -104,10 +105,15 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
   const [returnDialogOpen, setReturnDialogOpen] = useState<string | null>(null)
   const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
   const [currentView, setCurrentView] = useState<ViewType>('available')
+  const [showBack, setShowBack] = useState(false);
 
   useEffect(() => {
     fetchData()
   }, [user])
+
+  useEffect(() => {
+    setShowBack(false);
+  }, [infoDialogOpen]);
 
   // Validation functions
   const isFormValid = () => {
@@ -268,7 +274,6 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
           return_date: new Date().toISOString(),
         }),
       })
-
       if (response.ok) {
         toast({
           title: "Return Confirmed",
@@ -292,7 +297,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
 
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toUpperCase()) {
       case "PENDING":
         return "bg-yellow-100 text-yellow-800"
       case "APPROVED":
@@ -314,19 +319,19 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending":
+    switch (status.toUpperCase()) {
+      case "PENDING":
         return <Clock className="h-4 w-4" />
-      case "approved":
+      case "APPROVED":
         return <CheckCircle className="h-4 w-4" />
-      case "rejected":
+      case "REJECTED":
         return <XCircle className="h-4 w-4" />
-      case "collected":
+      case "COLLECTED":
         return <Package className="h-4 w-4" />
 
-      case "user_returned":
+      case "USER_RETURNED":
         return <CheckCircle className="h-4 w-4" />
-      case "returned":
+      case "RETURNED":
         return <CheckCircle className="h-4 w-4" />
       default:
         return <Clock className="h-4 w-4" />
@@ -440,6 +445,29 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
         </Card>
         
         <Card 
+          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-green-100 hover:border-green-300 ${
+            currentView === 'active' ? 'ring-2 ring-green-500 bg-green-50 border-green-200' : 'hover:ring-1 hover:ring-green-200'
+          }`}
+          onClick={() => setCurrentView('active')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Clock className={`h-5 w-5 transition-colors duration-200 ${
+                currentView === 'active' ? 'text-green-600' : 'text-green-500 group-hover:text-green-700'
+              }`} />
+              <div>
+                <p className={`text-2xl font-bold transition-colors duration-200 ${
+                  currentView === 'active' ? 'text-green-700' : 'text-gray-900'
+                }`}>{activeRequests.length}</p>
+                <p className={`text-sm transition-colors duration-200 ${
+                  currentView === 'active' ? 'text-green-600' : 'text-gray-600'
+                }`}>Active Requests</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-100 hover:border-blue-300 ${
             currentView === 'requests' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' : 'hover:ring-1 hover:ring-blue-200'
           }`}
@@ -462,28 +490,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
           </CardContent>
         </Card>
         
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-green-100 hover:border-green-300 ${
-            currentView === 'active' ? 'ring-2 ring-green-500 bg-green-50 border-green-200' : 'hover:ring-1 hover:ring-green-200'
-          }`}
-          onClick={() => setCurrentView('active')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className={`h-5 w-5 transition-colors duration-200 ${
-                currentView === 'active' ? 'text-green-600' : 'text-green-500 group-hover:text-green-700'
-              }`} />
-              <div>
-                <p className={`text-2xl font-bold transition-colors duration-200 ${
-                  currentView === 'active' ? 'text-green-700' : 'text-gray-900'
-                }`}>{activeRequests.length}</p>
-                <p className={`text-sm transition-colors duration-200 ${
-                  currentView === 'active' ? 'text-green-600' : 'text-gray-600'
-                }`}>Active Requests</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
         
         <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-red-100 hover:border-red-300 ${
@@ -889,21 +896,6 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                               </div>
                             </Badge>
                             
-                            {request.status === "COLLECTED" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setReturnDialogOpen(request.id)}
-                              >
-                                I Returned It
-                              </Button>
-                            )}
-                            
-                            {request.status === "USER_RETURNED" && (
-                              <div className="text-xs text-purple-600 font-medium">
-                                Waiting for coordinator verification
-                              </div>
-                            )}
                           </div>
                         </div>
                         
@@ -962,77 +954,15 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                                   Due: {new Date(request.required_date).toLocaleDateString()}
                                 </span>
                               </div>
-        {/* Required date and project */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="required_date">Return Date *</Label>
-                                  <Input
-                                    id="required_date"
-                                    type="date"
-                                    value={newRequest.required_date}
-                                    onChange={(e) => setNewRequest((prev) => ({ ...prev, required_date: e.target.value }))}
-                                    min={new Date().toISOString().split("T")[0]}
-                                    className="text-base py-2 border-gray-200 rounded-lg"
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="project">Project *</Label>
-                                  <Select
-                                    value={newRequest.project_id}
-                                    onValueChange={(value) => setNewRequest((prev) => ({ ...prev, project_id: value }))}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a project" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {selectedComponent.projects.length > 0 ? (
-                                        selectedComponent.projects
-                                          .filter(componentProject => {
-                                            const fullProject = projects.find(p => p.id === componentProject.id);
-                                            return fullProject?.status === "ONGOING";
-                                          })
-                                          .map((componentProject) => {
-                                            const fullProject = projects.find(p => p.id === componentProject.id)
-                                            return (
-                                              <SelectItem
-                                                key={componentProject.id}
-                                                value={componentProject.id}
-                                              >
-                                                <div className="flex flex-col">
-                                                  <div className="flex items-center gap-2">
-                                                    <span>{componentProject.name}</span>
-                                                    {fullProject?.status === "ONGOING" && (
-                                                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                                                        Available
-                                                      </Badge>
-                                                    )}
-                                                  </div>
-                                                  <span className={`text-xs ${getProjectStatusColor(componentProject.id)}`}>
-                                                    {getProjectStatusText(componentProject.id)}
-                                                  </span>
-                                                </div>
-                                              </SelectItem>
-                                            )
-                                          })
-                                      ) : (
-                                        <div className="p-4 text-sm text-center text-gray-500">
-                                          No projects associated with this component.
-                                        </div>
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-
                               {request.project_id && (
                                 <div className="mt-1">
                                   <p className="text-xs text-green-600">
                                     Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
                                   </p>
-
                                 </div>
                               )}
                             </div>
                           </div>
-                          
                           <div className="flex items-center space-x-2">
                             <Badge className={`${getStatusColor(request.status)} text-xs px-2 py-1`}>
                               <div className="flex items-center space-x-1">
@@ -1040,7 +970,6 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                                 <span>{request.status}</span>
                               </div>
                             </Badge>
-                            
                             {request.status === "COLLECTED" && (
                               <Button
                                 size="sm"
@@ -1050,15 +979,28 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                                 I Returned It
                               </Button>
                             )}
-                            
                             {request.status === "USER_RETURNED" && (
                               <div className="text-xs text-purple-600 font-medium">
                                 Waiting for coordinator verification
                               </div>
                             )}
+                            {request.status === "RETURNED" && (
+                              <p className="text-xs text-green-600">
+                                ✅ Returned
+                              </p>
+                            )}
+                            {request.status === "REJECTED" && (
+                              <p className="text-xs text-red-600">
+                                ❌ Rejected
+                              </p>
+                            )}
+                            {request.status === "COLLECTED" && isOverdue(request.required_date) && (
+                              <p className="text-xs text-red-600 font-medium mt-1">
+                                ⚠️ {getOverdueDays(request.required_date)}d overdue
+                              </p>
+                            )}
                           </div>
                         </div>
-                        
                         {request.faculty_notes && (
                           <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
                             <strong>Faculty Notes:</strong> {request.faculty_notes}
@@ -1187,96 +1129,93 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
 
       {/* Component Info Dialog */}
       <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl"> {/* Increase width for side-by-side layout */}
           <DialogHeader>
             <DialogTitle>Component Details</DialogTitle>
           </DialogHeader>
-          {infoDialogOpen && (() => {
-            const component = components.find(c => c.id === infoDialogOpen)
-            if (!component) return null
-            
+          {(() => {
+            if (!infoDialogOpen) return null;
+            const component = components.find(c => c.id === infoDialogOpen);
+            if (!component) return null;
+            const isAvailable = component.available_quantity > 0;
             return (
-              <div className="space-y-4">
-                {/* Component Name and Category */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-5 w-5 text-gray-500" />
-                    <h3 className="text-lg font-semibold">{component.component_name}</h3>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {component.component_category}
-                  </Badge>
-                </div>
-
-                {/* Description */}
-                {/* <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Description</h4>
-                  <p className="text-sm text-gray-600">{component.component_description}</p>
-                </div> */}
-
-                {/* Specifications */}
-                {/* <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Specifications</h4>
-                  <p className="text-sm text-gray-600">{component.component_specification}</p>
-                </div> */}
-
-                {/* Availability */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-sm">Total Quantity</h4>
-                    <p className="text-lg font-semibold text-gray-900">{component.component_quantity}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-sm">Available</h4>
-                    <p className={`text-lg font-semibold ${component.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {component.available_quantity}
-                    </p>
-                  </div>
-                </div>
-
-                {/* On Loan */}
-                <div className="space-y-1">
-                  <h4 className="font-medium text-sm">Currently On Loan</h4>
-                  <p className="text-lg font-semibold text-blue-600">
-                    {component.component_quantity - component.available_quantity}
-                  </p>
-                </div>
-
-                {/* Location */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Location</h4>
-                  <p className="text-sm text-gray-600">{component.component_location}</p>
-                </div>
-
-                {/* Associated Projects */}
-                {component.projects && component.projects.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Associated Projects</h4>
-                    <div className="space-y-1">
-                      {component.projects.map((project) => (
-                        <Badge key={project.id} variant="outline" className="text-xs mr-1">
-                          {project.name}
-                        </Badge>
-                      ))}
+              <div className="flex flex-col md:flex-row gap-8">
+                {/* Left: Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Package className="h-5 w-5 text-gray-500" />
+                        {component.component_name}
+                      </h3>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isAvailable ? 'Available' : 'Not Available'}</span>
                     </div>
+                    <div className="flex flex-row items-end justify-center pl-8">
+                      <div>
+                        <h4 className="font-medium text-sm">Total Quantity</h4>
+                        <p className="text-lg font-semibold text-gray-900 text-center">{component?.component_quantity}</p>
+                      </div>
+                      <div className="ml-16 text-center">
+                        <h4 className="font-medium text-sm">Available</h4>
+                        <p className={`text-lg font-semibold ${isAvailable ? 'text-green-600' : 'text-red-600'} text-center`}>{component?.available_quantity}</p>
+                      </div>
+                    </div>
+                    {component?.component_specification && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Specifications</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-line">{component?.component_specification}</p>
+                      </div>
+                    )}
+                    {component?.component_description && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Description</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-line">{component?.component_description}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {/* Domain */}
-                {component.domain && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Domain</h4>
-                    <Badge variant="outline" className="text-xs">
-                      {component.domain.name}
-                    </Badge>
+                </div>
+                {/* Right: Image Preview */}
+                <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+                  <div className="relative w-full max-w-xs aspect-square bg-gray-50 rounded-lg border flex items-center justify-center overflow-hidden">
+                    {component.image_url || component.back_image_url ? (
+                      <>
+                        <img
+                          src={(showBack && component.back_image_url ? component.back_image_url : component.image_url || component.back_image_url) || undefined}
+                          alt={showBack ? `Back view of ${component.component_name}` : `Front view of ${component.component_name}`}
+                          className="object-contain w-full h-full"
+                          onError={e => { e.currentTarget.src = '/placeholder.jpg'; }}
+                        />
+                        {component.back_image_url && component.image_url && (
+                          <>
+                            {/* Left arrow (show only when on back) */}
+                            {showBack && (
+                              <button
+                                className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                onClick={() => setShowBack(false)}
+                                type="button"
+                                aria-label="Show Front"
+                              >
+                                <ChevronLeft className="h-6 w-6" />
+                              </button>
+                            )}
+                            {/* Right arrow (show only when on front) */}
+                            {!showBack && (
+                              <button
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                onClick={() => setShowBack(true)}
+                                type="button"
+                                aria-label="Show Back"
+                              >
+                                <ChevronRight className="h-6 w-6" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">No Image</span>
+                    )}
                   </div>
-                )}
-
-                {/* Availability Status */}
-                <div className="pt-2 border-t">
-                  <Badge className={`${getAvailabilityColor(component.available_quantity, component.component_quantity)}`}>
-                    {getAvailabilityText(component.available_quantity, component.component_quantity)}
-                  </Badge>
                 </div>
               </div>
             )
@@ -1285,4 +1224,4 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
       </Dialog>
     </div>
   )
-} 
+}

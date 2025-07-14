@@ -1638,8 +1638,7 @@ export function ManageLibrary() {
                   )}
                   <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
                     <div><span className="font-semibold">Total:</span> {item.item_quantity}</div>
-                    <div><span className="font-semibold">Available:</span> {item.availableQuantity}</div>
-                    <div><span className="font-semibold">Location:</span> {item.item_location}</div>
+                     <div><span className="font-semibold">Location:</span> {item.item_location}</div>
                   </div>
                   <div className="flex space-x-2 pt-2">
                     <Button
