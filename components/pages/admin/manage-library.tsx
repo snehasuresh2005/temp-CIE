@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -105,10 +105,14 @@ export function ManageLibrary() {
   const [newCategory, setNewCategory] = useState("")
   const [isSavingCategory, setIsSavingCategory] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
+  const [isDeleteCategoryDialogOpen, setIsDeleteCategoryDialogOpen] = useState(false)
   const [showAddLocation, setShowAddLocation] = useState(false)
   const [newLocation, setNewLocation] = useState("")
   const [isSavingLocation, setIsSavingLocation] = useState(false)
-  const [locationOptions, setLocationOptions] = useState<string[]>(["Library A", "Library B", "Reading Room", "Storage Room"])
+  const [locationToDelete, setLocationToDelete] = useState<string | null>(null)
+  const [isDeleteLocationDialogOpen, setIsDeleteLocationDialogOpen] = useState(false)
+  const [locationOptions, setLocationOptions] = useState<string[]>([])
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<LibraryItem | null>(null)
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
@@ -125,6 +129,7 @@ export function ManageLibrary() {
   useEffect(() => {
     fetchItems()
     fetchCategories()
+    fetchLocations()
     fetchFaculty()
   }, [])
 
@@ -135,6 +140,68 @@ export function ManageLibrary() {
     console.log("ManageLibrary - User name:", user?.name)
     console.log("ManageLibrary - User role:", user?.role)
   }, [user])
+
+  // Refs for click-outside detection
+  const locationInputRef = useRef<HTMLDivElement>(null)
+  const categoryInputRef = useRef<HTMLDivElement>(null)
+
+  // Click-outside detection for location input
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showAddLocation &&
+        locationInputRef.current &&
+        !locationInputRef.current.contains(event.target as Node)
+      ) {
+        setShowAddLocation(false)
+        setNewLocation("")
+      }
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showAddLocation) {
+        setShowAddLocation(false)
+        setNewLocation("")
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscapeKey)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [showAddLocation])
+
+  // Click-outside detection for category input
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showAddCategory &&
+        categoryInputRef.current &&
+        !categoryInputRef.current.contains(event.target as Node)
+      ) {
+        setShowAddCategory(false)
+        setNewCategory("")
+      }
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showAddCategory) {
+        setShowAddCategory(false)
+        setNewCategory("")
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscapeKey)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [showAddCategory])
 
   const fetchItems = async () => {
     try {
@@ -192,6 +259,20 @@ export function ManageLibrary() {
       }
     } catch (e) {
       console.error("Failed to fetch faculty", e);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch("/api/library-items/locations");
+      if (res.ok) {
+        const data = await res.json();
+        setLocationOptions(data.locations || []);
+      }
+    } catch (e) {
+      console.error("Error fetching locations:", e);
+      // Set default locations as fallback
+      setLocationOptions(["Library A", "Library B", "Reading Room", "Storage Room"]);
     }
   };
 
@@ -367,14 +448,16 @@ export function ManageLibrary() {
     setBackImageFile(null)
     setFrontImagePreview(null)
     setBackImagePreview(null)
-    setCategoryOptions(["General"])
     setNewCategory("")
     setIsSavingCategory(false)
     setShowAddCategory(false)
+    setCategoryToDelete(null)
+    setIsDeleteCategoryDialogOpen(false)
     setShowAddLocation(false)
     setNewLocation("")
     setIsSavingLocation(false)
-    setLocationOptions(["Library A", "Library B", "Reading Room", "Storage Room"])
+    setLocationToDelete(null)
+    setIsDeleteLocationDialogOpen(false)
     setIsEditDialogOpen(false)
     setEditingItem(null)
     setImageStates({})
@@ -778,6 +861,164 @@ export function ManageLibrary() {
     }
   }
 
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return
+    setIsSavingCategory(true)
+    try {
+      const res = await fetch("/api/library-items/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: newCategory.trim() })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        const formattedCategory = data.category
+        setCategoryOptions((prev) => [...prev, formattedCategory])
+        setNewItem((prev) => ({ ...prev, item_category: formattedCategory }))
+        setNewCategory("")
+        setShowAddCategory(false)
+        toast({ title: "Category added!", description: "New category added successfully." })
+      } else {
+        const error = await res.json()
+        toast({ 
+          title: "Error", 
+          description: error.error || "Failed to add category.", 
+          variant: "destructive" 
+        })
+      }
+    } catch (error) {
+      console.error("Error adding category:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to add category.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsSavingCategory(false)
+    }
+  }
+
+  const handleDeleteCategory = async (category: string) => {
+    try {
+      const res = await fetch(`/api/library-items/categories?category=${encodeURIComponent(category)}`, {
+        method: "DELETE"
+      })
+      
+      if (res.ok) {
+        setCategoryOptions((prev) => prev.filter(cat => cat !== category))
+        toast({ 
+          title: "Category removed!", 
+          description: "Category removed successfully." 
+        })
+      } else {
+        const error = await res.json()
+        if (error.componentsUsing) {
+          toast({ 
+            title: "Cannot delete category", 
+            description: `Category is being used by ${error.count} item(s). Remove items first.`, 
+            variant: "destructive" 
+          })
+        } else {
+          toast({ 
+            title: "Error", 
+            description: error.error || "Failed to delete category.", 
+            variant: "destructive" 
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting category:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete category.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsDeleteCategoryDialogOpen(false)
+      setCategoryToDelete(null)
+    }
+  }
+
+  const handleAddLocation = async () => {
+    if (!newLocation.trim()) return
+    setIsSavingLocation(true)
+    try {
+      const res = await fetch("/api/library-items/locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: newLocation.trim() })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        const formattedLocation = data.location
+        setLocationOptions((prev) => [...prev, formattedLocation])
+        setNewItem((prev) => ({ ...prev, item_location: formattedLocation }))
+        setNewLocation("")
+        setShowAddLocation(false)
+        toast({ title: "Location added!", description: "New location added successfully." })
+      } else {
+        const error = await res.json()
+        toast({ 
+          title: "Error", 
+          description: error.error || "Failed to add location.", 
+          variant: "destructive" 
+        })
+      }
+    } catch (error) {
+      console.error("Error adding location:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to add location.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsSavingLocation(false)
+    }
+  }
+
+  const handleDeleteLocation = async (location: string) => {
+    try {
+      const res = await fetch(`/api/library-items/locations?location=${encodeURIComponent(location)}`, {
+        method: "DELETE"
+      })
+      
+      if (res.ok) {
+        setLocationOptions((prev) => prev.filter(loc => loc !== location))
+        toast({ 
+          title: "Location removed!", 
+          description: "Location removed successfully." 
+        })
+      } else {
+        const error = await res.json()
+        if (error.componentsUsing) {
+          toast({ 
+            title: "Cannot delete location", 
+            description: `Location is being used by ${error.count} item(s). Remove items first.`, 
+            variant: "destructive" 
+          })
+        } else {
+          toast({ 
+            title: "Error", 
+            description: error.error || "Failed to delete location.", 
+            variant: "destructive" 
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting location:", error)
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete location.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setIsDeleteLocationDialogOpen(false)
+      setLocationToDelete(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -902,45 +1143,145 @@ export function ManageLibrary() {
                     </div>
                     <div className="flex gap-3 items-end">
                       <div className="flex-1">
-                        <Label htmlFor="location">Location *</Label>
-                        <Select 
-                          value={editingItem ? editingItem.item_location : newItem.item_location} 
-                          onValueChange={(value) => editingItem
-                            ? setEditingItem((prev) => prev && { ...prev, item_location: value })
-                            : setNewItem((prev) => ({ ...prev, item_location: value }))}
-                        >
-                          <SelectTrigger className={`mt-1 ${formErrors.item_location ? 'border-red-500' : ''}`}>
-                            <SelectValue placeholder="Select location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {locationOptions.map((location) => (
-                              <SelectItem key={location} value={location}>
-                                {location}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="location">Location *</Label>
+                          <div className="flex space-x-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowAddLocation(true)}
+                              className="h-6 w-6 p-0"
+                              title="Add location"
+                              aria-label="Add location"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            {newItem.item_location && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setLocationToDelete(newItem.item_location)
+                                  setIsDeleteLocationDialogOpen(true)
+                                }}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                title="Delete location"
+                                aria-label="Delete location"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {showAddLocation ? (
+                          <div ref={locationInputRef} className="flex gap-2 mt-1">
+                            <Input
+                              placeholder="Enter location (e.g., Library A, Storage Room)"
+                              value={newLocation}
+                              onChange={(e) => setNewLocation(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleAddLocation}
+                              disabled={!newLocation.trim() || isSavingLocation}
+                            >
+                              {isSavingLocation ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select 
+                            value={editingItem ? editingItem.item_location : newItem.item_location} 
+                            onValueChange={(value) => editingItem
+                              ? setEditingItem((prev) => prev && { ...prev, item_location: value })
+                              : setNewItem((prev) => ({ ...prev, item_location: value }))}
+                          >
+                            <SelectTrigger className={`mt-1 ${formErrors.item_location ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="Select location" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {locationOptions.map((location) => (
+                                <SelectItem key={location} value={location}>
+                                  {location}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                         {formErrors.item_location && <p className="text-red-500 text-xs mt-1">{formErrors.item_location}</p>}
                       </div>
                       <div className="flex-1">
-                        <Label htmlFor="category">Category *</Label>
-                        <Select 
-                          value={editingItem ? editingItem.item_category : newItem.item_category} 
-                          onValueChange={(value) => editingItem
-                            ? setEditingItem((prev) => prev && { ...prev, item_category: value })
-                            : setNewItem((prev) => ({ ...prev, item_category: value }))}
-                        >
-                          <SelectTrigger className={`mt-1 ${formErrors.item_category ? 'border-red-500' : ''}`}>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categoryOptions.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="category">Category *</Label>
+                          <div className="flex space-x-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowAddCategory(true)}
+                              className="h-6 w-6 p-0"
+                              title="Add category"
+                              aria-label="Add category"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            {newItem.item_category && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setCategoryToDelete(newItem.item_category)
+                                  setIsDeleteCategoryDialogOpen(true)
+                                }}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                title="Delete category"
+                                aria-label="Delete category"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {showAddCategory ? (
+                          <div ref={categoryInputRef} className="flex gap-2 mt-1">
+                            <Input
+                              placeholder="Enter category (e.g., Computer Science, Electronics)"
+                              value={newCategory}
+                              onChange={(e) => setNewCategory(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleAddCategory}
+                              disabled={!newCategory.trim() || isSavingCategory}
+                            >
+                              {isSavingCategory ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select 
+                            value={editingItem ? editingItem.item_category : newItem.item_category} 
+                            onValueChange={(value) => editingItem
+                              ? setEditingItem((prev) => prev && { ...prev, item_category: value })
+                              : setNewItem((prev) => ({ ...prev, item_category: value }))}
+                          >
+                            <SelectTrigger className={`mt-1 ${formErrors.item_category ? 'border-red-500' : ''}`}>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categoryOptions.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                         {formErrors.item_category && <p className="text-red-500 text-xs mt-1">{formErrors.item_category}</p>}
                       </div>
                       <div className="w-20">
@@ -1465,6 +1806,94 @@ export function ManageLibrary() {
               Delete
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Category Confirmation Dialog */}
+      <Dialog open={isDeleteCategoryDialogOpen} onOpenChange={setIsDeleteCategoryDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete Category
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this category? This action cannot be undone if the category is not being used by any items.
+            </DialogDescription>
+          </DialogHeader>
+          {categoryToDelete && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-medium">Category: {categoryToDelete}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  This will remove the category from the available options. Items currently using this category will not be affected.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteCategoryDialogOpen(false)
+                    setCategoryToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => categoryToDelete && handleDeleteCategory(categoryToDelete)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Category
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Location Confirmation Dialog */}
+      <Dialog open={isDeleteLocationDialogOpen} onOpenChange={setIsDeleteLocationDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Delete Location
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this location? This action cannot be undone if the location is not being used by any items.
+            </DialogDescription>
+          </DialogHeader>
+          {locationToDelete && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="font-medium">Location: {locationToDelete}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  This will remove the location from the available options. Items currently using this location will not be affected.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteLocationDialogOpen(false)
+                    setLocationToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => locationToDelete && handleDeleteLocation(locationToDelete)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Location
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

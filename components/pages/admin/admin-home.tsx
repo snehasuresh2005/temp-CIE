@@ -2,57 +2,87 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, GraduationCap, BookOpen, MapPin, Wrench, TrendingUp } from "lucide-react"
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
+import { useAuth } from "@/components/auth-provider"
 
 interface AdminHomeProps {
   onPageChange?: (page: string) => void
 }
 
 export function AdminHome({ onPageChange }: AdminHomeProps) {
-  const stats = [
+  const { user } = useAuth()
+  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user?.id) return
+      
+      try {
+        const response = await fetch('/api/dashboard/admin', {
+          headers: {
+            'x-user-id': user.id.toString()
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setDashboardData(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [user?.id])
+
+  const stats = dashboardData ? [
     {
       title: "Faculty",
-      value: "24 (*)",
+      value: dashboardData.stats.faculty.toString(),
       description: "Active",
       icon: Users,
       color: "text-blue-600",
     },
     {
       title: "Students",
-      value: "342 (*)",
+      value: dashboardData.stats.students.toString(),
       description: "Enrolled",
       icon: GraduationCap,
       color: "text-green-600",
     },
     {
       title: "Courses",
-      value: "18 (*)",
+      value: dashboardData.stats.courses.toString(),
       description: "Currently offered",
       icon: BookOpen,
       color: "text-purple-600",
     },
     {
       title: "Locations",
-      value: "12 (*)",
-      description: "Available classrooms",
+      value: dashboardData.stats.locations.toString(),
+      description: "Available spaces",
       icon: MapPin,
       color: "text-orange-600",
     },
     {
       title: "Lab Components",
-      value: "156 (*)",
+      value: dashboardData.stats.labComponents.toString(),
       description: "Total inventory",
       icon: Wrench,
       color: "text-red-600",
     },
     {
-      title: "System Usage ??",
-      value: "94% (*)",
+      title: "System Usage(*)",
+      value: `${dashboardData.stats.systemUsage}%`,
       description: "Active user rate",
       icon: TrendingUp,
       color: "text-indigo-600",
     },
-  ]
+  ] : []
 
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const [highlightQuickActions, setHighlightQuickActions] = useState(false);
@@ -85,94 +115,169 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
-              {stats.map((stat, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
+              {loading ? (
+                Array.from({ length: 6 }).map((_, index) => (
+                  <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-24"></div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                stats.map((stat, index) => (
+                  <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                      <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stat.value}</div>
+                      <p className="text-xs text-muted-foreground">{stat.description}</p>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                 <CardHeader>
-                  <CardTitle>System Alerts (*)</CardTitle>
+                  <CardTitle>System Alerts</CardTitle>
                   <CardDescription>Critical items requiring attention</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center space-x-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-red-800">Low Stock Alert</p>
-                        <p className="text-xs text-red-600">Arduino Uno - Only 2 units remaining</p>
+                    {loading ? (
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg animate-pulse">
+                          <div className="w-2 h-2 bg-gray-200 rounded-full"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-32"></div>
+                            <div className="h-3 bg-gray-200 rounded w-48"></div>
+                          </div>
+                          <div className="h-3 bg-gray-200 rounded w-12"></div>
+                        </div>
+                      ))
+                    ) : dashboardData?.alerts?.length > 0 ? (
+                      dashboardData.alerts.map((alert: any, index: number) => {
+                        const colorClasses = {
+                          red: 'bg-red-50 border-red-200',
+                          yellow: 'bg-yellow-50 border-yellow-200',
+                          orange: 'bg-orange-50 border-orange-200',
+                          blue: 'bg-blue-50 border-blue-200',
+                          green: 'bg-green-50 border-green-200'
+                        }[alert.color] || 'bg-gray-50 border-gray-200'
+                        
+                        const textClasses = {
+                          red: 'text-red-800',
+                          yellow: 'text-yellow-800',
+                          orange: 'text-orange-800',
+                          blue: 'text-blue-800',
+                          green: 'text-green-800'
+                        }[alert.color] || 'text-gray-800'
+                        
+                        const dotColor = {
+                          red: 'bg-red-600',
+                          yellow: 'bg-yellow-600',
+                          orange: 'bg-orange-600',
+                          blue: 'bg-blue-600',
+                          green: 'bg-green-600'
+                        }[alert.color] || 'bg-gray-600'
+                        
+                        const priorityColor = {
+                          red: 'text-red-500',
+                          yellow: 'text-yellow-500',
+                          orange: 'text-orange-500',
+                          blue: 'text-blue-500',
+                          green: 'text-green-500'
+                        }[alert.color] || 'text-gray-500'
+                        
+                        return (
+                          <div key={index} className={`flex items-center space-x-3 p-3 border rounded-lg ${colorClasses}`}>
+                            <div className={`w-2 h-2 rounded-full ${dotColor}`}></div>
+                            <div className="flex-1">
+                              <p className={`text-sm font-medium ${textClasses}`}>{alert.message}</p>
+                              {alert.details && (
+                                <p className={`text-xs opacity-75 ${textClasses}`}>{alert.details}</p>
+                              )}
+                            </div>
+                            <span className={`text-xs capitalize ${priorityColor}`}>{alert.priority}</span>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No alerts at this time</p>
+                        <p className="text-xs mt-1">System running smoothly</p>
                       </div>
-                      <span className="text-xs text-red-500">High</span>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-yellow-800">Pending Approvals</p>
-                        <p className="text-xs text-yellow-600">7 faculty applications waiting review</p>
-                      </div>
-                      <span className="text-xs text-yellow-500">Medium</span>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                      <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-orange-800">Overdue Returns</p>
-                        <p className="text-xs text-orange-600">5 lab components overdue for return</p>
-                      </div>
-                      <span className="text-xs text-orange-500">Medium</span>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-800">System Status</p>
-                        <p className="text-xs text-blue-600">All systems operational - 99.9% uptime</p>
-                      </div>
-                      <span className="text-xs text-blue-500">Info</span>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                 <CardHeader>
-                  <CardTitle>Recent Activities (*)</CardTitle>
-                  {/* <CardDescription>Latest system activities</CardDescription> */}
+                  <CardTitle>Recent Activities</CardTitle>
+                  <CardDescription>Latest system activities</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">New faculty member added</p>
-                        <p className="text-xs text-gray-500">Dr. Sarah Johnson - Computer Science</p>
+                    {loading ? (
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className="flex items-center space-x-4 animate-pulse">
+                          <div className="w-2 h-2 bg-gray-200 rounded-full"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-40"></div>
+                            <div className="h-3 bg-gray-200 rounded w-32"></div>
+                          </div>
+                          <div className="h-3 bg-gray-200 rounded w-16"></div>
+                        </div>
+                      ))
+                    ) : dashboardData?.activities?.length > 0 ? (
+                      dashboardData.activities.slice(0, 4).map((activity: any, index: number) => {
+                        const colors = ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-orange-600', 'bg-red-600', 'bg-indigo-600']
+                        const dotColor = colors[index % colors.length]
+                        const timeAgo = new Date(activity.time).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })
+                        return (
+                          <div key={index} className="flex items-center space-x-4">
+                            <div className={`w-2 h-2 rounded-full ${dotColor}`}></div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{activity.message}</p>
+                              <div className="flex items-center space-x-2">
+                                <p className="text-xs text-gray-500">{timeAgo}</p>
+                                {activity.status && (
+                                  <>
+                                <span className="text-xs text-gray-300">•</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      activity.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                      activity.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                      activity.status === 'COLLECTED' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {activity.status}
+                                </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No recent activities</p>
+                        <p className="text-xs mt-1">Activities will appear here</p>
                       </div>
-                      <span className="text-xs text-gray-400">2 hours ago</span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Course updated</p>
-                        <p className="text-xs text-gray-500">CS301 - Database Systems</p>
-                      </div>
-                      <span className="text-xs text-gray-400">4 hours ago</span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Lab components restocked</p>
-                        <p className="text-xs text-gray-500">Arduino Uno boards - 20 units</p>
-                      </div>
-                      <span className="text-xs text-gray-400">1 day ago</span>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -183,7 +288,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                 className={`transform transition-transform duration-300 hover:scale-105 focus:scale-105 ${highlightQuickActions ? 'scale-110 ring-4 ring-blue-400/60 z-20' : ''}`}
               >
                 <CardHeader>
-                  <CardTitle>Quick Actions (*)</CardTitle>
+                  <CardTitle>Quick Actions</CardTitle>
                   <CardDescription>Common administrative tasks</CardDescription>
                 </CardHeader>
                 <CardContent>

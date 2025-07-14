@@ -27,6 +27,17 @@ async function setupTestData() {
     console.log(`Using students: ${students.map(s => s.user.name).join(', ')}`)
     console.log(`Using course: ${courses[0].name}`)
 
+    // Get available locations
+    const locations = await prisma.location.findMany({
+      where: { location_type: 'LAB' },
+      take: 3
+    })
+
+    if (locations.length === 0) {
+      console.error('No lab locations found. Please run the seed script first.')
+      return
+    }
+
     // Create 5 lab components
     console.log('\nCreating lab components...')
     const components = await Promise.all([
@@ -38,7 +49,7 @@ async function setupTestData() {
           component_quantity: 20,
           component_tag_id: 'ARDUINO-001',
           component_category: 'Microcontrollers',
-          component_location: 'Lab A',
+          component_location: locations[0].name,
           created_by: faculty.user.email,
         }
       }),
@@ -50,7 +61,7 @@ async function setupTestData() {
           component_quantity: 10,
           component_tag_id: 'RASPBERRY-001',
           component_category: 'Single Board Computers',
-          component_location: 'Lab B',
+          component_location: locations[1]?.name || locations[0].name,
           created_by: faculty.user.email,
         }
       }),
@@ -62,7 +73,7 @@ async function setupTestData() {
           component_quantity: 30,
           component_tag_id: 'SENSOR-001',
           component_category: 'Sensors',
-          component_location: 'Lab A',
+          component_location: locations[0].name,
           created_by: faculty.user.email,
         }
       }),
@@ -74,7 +85,7 @@ async function setupTestData() {
           component_quantity: 25,
           component_tag_id: 'DISPLAY-001',
           component_category: 'Displays',
-          component_location: 'Lab C',
+          component_location: locations[2]?.name || locations[0].name,
           created_by: faculty.user.email,
         }
       }),
@@ -86,7 +97,7 @@ async function setupTestData() {
           component_quantity: 40,
           component_tag_id: 'MOTOR-001',
           component_category: 'Motors',
-          component_location: 'Lab B',
+          component_location: locations[1]?.name || locations[0].name,
           created_by: faculty.user.email,
         }
       })

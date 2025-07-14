@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft, AlertTriangle } from "lucide-react"
+import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft, AlertTriangle, Info } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -83,6 +83,7 @@ export function LibraryRequest() {
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
   const [returnDialogOpen, setReturnDialogOpen] = useState<string | null>(null)
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
 
   // State for tracking viewed expired requests
   const [viewedExpiredRequests, setViewedExpiredRequests] = useState<Set<string>>(new Set())
@@ -489,9 +490,19 @@ export function LibraryRequest() {
                       </CardTitle>
                       <CardDescription className="text-xs">{item.item_category}</CardDescription>
                     </div>
-                    <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
-                      {getAvailabilityText(item.available_quantity, item.item_quantity)}
-                    </Badge>
+                    <div className="flex items-center space-x-1 flex-shrink-0">
+                      <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5`}>
+                        {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                        onClick={() => setInfoDialogOpen(item.id)}
+                      >
+                        <Info className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col p-3 pt-0">
@@ -514,6 +525,7 @@ export function LibraryRequest() {
                             }}
                           />
                         </div>
+                        
                         {/* Back Image */}
                         {item.back_image_url && (
                           <div 
@@ -531,6 +543,7 @@ export function LibraryRequest() {
                             />
                           </div>
                         )}
+                        
                         {/* Navigation Buttons */}
                         {item.back_image_url && (
                           <>
@@ -556,14 +569,26 @@ export function LibraryRequest() {
                             )}
                           </>
                         )}
+                        
+                        {/* Image Indicators */}
+                        {item.back_image_url && (
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                            <div 
+                              className={`w-1 h-1 rounded-full transition-colors duration-300 ${
+                                !imageStates[item.id] ? 'bg-white' : 'bg-white/50'
+                              }`}
+                            />
+                            <div 
+                              className={`w-1 h-1 rounded-full transition-colors duration-300 ${
+                                imageStates[item.id] ? 'bg-white' : 'bg-white/50'
+                              }`}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                     
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-xs text-gray-600 line-clamp-2">{item.item_description}</p>
-                      </div>
-                      
+                    <div className="space-y-1">
                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
                         <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
                         <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
@@ -574,7 +599,7 @@ export function LibraryRequest() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mt-3">
                     <Dialog open={isRequestDialogOpen && selectedItem?.id === item.id} onOpenChange={(isOpen) => {
                       setIsRequestDialogOpen(isOpen)
@@ -751,6 +776,84 @@ export function LibraryRequest() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Library Item Info Dialog */}
+      <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Library Item Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this library item
+            </DialogDescription>
+          </DialogHeader>
+          {infoDialogOpen && (() => {
+            const item = items.find(i => i.id === infoDialogOpen)
+            if (!item) return null
+            
+            return (
+              <div className="space-y-4">
+                {/* Item Name and Category */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-5 w-5 text-gray-500" />
+                    <h3 className="text-lg font-semibold">{item.item_name}</h3>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {item.item_category}
+                  </Badge>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Description</h4>
+                  <p className="text-sm text-gray-600">{item.item_description}</p>
+                </div>
+
+                {/* Specifications */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Specifications</h4>
+                  <p className="text-sm text-gray-600">{item.item_specification}</p>
+                </div>
+
+                {/* Availability */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-sm">Total Quantity</h4>
+                    <p className="text-lg font-semibold text-gray-900">{item.item_quantity}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-sm">Available</h4>
+                    <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {item.available_quantity}
+                    </p>
+                  </div>
+                </div>
+
+                {/* On Loan */}
+                <div className="space-y-1">
+                  <h4 className="font-medium text-sm">Currently On Loan</h4>
+                  <p className="text-lg font-semibold text-blue-600">
+                    {item.item_quantity - item.available_quantity}
+                  </p>
+                </div>
+
+                {/* Location */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Location</h4>
+                  <p className="text-sm text-gray-600">{item.item_location}</p>
+                </div>
+
+                {/* Availability Status */}
+                <div className="pt-2 border-t">
+                  <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)}`}>
+                    {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                  </Badge>
+                </div>
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

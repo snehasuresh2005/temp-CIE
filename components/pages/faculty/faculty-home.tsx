@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/components/auth-provider"
-import { Users, BookOpen, ClipboardCheck, Clock, AlertTriangle, CheckCircle } from "lucide-react"
+import { Users, BookOpen, ClipboardCheck, Clock, AlertTriangle, CheckCircle, Calendar, MapPin, FolderOpen } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
 import { ManageCourses } from "@/components/pages/admin/manage-courses"
 
@@ -13,6 +13,7 @@ interface FacultyHomeProps {
 export function FacultyHome({ onPageChange }: FacultyHomeProps) {
   const { user } = useAuth()
   const [courses, setCourses] = useState([])
+  const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const [highlightQuickActions, setHighlightQuickActions] = useState(false);
@@ -23,122 +24,98 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
   };
 
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchDashboardData = async () => {
+      if (!user?.id) return
+      
       setLoading(true)
       try {
-        const res = await fetch("/api/courses")
-        const data = await res.json()
-        // Only show courses created by this faculty
-        const filteredCourses = data.courses.filter((c: any) => c.created_by === user?.id)
-        setCourses(filteredCourses)
-        console.log("Faculty courses:", filteredCourses)
-      } catch (e) {
+        const response = await fetch('/api/dashboard/faculty', {
+          headers: {
+            'x-user-id': user.id
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setDashboardData(data)
+          setCourses(data.courses || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
         setCourses([])
+        setDashboardData(null)
       } finally {
         setLoading(false)
       }
     }
-    if (user?.id) fetchCourses()
+
+    fetchDashboardData()
   }, [user?.id])
 
-  const stats = [
+  const stats = dashboardData ? [
     {
       title: "Courses",
-      value: courses.length.toString(),
+      value: (dashboardData.stats.courses || 0).toString(),
       description: "created courses",
       icon: BookOpen,
       color: "text-blue-600",
     },
     {
       title: "Students",
-      value: "67",
-      description: "Across all classes",
+      value: (dashboardData.stats.students || 0).toString(),
+      description: "Enrolled to your course",
       icon: Users,
       color: "text-green-600",
     },
     {
       title: "Requests",
-      value: "3",
-      description: "Lab component requests",
+      value: (dashboardData.stats.pendingRequests || 0).toString(),
+      description: "Pending approvals",
       icon: Clock,
       color: "text-orange-600",
     },
     {
       title: "Attendance Rate",
-      value: "92%",
+      value: `${dashboardData.stats.attendanceRate || 0}%`,
       description: "This semester",
       icon: ClipboardCheck,
       color: "text-purple-600",
     },
     {
       title: "Bookings",
-      value: "5",
-      description: "Upcoming location bookings",
+      value: (dashboardData.stats.upcomingBookings || 0).toString(),
+      description: "Upcoming bookings",
       icon: CheckCircle,
       color: "text-pink-600",
     },
     {
-      title: "Pending Approvals",
-      value: "2",
-      description: "Requests to review",
+      title: "Avg Grade(*)",
+      value: (dashboardData.stats.avgGradeThisSem || "N/A").toString(),
+      description: "This semester",
       icon: AlertTriangle,
       color: "text-yellow-600",
     },
-  ]
+  ] : []
 
-  const recentActivities = [
-    {
-      type: "request",
-      message: "New lab component request from Jane Doe",
-      time: "2 hours ago",
-      icon: Clock,
-      color: "text-orange-600",
-    },
-    {
-      type: "attendance",
-      message: "Attendance marked for CS101",
-      time: "4 hours ago",
-      icon: CheckCircle,
-      color: "text-green-600",
-    },
-    {
-      type: "overdue",
-      message: "Tom Brown has overdue lab components",
-      time: "1 day ago",
-      icon: AlertTriangle,
-      color: "text-red-600",
-    },
-    {
-      type: "booking",
-      message: "You booked Room 204 for tomorrow",
-      time: "6 hours ago",
-      icon: BookOpen,
-      color: "text-blue-600",
-    },
-    {
-      type: "project",
-      message: "Project submission deadline for AI Lab is next week",
-      time: "3 days ago",
-      icon: ClipboardCheck,
-      color: "text-purple-600",
-    },
-  ]
 
   const quickActions = [
     {
-      title: "Mark Attendance",
-      description: "Record student attendance",
-      action: () => onPageChange?.("attendance"),
+      title: "CIE Coordinator",
+      description: "Manage coordinator tasks",
+      action: () => onPageChange?.("coordinator"),
+      icon: Users,
     },
     {
       title: "Assign Project",
       description: "Create new student project",
       action: () => onPageChange?.("projects"),
+      icon: FolderOpen,
     },
     {
       title: "Book Location",
       description: "Reserve a classroom or lab",
       action: () => onPageChange?.("locations"),
+      icon: MapPin,
     },
   ]
 
@@ -165,19 +142,92 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
-              {stats.map((stat, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+              {loading ? (
+                Array.from({ length: 6 }).map((_, index) => (
+                  <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-24"></div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                // Remove Attendance Rate card and insert Pending/Active Requests card in its place
+                stats
+                  .filter((stat) => stat.title !== "Attendance Rate")
+                  .map((stat, index) => (
+                    <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{stat.value}</div>
+                        <p className="text-xs text-muted-foreground">{stat.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))
+              )}
+              {/* Insert Pending/Active Requests card in the grid */}
+              {!loading && dashboardData && (
+                <Card className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                    <CardTitle className="text-sm font-medium">
+                      {dashboardData.isCoordinator ? "Pending Requests(*)" : "Active Requests"}
+                    </CardTitle>
+                    {dashboardData.isCoordinator ? (
+                      <Clock className="h-4 w-4 text-orange-600" />
+                    ) : (
+                      <ClipboardCheck className="h-4 w-4 text-blue-600" />
+                    )}
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                    <div className="text-2xl font-bold">
+                      {dashboardData.isCoordinator
+                        ? dashboardData.stats.pendingRequests
+                        : dashboardData.stats.activeRequests}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {dashboardData.isCoordinator ? "awaiting approval" : "assigned to you"}
+                    </p>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
+
+            {/* Today's Schedule */}
+            {dashboardData?.calendar?.upcomingClasses?.length > 0 && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5" />
+                    <span>Today's Classes</span>
+                  </CardTitle>
+                  <CardDescription>Your scheduled classes for today</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {dashboardData.calendar.upcomingClasses.map((classItem: any, index: number) => (
+                      <div key={index} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-medium text-lg">{classItem.courseCode}</h3>
+                          <span className="text-sm text-gray-500">{classItem.startTime} - {classItem.endTime}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{classItem.courseName}</p>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>{classItem.location}</span>
+                          <span>{classItem.enrolledStudents} students</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
@@ -219,15 +269,61 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivities.map((activity, index) => (
-                      <div key={index} className="flex items-center space-x-4">
-                        <activity.icon className={`h-4 w-4 ${activity.color}`} />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{activity.message}</p>
-                          <p className="text-xs text-gray-500">{activity.time}</p>
+                    {loading ? (
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className="flex items-center space-x-4 animate-pulse">
+                          <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-48"></div>
+                            <div className="h-3 bg-gray-200 rounded w-32"></div>
+                          </div>
                         </div>
+                      ))
+                    ) : dashboardData?.activities?.length > 0 ? (
+                      dashboardData.activities.slice(0, 4).map((activity: any, index: number) => {
+                        const iconColors = ['text-orange-600', 'text-green-600', 'text-red-600', 'text-blue-600', 'text-purple-600', 'text-indigo-600']
+                        const iconColor = iconColors[index % iconColors.length]
+                        const timeAgo = new Date(activity.time).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })
+                        const IconComponent = activity.category === 'laboratory' ? Clock :
+                                            activity.category === 'locations' ? BookOpen :
+                                            activity.category === 'academics' ? ClipboardCheck :
+                                            CheckCircle
+                        return (
+                          <div key={index} className="flex items-center space-x-4">
+                            <IconComponent className={`h-4 w-4 ${iconColor}`} />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{activity.message}</p>
+                              <div className="flex items-center space-x-2">
+                                <p className="text-xs text-gray-500">{timeAgo}</p>
+                                {activity.status && (
+                                  <>
+                                    <span className="text-xs text-gray-300">•</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      activity.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                      activity.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                      activity.status === 'COLLECTED' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {activity.status}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No recent activities</p>
+                        <p className="text-xs mt-1">Activities will appear here</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -238,6 +334,7 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
               >
                 <CardHeader>
                   <CardTitle>Quick Actions</CardTitle>
+                  <CardDescription>Common faculty tasks</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -245,7 +342,7 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
                       <button 
                         key={idx} 
                         onClick={action.action}
-                        className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+                        className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors"
                       >
                         <div className="font-medium">{action.title}</div>
                         <div className="text-sm text-gray-500">{action.description}</div>
