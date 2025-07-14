@@ -42,7 +42,6 @@ import { useAuth } from "@/components/auth-provider"
 import { LibraryManagement } from "@/components/pages/faculty/library-management"
 import { LibraryInventoryStatus } from "@/components/pages/faculty/library-inventory-status"
 import { LabInventoryStatus } from "@/components/pages/faculty/lab-inventory-status"
-import { SimplifiedLibraryManagement } from "@/components/pages/faculty/simplified-library-management"
 import { LabComponentsManagement } from "./lab-components-management"
 import { 
   DropdownMenu,
@@ -135,8 +134,8 @@ export function CoordinatorDashboard() {
   // Set default tab to 'analytics'
   const [activeTab, setActiveTab] = useState('analytics')
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "due" | "not-due">("all")
-
+  // Replace combinedFilter and filterOptions with a single filter state
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'due', 'not-due', 'student', 'faculty'
   // Add coordinator domains state with enhanced type
   const [coordinatorDomains, setCoordinatorDomains] = useState<Array<{
     id: string; 
@@ -151,6 +150,12 @@ export function CoordinatorDashboard() {
 
   // Add role selection state
   const [selectedRole, setSelectedRole] = useState<'library' | 'lab' | null>(null)
+
+  // In the CoordinatorDashboard component, add state for history search and filter:
+  const [historySearchTerm, setHistorySearchTerm] = useState("");
+  const [historyFilter, setHistoryFilter] = useState("all"); // 'all', 'due', 'not-due', 'student', 'faculty'
+
+  const [activeLoansPage, setActiveLoansPage] = useState(1);
 
   useEffect(() => {
     fetchRequests()
@@ -365,8 +370,21 @@ export function CoordinatorDashboard() {
 
   const handleRenewRequest = async (requestId: string, currentDueDate?: string) => {
     try {
-      let baseDate = currentDueDate ? new Date(currentDueDate) : new Date();
-      baseDate.setDate(baseDate.getDate() + 14); // Extend by 14 days
+      let baseDate;
+      if (selectedRole === 'lab') {
+        // Only extend if within 3 days of due date and not overdue
+        const daysLeft = currentDueDate ? Math.ceil((new Date(currentDueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+        const isOverdue = daysLeft !== null && daysLeft < 0;
+        if (daysLeft === null || isOverdue || daysLeft > 3) {
+          // Do nothing, toast is handled in button logic
+          return;
+        }
+        baseDate = new Date(currentDueDate!);
+        baseDate.setDate(baseDate.getDate() + 14); // Lab: Extend by 14 days from due date
+      } else {
+        baseDate = new Date();
+        baseDate.setDate(baseDate.getDate() + 14); // Library: Always today + 14 days
+      }
       let response;
       if (selectedRole === 'lab') {
         response = await fetch(`/api/component-requests/${requestId}`, {
@@ -397,7 +415,9 @@ export function CoordinatorDashboard() {
         await fetchRequests();
         toast({
           title: "Item Renewed",
-          description: `Due date extended to ${baseDate.toLocaleDateString()}`
+          description: selectedRole === 'lab'
+            ? `Due date extended to ${baseDate.toLocaleDateString()}`
+            : `Due date set to ${baseDate.toLocaleDateString()}`
         });
       } else {
         const error = await response.json();
@@ -787,7 +807,7 @@ export function CoordinatorDashboard() {
                 title={''}
                 data={[
                   { label: 'Pending', count: pendingRequests.length, color: '#FFC107' },
-                  { label: 'Approved', count: collectionRequests.length, color: '#2196F3' },
+                  { label: 'Awaiting', count: collectionRequests.length, color: '#2196F3' },
                   { label: 'Collected', count: returnRequests.length, color: '#4CAF50' },
                   { label: 'Returned', count: requests.filter(req => req.status === "RETURNED").length, color: '#757575' },
                   { label: 'Rejected', count: requests.filter(req => req.status === "REJECTED").length, color: '#F44336' },
@@ -894,9 +914,8 @@ export function CoordinatorDashboard() {
         <div className="space-y-4">
               {/* Define filteredActiveLoans here */}
               {(() => {
-                // Combine all active loans for the selected role
                 let activeLoans = returnRequests;
-                // Filter by search term
+                // --- Filtering Logic for Active Loans ---
                 if (searchTerm.trim() !== "") {
                   const lower = searchTerm.toLowerCase();
                   activeLoans = activeLoans.filter(request => {
@@ -906,201 +925,250 @@ export function CoordinatorDashboard() {
                     return name.includes(lower) || srn.includes(lower) || item.includes(lower);
                   });
                 }
-                // Filter by due status
-                if (statusFilter === "due") {
+                if (activeFilter === "due") {
                   activeLoans = activeLoans.filter(request => isOverdue(request.due_date));
-                } else if (statusFilter === "not-due") {
+                } else if (activeFilter === "not-due") {
                   activeLoans = activeLoans.filter(request => !isOverdue(request.due_date));
+                } else if (activeFilter === "student") {
+                  activeLoans = activeLoans.filter(request => request.student);
+                } else if (activeFilter === "faculty") {
+                  activeLoans = activeLoans.filter(request => !request.student);
                 }
-                // Assign to local variable for rendering
                 const filteredActiveLoans = activeLoans;
-                return (
-                  filteredActiveLoans.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                const hasAnyLoans = returnRequests.length > 0;
+
+                if (!hasAnyLoans) {
+                  return (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No active {roleName.toLowerCase()} loans</h3>
                         <p className="text-gray-600">All {roleName.toLowerCase()} items have been returned.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-                      <h2 className="text-xl font-semibold">{roleName} Active Loans</h2>
-                     
-                      
-              {/* Search and Filter Bar */}
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <Search className="h-4 w-4 text-gray-500" />
-                  <Input
-                            placeholder={`Search by borrower name, SRN, or ${roleName.toLowerCase()} name...`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                      <Filter className="h-4 w-4" />
-                      <span>
-                        {statusFilter === "all" ? "All Status" : 
-                         statusFilter === "due" ? "Due Only" : 
-                         "Not Due Only"}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      onClick={() => setStatusFilter("all")}
-                      className={statusFilter === "all" ? "bg-gray-100" : ""}
-                    >
-                      All Status
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setStatusFilter("due")}
-                      className={statusFilter === "due" ? "bg-gray-100" : ""}
-                    >
-                      Due Only
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setStatusFilter("not-due")}
-                      className={statusFilter === "not-due" ? "bg-gray-100" : ""}
-                    >
-                      Not Due Only
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
 
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[250px]">Borrower</TableHead>
-                                <TableHead className="w-[200px]">{roleName} Item</TableHead>
-                        <TableHead className="w-[80px]">Qty</TableHead>
-                        <TableHead className="w-[120px]">Status</TableHead>
-                        <TableHead className="w-[100px]">Collected</TableHead>
-                        <TableHead className="w-[100px]">Due Date</TableHead>
-                        <TableHead className="w-[100px]">Fine</TableHead>
-                        <TableHead className="w-[200px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredActiveLoans.map((request) => {
-                        const overdue = isOverdue(request.due_date)
-                        const daysOverdue = getDaysOverdue(request.due_date)
-                        const borrower = request.student?.user?.name || request.faculty?.user?.name || "Unknown"
-                        const borrowerId = request.student?.student_id || "Faculty"
-                        return (
-                          <TableRow key={request.id} className="hover:bg-gray-50">
-                            <TableCell>
-                              <div>
-                                <div className="font-medium text-sm">{borrower}</div>
-                                <div className="text-xs text-gray-500">
-                                  {request.student ? `SRN: ${borrowerId}` : 'Faculty'}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-sm">{getItemName(request)}</div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-sm font-medium">{request.quantity}</span>
-                            </TableCell>
-                            <TableCell>
-                              {overdue ? (
-                                <Badge className="bg-red-100 text-red-800 font-medium">
-                                  Due
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-yellow-100 text-yellow-800 font-medium">
-                                  Not Due
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-sm">
-                                {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "-"}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`text-sm ${overdue ? 'text-red-600 font-medium' : ''}`}>
-                                {request.due_date ? new Date(request.due_date).toLocaleDateString() : "-"}
-                              </span>
-                              {overdue && (
-                                <div className="text-xs text-red-600">
-                                  {daysOverdue} days late
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {request.fine_amount && request.fine_amount > 0 ? (
-                                <div className="text-sm">
-                                  <span className="text-red-600">₹{request.fine_amount}</span>
-                                  <div className="text-xs text-gray-500">
-                                    {request.fine_paid ? "Paid" : "Pending"}
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-gray-400">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex space-x-1">
+                const activeLoansRowsPerPage = 8;
+                const activeLoansTotalPages = Math.ceil(filteredActiveLoans.length / activeLoansRowsPerPage);
+                const paginatedActiveLoans = filteredActiveLoans.slice((activeLoansPage - 1) * activeLoansRowsPerPage, activeLoansPage * activeLoansRowsPerPage);
+
+                return (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">{roleName} Active Loans</h2>
+                    {/* Search and Filter Bar */}
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className="flex items-center space-x-2">
+                        <Search className="h-4 w-4 text-gray-500" />
+                        <Input
+                          placeholder="Search by name or item..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="max-w-sm"
+                        />
+                      </div>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                            <Filter className="h-4 w-4" />
+                            <span>
+                              {activeFilter === 'all' ? 'All' :
+                               activeFilter === 'due' ? 'Due' :
+                               activeFilter === 'not-due' ? 'Not Due' :
+                               activeFilter === 'student' ? 'Student' :
+                               'Faculty'}
+                            </span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {['all', 'due', 'not-due', 'student', 'faculty'].map((filter) => (
+                            <DropdownMenuItem
+                              key={filter}
+                              onClick={() => setActiveFilter(filter)}
+                              className={activeFilter === filter ? 'bg-gray-100' : ''}
+                            >
+                              {filter === 'all' ? 'All' :
+                               filter === 'due' ? 'Due' :
+                               filter === 'not-due' ? 'Not Due' :
+                               filter === 'student' ? 'Student' :
+                               'Faculty'}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <Card>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-left text-black font-bold">Borrower</TableHead>
+                              <TableHead className="text-left text-black font-bold">{roleName} Item</TableHead>
+                              <TableHead className="text-center text-black font-bold">Qty</TableHead>
+                              <TableHead className="text-center text-black font-bold">Status</TableHead>
+                              <TableHead className="text-center text-black font-bold">Collected</TableHead>
+                              <TableHead className="text-center text-black font-bold">Due Date</TableHead>
+                              <TableHead className="text-center text-black font-bold">Fine</TableHead>
+                              <TableHead className="text-center text-black font-bold">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {paginatedActiveLoans.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                                  No results found for the current search/filter.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              paginatedActiveLoans.map((request) => {
+                                const overdue = isOverdue(request.due_date)
+                                const daysOverdue = getDaysOverdue(request.due_date)
+                                const borrower = request.student?.user?.name || request.faculty?.user?.name || "Unknown"
+                                const borrowerId = request.student?.student_id || "Faculty"
+                                return (
+                                  <TableRow key={request.id} className="hover:bg-gray-50">
+                                    <TableCell className="font-medium text-sm text-left">
+                                      <div>
+                                        <div className="font-medium text-sm">{borrower}</div>
+                                        <div className="text-xs text-gray-500">
+                                          {request.student ? `SRN: ${borrowerId}` : 'Faculty'}
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="font-medium text-sm text-left">{getItemName(request)}</TableCell>
+                                    <TableCell className="text-sm font-medium text-center">{request.quantity}</TableCell>
+                                    <TableCell className="text-center">
+                                      {overdue ? (
+                                        <Badge className="bg-red-100 text-red-800 font-medium">
+                                          Due
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-yellow-100 text-yellow-800 font-medium">
+                                          Not Due
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-center">
+                                      <span className="text-sm">
+                                        {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "-"}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="text-sm text-center">
+                                      <span className={`text-sm ${overdue ? 'text-red-600 font-medium' : ''}`}>
+                                        {request.due_date ? new Date(request.due_date).toLocaleDateString() : "-"}
+                                      </span>
+                                      {overdue && (
+                                        <div className="text-xs text-red-600">
+                                          {daysOverdue} days late
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      {request.fine_amount && request.fine_amount > 0 ? (
+                                        <div className="text-sm">
+                                          <span className="text-red-600">₹{request.fine_amount}</span>
+                                          <div className="text-xs text-gray-500">
+                                            {request.fine_paid ? "Paid" : "Pending"}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span className="text-sm text-gray-400">-</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <div className="flex justify-center items-center space-x-1">
                                         {request.status === "COLLECTED" && (
                                           <>
-                                <Button 
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                  onClick={() => handleRenewRequest(request.id, request.due_date)}
-                                >
-                                  <RefreshCw className="h-3 w-3 mr-1" />
-                                  Renew
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="bg-zinc-900 hover:bg-zinc-800 text-white"
-                                  onClick={() => selectedRole === 'library' ? handleUpdateLibraryRequest(request.id, "RETURNED") : handleUpdateComponentRequest(request.id, "RETURNED")}
-                                >
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Mark as Returned
-                                </Button>
+                                            <Button 
+                                              size="sm"
+                                              variant="outline"
+                                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                              onClick={() => {
+                                                const daysLeft = request.due_date ? Math.ceil((new Date(request.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+                                                const isOverdue = daysLeft !== null && daysLeft < 0;
+                                                if (selectedRole === 'lab') {
+                                                  if (isOverdue) {
+                                                    toast({
+                                                      title: "Cannot renew overdue items",
+                                                      description: "This item is already overdue.",
+                                                      variant: "destructive",
+                                                    });
+                                                    return;
+                                                  }
+                                                  if (daysLeft !== null && daysLeft > 3) {
+                                                    toast({
+                                                      title: "Renewal not allowed yet",
+                                                      description: `Due date is already set to ${request.due_date ? new Date(request.due_date).toLocaleDateString() : '-'}`,
+                                                      variant: "default",
+                                                    });
+                                                    return;
+                                                  }
+                                                }
+                                                handleRenewRequest(request.id, request.due_date);
+                                              }}
+                                            >
+                                              <RefreshCw className="h-3 w-3 mr-1" />
+                                              Renew
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              className="bg-zinc-900 hover:bg-zinc-800 text-white"
+                                              onClick={() => selectedRole === 'library' ? handleUpdateLibraryRequest(request.id, "RETURNED") : handleUpdateComponentRequest(request.id, "RETURNED")}
+                                            >
+                                              <CheckCircle className="h-3 w-3 mr-1" />
+                                              Mark as Returned
+                                            </Button>
                                           </>
                                         )}
-                                        
                                         {request.status === "USER_RETURNED" && (
-                                          // Student has confirmed return, coordinator can confirm collection
-                                  <Button 
-                                    size="sm"
+                                          <Button 
+                                            size="sm"
                                             className="bg-green-600 hover:bg-green-700"
-                                    onClick={() => {
+                                            onClick={() => {
                                               if (selectedRole === 'library') {
-                                        handleUpdateLibraryRequest(request.id, "RETURNED")
+                                                handleUpdateLibraryRequest(request.id, "RETURNED")
                                               } else {
                                                 handleUpdateComponentRequest(request.id, "RETURNED")
-                                      }
-                                    }}
-                                  >
-                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                              }
+                                            }}
+                                          >
+                                            <CheckCircle className="h-3 w-3 mr-1" />
                                             Confirm Return
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })
+                            )}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                    {/* Pagination Controls for Active Loans */}
+                    <div className="flex justify-between items-center p-2 border-t bg-gray-50">
+                      <button
+                        className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+                        onClick={() => setActiveLoansPage((p) => Math.max(1, p - 1))}
+                        disabled={activeLoansPage === 1}
+                      >
+                        Previous
+                      </button>
+                      <span className="text-xs text-gray-600">
+                        Page {activeLoansPage} of {activeLoansTotalPages}
+                      </span>
+                      <button
+                        className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+                        onClick={() => setActiveLoansPage((p) => Math.min(activeLoansTotalPages, p + 1))}
+                        disabled={activeLoansPage === activeLoansTotalPages}
+                      >
+                        Next
+                      </button>
                     </div>
-                  )
+                  </div>
                 );
               })()}
             </div>
@@ -1109,8 +1177,47 @@ export function CoordinatorDashboard() {
           {activeTab === 'history' && selectedRole && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">{roleName} Request History</h2>
-              {/* Table with pagination for historyRequests */}
-              <HistoryTable data={historyRequests} roleName={roleName} />
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex items-center space-x-2">
+                  <Search className="h-4 w-4 text-gray-500" />
+                  <Input
+                    placeholder="Search by borrower, item, or SRN..."
+                    value={historySearchTerm}
+                    onChange={(e) => setHistorySearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                      <Filter className="h-4 w-4" />
+                      <span>
+                        {historyFilter === 'all' ? 'All' :
+                          historyFilter === 'due' ? 'Due' :
+                          historyFilter === 'not-due' ? 'Not Due' :
+                          historyFilter === 'student' ? 'Student' :
+                          'Faculty'}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {['all', 'due', 'not-due', 'student', 'faculty'].map((filter) => (
+                      <DropdownMenuItem
+                        key={filter}
+                        onClick={() => setHistoryFilter(filter)}
+                        className={historyFilter === filter ? 'bg-gray-100' : ''}
+                      >
+                        {filter === 'all' ? 'All' :
+                          filter === 'due' ? 'Due' :
+                          filter === 'not-due' ? 'Not Due' :
+                          filter === 'student' ? 'Student' :
+                          'Faculty'}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <HistoryTable data={historyRequests} roleName={roleName} searchTerm={historySearchTerm} filter={historyFilter} isOverdue={isOverdue} />
             </div>
           )}
         </>
@@ -1124,13 +1231,35 @@ export function CoordinatorDashboard() {
 type HistoryTableProps = {
   data: RequestUnion[];
   roleName: string;
+  searchTerm?: string;
+  filter?: string;
+  isOverdue: (dueDate?: string) => boolean;
 };
 
-function HistoryTable({ data, roleName }: HistoryTableProps) {
+function HistoryTable({ data, roleName, searchTerm = "", filter = "all", isOverdue }: HistoryTableProps) {
   const [page, setPage] = useState<number>(1);
   const rowsPerPage = 8;
   const totalPages = Math.ceil(data.length / rowsPerPage);
-  const paginatedData = data.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  let filteredData = data;
+  if (searchTerm.trim() !== "") {
+    const lower = searchTerm.toLowerCase();
+    filteredData = filteredData.filter(req => {
+      const name = (req as any).student?.user?.name?.toLowerCase?.() || (req as any).requesting_faculty?.user?.name?.toLowerCase?.() || (req as any).faculty?.user?.name?.toLowerCase?.() || "";
+      const srn = (req as any).student?.student_id?.toLowerCase?.() || "";
+      const item = (req as any).component?.component_name?.toLowerCase?.() || (req as any).item?.item_name?.toLowerCase?.() || "";
+      return name.includes(lower) || srn.includes(lower) || item.includes(lower);
+    });
+  }
+  if (filter === "due") {
+    filteredData = filteredData.filter(req => req.due_date && isOverdue(req.due_date));
+  } else if (filter === "not-due") {
+    filteredData = filteredData.filter(req => req.due_date && !isOverdue(req.due_date));
+  } else if (filter === "student") {
+    filteredData = filteredData.filter(req => (req as any).student);
+  } else if (filter === "faculty") {
+    filteredData = filteredData.filter(req => !(req as any).student);
+  }
+  const paginatedData = filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1147,35 +1276,46 @@ function HistoryTable({ data, roleName }: HistoryTableProps) {
     <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
       <table className="min-w-full text-sm">
         <thead>
-          <tr className="bg-gray-50">
-            <th className="px-4 py-2 text-left font-semibold">Role</th>
-            <th className="px-4 py-2 text-left font-semibold">Requester</th>
-            <th className="px-4 py-2 text-left font-semibold">{roleName === 'Lab' ? 'Component' : 'Item'}</th>
-            {roleName === 'Lab' && <th className="px-4 py-2 text-left font-semibold">Purpose</th>}
-            <th className="px-4 py-2 text-left font-semibold">Status</th>
-            <th className="px-4 py-2 text-left font-semibold">Quantity</th>
-            <th className="px-4 py-2 text-left font-semibold">Request Date</th>
-            <th className="px-4 py-2 text-left font-semibold">Returned/Rejected Date</th>
+          <tr>
+            <th className="text-left font-bold text-gray-700 px-4 py-3">Borrower</th>
+            <th className="text-left font-bold text-gray-700 px-4 py-3">{roleName === 'Lab' ? 'Lab Item' : 'Item'}</th>
+            <th className="text-left font-bold text-gray-700 px-4 py-3">Qty</th>
+            <th className="text-left font-bold text-gray-700 px-4 py-3">Status</th>
+            <th className="text-left font-bold text-gray-700 px-4 py-3">Collected</th>
+            <th className="text-left font-bold text-gray-700 px-4 py-3">Due Date</th>
+            <th className="text-left font-bold text-gray-700 px-4 py-3">Fine</th>
           </tr>
         </thead>
         <tbody>
           {paginatedData.length === 0 ? (
             <tr>
-              <td colSpan={roleName === 'Lab' ? 9 : 8} className="text-center py-8 text-gray-400">No history found.</td>
+              <td colSpan={7} className="text-center py-8 text-gray-400">No history found.</td>
             </tr>
           ) : (
-            paginatedData.map((req: RequestUnion) => (
-              <tr key={req.id} className="border-t">
-                <td className="px-4 py-2">{(req as any).student ? 'Student' : 'Faculty'}</td>
-                <td className="px-4 py-2">{(req as any).student?.user?.name || (req as any).requesting_faculty?.user?.name || (req as any).faculty?.user?.name || 'Unknown'}</td>
-                <td className="px-4 py-2">{(req as any).component?.component_name || (req as any).item?.item_name || '-'}</td>
-                {roleName === 'Lab' && <td className="px-4 py-2">{(req as any).purpose || '-'}</td>}
-                <td className={`px-4 py-2 font-semibold ${getStatusColor((req as any).status)}`}>{(req as any).status}</td>
-                <td className="px-4 py-2">{(req as any).quantity}</td>
-                <td className="px-4 py-2">{(req as any).request_date ? new Date((req as any).request_date).toLocaleDateString() : '-'}</td>
-                <td className="px-4 py-2">{(req as any).return_date ? new Date((req as any).return_date).toLocaleDateString() : ((req as any).status === 'REJECTED' && (req as any).collection_date ? new Date((req as any).collection_date).toLocaleDateString() : '-')}</td>
-              </tr>
-            ))
+            paginatedData.map((req: RequestUnion) => {
+              const borrower = (req as any).student?.user?.name || (req as any).requesting_faculty?.user?.name || (req as any).faculty?.user?.name || 'Unknown';
+              const borrowerId = (req as any).student?.student_id || 'Faculty';
+              const item = (req as any).component?.component_name || (req as any).item?.item_name || '-';
+              const qty = (req as any).quantity;
+              const status = (req as any).status;
+              const collected = (req as any).collection_date ? new Date((req as any).collection_date).toLocaleDateString() : '-';
+              const dueDate = (req as any).due_date ? new Date((req as any).due_date).toLocaleDateString() : '-';
+              const fine = (req as any).fine_amount && (req as any).fine_amount > 0 ? `₹${(req as any).fine_amount}` : '-';
+              return (
+                <tr key={req.id} className="border-t">
+                  <td className="px-4 py-3 align-top truncate">
+                    <div className="font-medium text-sm truncate">{borrower}</div>
+                    <div className="text-xs text-gray-500 truncate">{(req as any).student ? `SRN: ${borrowerId}` : 'Faculty'}</div>
+                  </td>
+                  <td className="px-4 py-3 align-top font-medium text-sm truncate">{item}</td>
+                  <td className="px-4 py-3 align-top text-sm">{qty}</td>
+                  <td className={`px-4 py-3 align-top font-medium text-sm ${getStatusColor(status)}`}>{status}</td>
+                  <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{collected}</td>
+                  <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{dueDate}</td>
+                  <td className="px-4 py-3 align-top text-sm">{fine}</td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
