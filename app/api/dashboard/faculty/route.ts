@@ -11,26 +11,130 @@ export async function GET(request: NextRequest) {
     // Verify user is faculty
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { faculty: true }
+      include: { faculty: {
+        include: { domain_assignments: true }
+      } }
     })
 
     if (!user?.faculty) {
       return NextResponse.json({ error: "Faculty access required" }, { status: 403 })
     }
 
-    // Get basic statistics
+    // Determine coordinator status
+    const isCoordinator = user.faculty.domain_assignments && user.faculty.domain_assignments.length > 0
+    let pendingRequests = 0
+    let activeRequests = 0
+
+    if (isCoordinator) {
+      // Get all domain IDs this faculty coordinates
+      const domainIds = user.faculty.domain_assignments.map((a: any) => a.domain_id)
+      // Count pending component requests for these domains
+      const pendingComponentRequests = await prisma.componentRequest.count({
+        where: {
+          status: "PENDING",
+          component: {
+            domain_id: { in: domainIds }
+          }
+        }
+      })
+      // Count pending library requests for these domains
+      const pendingLibraryRequests = await prisma.libraryRequest.count({
+        where: {
+          status: "PENDING",
+          item: {
+            domain_id: { in: domainIds }
+          }
+        }
+      })
+      pendingRequests = pendingComponentRequests + pendingLibraryRequests
+    } else {
+      // For non-coordinators, count active requests assigned to this faculty
+      const activeComponentRequests = await prisma.componentRequest.count({
+        where: {
+          status: "PENDING",
+          approved_by: user.faculty.id
+        }
+      })
+      const activeLibraryRequests = await prisma.libraryRequest.count({
+        where: {
+          status: "PENDING",
+          faculty_id: user.faculty.id
+        }
+      })
+      activeRequests = activeComponentRequests + activeLibraryRequests
+    }
+
+    // Get basic statistics and courses data
     const [
       coursesCount,
-      studentsCount
+      studentsCount,
+      courses
     ] = await Promise.all([
-      prisma.course.count({ where: { created_by: userId } }),
-      prisma.enrollment.count({ where: { course: { created_by: userId } } })
+      // Count courses created by this faculty OR courses they teach via class schedules
+      prisma.course.count({ 
+        where: { 
+          OR: [
+            { created_by: userId },
+            { class_schedules: { some: { faculty_id: user.faculty.id } } }
+          ]
+        } 
+      }),
+      // Get courses to count students from both enrollments table and course_enrollments array
+      prisma.course.findMany({
+        where: { 
+          OR: [
+            { created_by: userId },
+            { class_schedules: { some: { faculty_id: user.faculty.id } } }
+          ]
+        },
+        select: {
+          course_enrollments: true,
+          enrollments: {
+            select: { student_id: true }
+          }
+        }
+      }),
+      // Get courses created by this faculty OR courses they teach via class schedules
+      prisma.course.findMany({
+          where: { 
+            OR: [
+              { created_by: userId },
+              { class_schedules: { some: { faculty_id: user.faculty.id } } }
+            ]
+          },
+          include: {
+            enrollments: {
+              include: {
+                student: {
+                  include: {
+                    user: {
+                      select: { name: true }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          orderBy: { course_start_date: 'desc' }
+        })
     ])
+
+    // Calculate total students from both enrollments table and course_enrollments array
+    const studentsFromEnrollments = coursesCount > 0 ? studentsCount.reduce((total, course) => {
+      return total + course.enrollments.length
+    }, 0) : 0
+    
+    const studentsFromArray = coursesCount > 0 ? studentsCount.reduce((total, course) => {
+      return total + (course.course_enrollments?.length || 0)
+    }, 0) : 0
+    
+    const totalStudents = studentsFromEnrollments + studentsFromArray
 
     const stats = {
       courses: coursesCount,
-      students: studentsCount,
-      pendingRequests: 0,
+      students: totalStudents,
+      pendingRequests,
+      activeRequests,
       upcomingBookings: 0
     }
 
@@ -55,9 +159,10 @@ export async function GET(request: NextRequest) {
       prisma.enrollment.findMany({
         take: 5,
         where: {
-          course: {
-            created_by: userId
-          }
+          OR: [
+            { course: { created_by: userId } },
+            { course: { class_schedules: { some: { faculty_id: user.faculty.id } } } }
+          ]
         },
         orderBy: { enrolled_at: 'desc' },
         include: {
@@ -205,7 +310,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       stats,
       alerts,
-      activities
+      activities,
+      courses,
+      isCoordinator
     })
   } catch (error) {
     console.error("Faculty dashboard error:", error)
