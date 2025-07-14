@@ -48,12 +48,18 @@ model Faculty {
   user_id             String             @unique
   image_id            String?
   image_path          String?            @default("profile-img")
+  resume_id           String?
+  resume_path         String?            @default("resumes")
   attendance_records  AttendanceRecord[]
   class_schedules     ClassSchedule[]
   component_approvals ComponentRequest[] @relation("ComponentApprovals")
+  component_requests  ComponentRequest[] @relation("ComponentRequests")
   user                User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
   location_bookings   LocationBooking[]
   project_requests    ProjectRequest[]
+  library_requests     LibraryRequest[]
+  library_items       LibraryItem[]
+  domain_assignments  DomainCoordinator[] @relation("DomainAssignments")
 
   @@map("faculty")
 }
@@ -67,11 +73,14 @@ model Student {
   advisor_id          String?
   student_id          String              @unique
   user_id             String              @unique
+  resume_id           String?
+  resume_path         String?            @default("resumes")
   component_requests  ComponentRequest[]
   enrollments         Enrollment[]
   project_requests    ProjectRequest[]
   project_submissions ProjectSubmission[]
   attendance_records  StudentAttendance[]
+  library_requests   LibraryRequest[]
   user                User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("students")
@@ -128,16 +137,16 @@ model Enrollment {
 }
 
 model ClassSchedule {
-  id          String  @id @default(cuid())
+  id          String     @id @default(cuid())
   room        String
   section     String
   course_id   String
   day_of_week String
   end_time    String
-  faculty_id  String
+  faculty_id  String?
   start_time  String
-  course      Course  @relation(fields: [course_id], references: [id])
-  faculty     Faculty @relation(fields: [faculty_id], references: [id])
+  course      Course     @relation(fields: [course_id], references: [id])
+  faculty     Faculty?   @relation(fields: [faculty_id], references: [id])
 
   @@map("class_schedules")
 }
@@ -146,7 +155,7 @@ model Project {
   id                       String              @id @default(cuid())
   accepted_by              String?
   components_needed        String[]
-  course_id                String
+  course_id                String?
   created_by               String
   created_date             DateTime            @default(now())
   description              String
@@ -210,8 +219,8 @@ model AttendanceRecord {
   date               DateTime
   course_id          String
   created_at         DateTime            @default(now())
-  faculty_id         String
-  faculty            Faculty             @relation(fields: [faculty_id], references: [id])
+  faculty_id         String?
+  faculty            Faculty?            @relation(fields: [faculty_id], references: [id])
   student_attendance StudentAttendance[]
 
   @@map("attendance_records")
@@ -227,6 +236,32 @@ model StudentAttendance {
 
   @@unique([attendance_record_id, student_id])
   @@map("student_attendance")
+}
+
+model Domain {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  coordinators  DomainCoordinator[]
+  lab_components LabComponent[]
+  library_items  LibraryItem[]
+
+  @@map("domains")
+}
+
+model DomainCoordinator {
+  id          String   @id @default(cuid())
+  domain_id   String
+  faculty_id  String
+  assigned_at DateTime @default(now())
+  assigned_by String
+  domain      Domain   @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  faculty     Faculty  @relation("DomainAssignments", fields: [faculty_id], references: [id], onDelete: Cascade)
+
+  @@unique([domain_id, faculty_id])
+  @@map("domain_coordinators")
 }
 
 model LabComponent {
@@ -251,13 +286,16 @@ model LabComponent {
   created_at              DateTime           @default(now())
   modified_at             DateTime           @updatedAt
   component_requests      ComponentRequest[]
+  domain_id               String?
+  domain                  Domain?            @relation(fields: [domain_id], references: [id])
 
   @@map("lab_components")
 }
 
 model ComponentRequest {
   id            String        @id @default(cuid())
-  student_id    String
+  student_id    String?       // Make optional so faculty can make requests
+  faculty_id    String?       // Add faculty_id for faculty requests
   component_id  String
   quantity      Int
   request_date  DateTime      @default(now())
@@ -266,13 +304,20 @@ model ComponentRequest {
   notes         String?
   approved_by   String?
   approved_date DateTime?
-  project_id    String
-  purpose       String
-  required_date DateTime
+  project_id    String?
+  purpose       String?
+  required_date DateTime?
   faculty       Faculty?      @relation("ComponentApprovals", fields: [approved_by], references: [id])
+  requesting_faculty Faculty? @relation("ComponentRequests", fields: [faculty_id], references: [id])
   component     LabComponent  @relation(fields: [component_id], references: [id])
-  project       Project       @relation(fields: [project_id], references: [id])
-  student       Student       @relation(fields: [student_id], references: [id])
+  project       Project?      @relation(fields: [project_id], references: [id])
+  student       Student?      @relation(fields: [student_id], references: [id]) // Make optional
+  faculty_notes       String?
+  collection_date     DateTime?
+  due_date           DateTime?
+  fine_amount        Decimal?           @db.Decimal(10, 2)
+  fine_paid          Boolean            @default(false)
+  payment_proof      String?
 
   @@map("component_requests")
 }
@@ -299,20 +344,54 @@ model Location {
 }
 
 model LocationBooking {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   location_id String
-  faculty_id  String
+  faculty_id  String?
   start_time  DateTime
   end_time    DateTime
   purpose     String
   title       String
   description String?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  faculty     Faculty  @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
-  location    Location @relation(fields: [location_id], references: [id], onDelete: Cascade)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  faculty     Faculty?   @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
+  location    Location   @relation(fields: [location_id], references: [id], onDelete: Cascade)
 
   @@map("location_bookings")
+}
+
+model LibraryItem {
+  id                  String   @id @default(uuid())
+  item_name           String
+  item_description    String
+  item_specification  String?
+  item_quantity       Int
+  item_tag_id         String?
+  item_category       String
+  item_location       String
+  image_path          String   @default("library-images")
+  front_image_id      String?
+  back_image_id       String?
+  invoice_number      String?
+  purchase_value      Decimal? @db.Decimal(10, 2)
+  purchased_from      String?
+  purchase_currency   String   @default("INR")
+  purchase_date       DateTime?
+  created_by          String
+  modified_by         String?
+  created_at          DateTime @default(now())
+  available_quantity        Int      @default(0)
+  faculty_id           String?
+  faculty              Faculty? @relation(fields: [faculty_id], references: [id])
+  domain_id           String?
+  domain              Domain?            @relation(fields: [domain_id], references: [id])
+
+  modified_at         DateTime @updatedAt
+  // Add relations to requests if needed later
+
+  library_requests     LibraryRequest[]
+
+  @@map("library_items")
 }
 
 model InternshipProject {
@@ -386,8 +465,37 @@ enum RequestStatus {
   REJECTED
   COLLECTED
   RETURNED
-  PENDING_RETURN
+  USER_RETURNED
+  OVERDUE
 }
+
+model LibraryRequest {
+  id             String        @id @default(cuid())
+  student_id     String?       // Make optional so faculty can make requests
+  item_id        String
+  quantity       Int
+  purpose        String?
+  request_date   DateTime      @default(now())
+  required_date  DateTime?
+  status         RequestStatus @default(PENDING)
+  collection_date DateTime?
+  return_date    DateTime?
+  notes          String?
+  faculty_notes  String?
+  faculty_id     String?
+  due_date           DateTime?
+  fine_amount        Decimal?           @db.Decimal(10, 2)
+  fine_paid          Boolean            @default(false)
+  payment_proof      String?
+
+  item    LibraryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  student Student?    @relation(fields: [student_id], references: [id])  // Make optional
+  faculty Faculty?    @relation(fields: [faculty_id], references: [id])
+
+  @@map("library_requests")
+}
+
+
 
 enum LocationType {
   LAB

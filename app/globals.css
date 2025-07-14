@@ -47,39 +47,41 @@ body {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background-dark: 234 30% 18%; /* lighter dark blue for sidebar in dark mode */
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 234 30% 10%; /* dark5 */
+    --foreground: 220 20% 90%; /* light text */
+    --card: 234 30% 14%; /* dark4 */
+    --card-foreground: 220 20% 90%;
+    --popover: 234 30% 14%;
+    --popover-foreground: 220 20% 90%;
+    --primary: 220 20% 90%;
+    --primary-foreground: 234 30% 14%;
+    --secondary: 234 20% 20%; /* dark3 */
+    --secondary-foreground: 220 20% 90%;
+    --muted: 234 20% 20%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 234 20% 20%;
+    --accent-foreground: 220 20% 90%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --border: 234 20% 20%;
+    --input: 234 20% 20%;
+    --ring: 220 20% 70%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: var(--sidebar-background-dark);
+    --sidebar-foreground: 0 0% 100%; /* white text in sidebar */
+    --foreground: 0 0% 100%; /* white text everywhere in dark mode */
+    --sidebar-primary: 220 40% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-accent: 234 20% 20%;
+    --sidebar-accent-foreground: 220 20% 90%;
+    --sidebar-border: 234 20% 20%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
@@ -90,5 +92,92 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Remove focus outlines from all form elements */
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible,
+  button:focus,
+  button:focus-visible,
+  [role="button"]:focus,
+  [role="button"]:focus-visible,
+  [tabindex]:focus,
+  [tabindex]:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  /* Remove focus outlines from Radix UI components */
+  [data-radix-focus-guard]:focus,
+  [data-radix-focus-guard]:focus-visible,
+  [data-radix-focus-trap]:focus,
+  [data-radix-focus-trap]:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  /* Remove focus outlines from all interactive elements */
+  *:focus,
+  *:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+  
+  /* Specific removal for form controls */
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus,
+  input[type="time"]:focus,
+  input[type="search"]:focus,
+  input[type="tel"]:focus,
+  input[type="url"]:focus,
+  textarea:focus,
+  select:focus {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+    border-color: hsl(var(--input)) !important;
+  }
+}
+
+@layer components {
+  /* Override Tailwind focus classes */
+  .focus\:outline-none:focus,
+  .focus-visible\:outline-none:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+  
+  .focus\:ring-0:focus,
+  .focus-visible\:ring-0:focus-visible {
+    box-shadow: none !important;
+  }
+  
+  .focus\:ring-2:focus,
+  .focus-visible\:ring-2:focus-visible {
+    box-shadow: none !important;
+  }
+  
+  /* Remove any ring effects */
+  .ring-0,
+  .ring-1,
+  .ring-2,
+  .ring-4,
+  .ring-8 {
+    box-shadow: none !important;
+  }
+  
+  /* Ensure no border changes on focus */
+  .focus\:border-transparent:focus,
+  .focus-visible\:border-transparent:focus-visible {
+    border-color: hsl(var(--input)) !important;
   }
 }

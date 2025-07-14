@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useMemo } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,7 +15,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Mail, GraduationCap, RefreshCw } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Plus, RefreshCw, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Student {
@@ -56,6 +65,12 @@ export function ManageStudents() {
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
 
+  const [filters, setFilters] = useState({
+    gpa: "",
+    program: "All",
+    section: "All",
+  })
+
   const [newStudent, setNewStudent] = useState({
     name: "",
     email: "",
@@ -65,6 +80,7 @@ export function ManageStudents() {
     program: "",
     year: "",
     section: "",
+    gpa: "",
   })
 
   useEffect(() => {
@@ -74,13 +90,10 @@ export function ManageStudents() {
   const fetchData = async () => {
     try {
       setLoading(true)
-
-      // Fetch students
       const studentsResponse = await fetch("/api/students")
       const studentsData = await studentsResponse.json()
       setStudents(studentsData.students || [])
 
-      // Fetch courses
       const coursesResponse = await fetch("/api/courses")
       const coursesData = await coursesResponse.json()
       setCourses(coursesData.courses || [])
@@ -96,13 +109,25 @@ export function ManageStudents() {
     }
   }
 
-  const filteredStudents = students.filter(
-    (student) =>
-      student.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.student_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.program.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const handleFilterChange = (filterName: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [filterName]: value }))
+  }
+
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
+      const searchTermMatch =
+        student.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.student_id.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const gpaValue = parseFloat(filters.gpa)
+      const gpaFilter = isNaN(gpaValue) ? true : student.gpa >= gpaValue
+      const programFilter = filters.program === "All" || student.program === filters.program
+      const sectionFilter = filters.section === "All" || student.section === filters.section
+
+      return searchTermMatch && gpaFilter && programFilter && sectionFilter
+    })
+  }, [students, searchTerm, filters])
 
   const handleAddStudent = async () => {
     if (!newStudent.name || !newStudent.email || !newStudent.student_id || !newStudent.program) {
@@ -135,6 +160,7 @@ export function ManageStudents() {
           program: "",
           year: "",
           section: "",
+          gpa: "",
         })
         setIsAddDialogOpen(false)
 
@@ -156,9 +182,29 @@ export function ManageStudents() {
     }
   }
 
-  const programs = ["CSE", "IT", "ECE", "ME", "IT"]
+  const programs = [
+    { value: "BTech CSE", label: "B.Tech CSE" },
+    { value: "IT", label: "B.Tech AIML" },
+    { value: "ECE", label: "B.Tech ECE" },
+    { value: "ME", label: "B.Tech ME" },
+  ]
   const years = ["2024", "2023", "2022", "2021"]
   const sections = ["A", "B", "C", "D"]
+
+  const getProgramLabel = (programValue: string) => {
+    const program = programs.find((p) => p.value === programValue)
+    return program ? program.label : programValue
+  }
+
+  // Add form validation check
+  const isFormValid = useMemo(() => {
+    return !!(
+      newStudent.name?.trim() &&
+      newStudent.email?.trim() &&
+      newStudent.student_id?.trim() &&
+      newStudent.program?.trim()
+    )
+  }, [newStudent.name, newStudent.email, newStudent.student_id, newStudent.program])
 
   if (loading) {
     return (
@@ -170,18 +216,16 @@ export function ManageStudents() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Student Management</h1>
-          <p className="text-gray-600 mt-2">Manage student records and enrollments</p>
+          <h1 className="text-2xl font-bold">Manage Students</h1>
+          <p className="text-gray-500">View, add, and manage student records and enrollments.</p>
         </div>
-
         <div className="flex space-x-2">
           <Button onClick={fetchData} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -189,12 +233,12 @@ export function ManageStudents() {
                 Add Student
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add New Student</DialogTitle>
                 <DialogDescription>Enter the details for the new student</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Full Name *</Label>
                   <Input
@@ -240,14 +284,23 @@ export function ManageStudents() {
                     </SelectTrigger>
                     <SelectContent>
                       {programs.map((program) => (
-                        <SelectItem key={program} value={program}>
-                          {program}
+                        <SelectItem key={program.value} value={program.value}>
+                          {program.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="gpa">GPA</Label>
+                    <Input
+                      id="gpa"
+                      type="number"
+                      value={newStudent.gpa}
+                      onChange={(e) => setNewStudent((prev) => ({ ...prev, gpa: e.target.value }))}
+                      placeholder="Enter GPA"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor="year">Year</Label>
                     <Select value={newStudent.year} onValueChange={(value) => setNewStudent((prev) => ({ ...prev, year: value }))}>
@@ -278,12 +331,17 @@ export function ManageStudents() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
+                <div className="col-span-2 flex justify-end space-x-2 pt-4">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddStudent}>Add Student</Button>
+                  <Button 
+                    onClick={handleAddStudent}
+                    disabled={!isFormValid}
+                    className={!isFormValid ? "opacity-50 cursor-not-allowed" : ""}
+                  >
+                    Add Student
+                  </Button>
                 </div>
               </div>
             </DialogContent>
@@ -292,58 +350,95 @@ export function ManageStudents() {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Search students..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {filteredStudents.map((student) => (
-            <Card key={student.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{student.user.name}</CardTitle>
-                  <Badge variant="secondary">{student.program}</Badge>
-                </div>
-                <CardDescription>ID: {student.student_id}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Mail className="h-4 w-4" />
-                  <span>{student.user.email}</span>
-                </div>
-                {student.user.phone && (
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <span>📞</span>
-                    <span>{student.user.phone}</span>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <GraduationCap className="h-4 w-4" />
-                  <span>
-                    {student.year} Year, Section {student.section}
-                  </span>
-                </div>
-                {student.gpa && (
-                  <div className="text-sm text-gray-600">
-                    GPA: {student.gpa.toFixed(2)}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredStudents.length === 0 && !loading && (
-          <div className="text-center py-8 text-gray-500">
-            {searchTerm ? "No students found matching your search." : "No students found."}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative flex-grow max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search by name, email, ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        )}
+          <Filter className="h-5 w-5 text-gray-500" />
+          <Select value={filters.program} onValueChange={(value) => handleFilterChange("program", value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Program" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Programs</SelectItem>
+              {programs.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filters.section} onValueChange={(value) => handleFilterChange("section", value)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Filter by Section" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Sections</SelectItem>
+              {sections.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="relative">
+            <Input
+              type="number"
+              step="0.1"
+              value={filters.gpa}
+              onChange={(e) => handleFilterChange("gpa", e.target.value)}
+              placeholder="GPA ≥"
+              className="w-[100px]"
+            />
+          </div>
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Student ID</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Program</TableHead>
+                  <TableHead>Section</TableHead>
+                  <TableHead className="text-right">GPA</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student: Student) => (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{student.user.name}</TableCell>
+                      <TableCell>{student.student_id}</TableCell>
+                      <TableCell>{student.user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{getProgramLabel(student.program)}</Badge>
+                      </TableCell>
+                      <TableCell>{student.section}</TableCell>
+                      <TableCell className="text-right">{student.gpa.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No students found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
 }
+

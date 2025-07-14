@@ -44,7 +44,7 @@ interface LocationBooking {
 }
 
 interface LocationCalendarProps {
-  userRole: 'admin' | 'faculty';
+  userRole: 'ADMIN' | 'FACULTY';
   userId?: string;
   locationId?: string;
   onSlotSelect?: (start: string, end: string) => void;
@@ -105,7 +105,7 @@ export function LocationCalendar({ userRole, userId, locationId, onSlotSelect }:
         url += `locationId=${selectedLocation}&`;
       }
       
-      if (userRole === 'faculty' && userId) {
+      if (userRole === 'FACULTY' && userId) {
         const facultyResponse = await fetch(`/api/faculty?userId=${userId}`);
         const facultyData = await facultyResponse.json();
         if (facultyData.faculty) {
@@ -340,7 +340,7 @@ export function LocationCalendar({ userRole, userId, locationId, onSlotSelect }:
               </p>
             </div>
             
-            {userRole === 'faculty' && (
+            {userRole === 'FACULTY' && (
               <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg">
@@ -581,7 +581,7 @@ export function LocationCalendar({ userRole, userId, locationId, onSlotSelect }:
                             </div>
                           </div>
                           
-                          {userRole === 'faculty' && (
+                          {userRole === 'FACULTY' && (
                             <div className="flex space-x-1 ml-2">
                               <Button
                                 size="sm"

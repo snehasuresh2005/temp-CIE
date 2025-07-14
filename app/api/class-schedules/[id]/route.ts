@@ -31,33 +31,57 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // For now, we'll allow access without authentication
-    // In a real app, you'd implement proper session checking here
-
     const data = await request.json()
 
     const schedule = await prisma.classSchedule.update({
       where: { id: params.id },
       data: {
-        courseId: data.courseId,
-        facultyId: data.facultyId,
+        course_id: data.courseId,
+        faculty_id: data.facultyId,
         room: data.room,
-        dayOfWeek: data.dayOfWeek,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        day_of_week: data.dayOfWeek,
+        start_time: data.startTime,
+        end_time: data.endTime,
         section: data.section,
       },
       include: {
         course: true,
         faculty: {
           include: {
-            user: true,
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
           },
         },
       },
     })
 
-    return NextResponse.json({ schedule })
+    // Transform the response to match frontend interface
+    const transformedSchedule = {
+      id: schedule.id,
+      courseId: schedule.course_id,
+      facultyId: schedule.faculty_id,
+      room: schedule.room,
+      dayOfWeek: schedule.day_of_week,
+      startTime: schedule.start_time,
+      endTime: schedule.end_time,
+      section: schedule.section,
+      course: {
+        course_id: schedule.course.id,
+        course_name: schedule.course.course_name,
+      },
+      faculty: {
+        user: {
+          name: schedule.faculty?.user.name || "",
+          email: schedule.faculty?.user.email || "",
+        },
+      },
+    };
+
+    return NextResponse.json({ schedule: transformedSchedule })
   } catch (error) {
     console.error("Update class schedule error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

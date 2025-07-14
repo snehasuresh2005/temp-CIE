@@ -12,17 +12,16 @@ export async function GET(request: NextRequest) {
 
     // Map database fields to frontend-friendly camelCase names
     const facultyWithPhoto = faculty.map(f => {
-      const facultyAny = f as any; // TypeScript types are wrong, but runtime has faculty_id
       return {
         id: f.id,
         userId: f.user_id,
         department: f.department,
         office: f.office,
         specialization: f.specialization,
-        facultyId: facultyAny.faculty_id, // Use faculty_id from runtime
+        facultyId: f.faculty_id, // Use faculty_id from the correct field
         officeHours: f.office_hours,
         user: f.user,
-        profilePhotoUrl: `/profile-img/${facultyAny.faculty_id}`, // Use faculty_id for image URL
+        profilePhotoUrl: `/profile-img/${f.faculty_id}`, // Use faculty_id for image URL
       }
     })
 
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Check if faculty ID already exists
     const existingFaculty = await prisma.faculty.findUnique({
-      where: { employee_id: facultyId }, // Use employee_id for database query
+      where: { faculty_id: facultyId }, // Use faculty_id for database query
     })
 
     if (existingFaculty) {
@@ -93,7 +92,7 @@ export async function POST(request: NextRequest) {
           department,
           office,
           specialization,
-          employee_id: facultyId, // Store facultyId in employee_id field
+          faculty_id: facultyId, // Store facultyId in faculty_id field (correct field name)
           office_hours: officeHours,
           user_id: user.id,
         },
@@ -105,13 +104,12 @@ export async function POST(request: NextRequest) {
       return faculty
     })
 
-    const resultAny = result as any; // TypeScript types are wrong
     return NextResponse.json({ 
       faculty: {
         ...result,
-        facultyId: resultAny.faculty_id || result.employee_id, // Return faculty_id or fallback
+        facultyId: result.faculty_id, // Return faculty_id
         officeHours: result.office_hours,
-        profilePhotoUrl: `/profile-img/${resultAny.faculty_id || result.employee_id}`,
+        profilePhotoUrl: `/profile-img/${result.faculty_id}`,
       }
     }, { status: 201 })
 

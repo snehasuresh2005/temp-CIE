@@ -61,7 +61,7 @@ export async function PUT(
     }
 
     const user = await getUserById(userId);
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Access denied - Admin only" }, { status: 403 });
     }
 
@@ -139,7 +139,7 @@ export async function DELETE(
     }
 
     const user = await getUserById(userId);
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Access denied - Admin only" }, { status: 403 });
     }
 

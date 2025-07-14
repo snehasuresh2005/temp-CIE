@@ -2,12 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
-export type UserRole = "admin" | "faculty" | "student"
+export type UserRole = "ADMIN" | "FACULTY" | "STUDENT"
 
 export interface User {
   id: string
   email: string
   name: string
+  image?: string
   role: UserRole
   phone?: string
   join_date: Date
@@ -75,6 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log("Attempting login for:", email)
+      
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -83,10 +86,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       })
 
+      console.log("Login response status:", response.status)
+
       if (response.ok) {
         const { user: userData } = await response.json()
-        setUser(userData)
-        localStorage.setItem("cie-user", JSON.stringify(userData))
+        console.log("Login successful, user data:", userData)
+        
+        // Force state update by setting user to null first, then to userData
+        setUser(null)
+        
+        // Use setTimeout to ensure state update happens
+        setTimeout(() => {
+          setUser(userData)
+          localStorage.setItem("cie-user", JSON.stringify(userData))
+          console.log("User state updated after login")
+        }, 0)
+        
         localStorage.setItem("userId", userData.id)
         return true
       } else {

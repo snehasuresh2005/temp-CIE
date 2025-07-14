@@ -32,30 +32,31 @@ export async function authenticateUser(email: string, password: string): Promise
     }
 
     // Get role-specific data
-    let profileData = {}
-    switch (user.role) {
-      case "ADMIN":
-        profileData = user.admin
-        break
-      case "FACULTY":
-        profileData = user.faculty
-        break
-      case "STUDENT":
-        profileData = user.student
-        break
+    let profileData = null
+    let role = 'USER'
+
+    if (user.admin) {
+      role = 'ADMIN'
+      profileData = user.admin
+    } else if (user.faculty) {
+      role = 'FACULTY'
+      profileData = user.faculty
+    } else if (user.student) {
+      role = 'STUDENT'
+      profileData = user.student
     }
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role.toLowerCase(),
-      phone: user.phone,
-      joinDate: user.joinDate,
+      role,
+      phone: user.phone || undefined,
+      joinDate: user.join_date,
       profileData,
     }
   } catch (error) {
-    console.error("Authentication error:", error)
+    console.error('Authentication error:', error)
     return null
   }
 }
@@ -75,30 +76,40 @@ export async function getUserById(id: string): Promise<AuthUser | null> {
       return null
     }
 
-    let profileData = {}
-    switch (user.role) {
-      case "ADMIN":
-        profileData = user.admin
-        break
-      case "FACULTY":
-        profileData = user.faculty
-        break
-      case "STUDENT":
-        profileData = user.student
-        break
+    // Get role-specific data
+    let profileData = null
+    let role = 'USER'
+
+    if (user.admin) {
+      role = 'ADMIN'
+      profileData = user.admin
+    } else if (user.faculty) {
+      role = 'FACULTY'
+      profileData = user.faculty
+    } else if (user.student) {
+      role = 'STUDENT'
+      profileData = user.student
     }
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role.toLowerCase(),
-      phone: user.phone,
-      joinDate: user.joinDate,
+      role,
+      phone: user.phone || undefined,
+      joinDate: user.join_date,
       profileData,
     }
   } catch (error) {
-    console.error("Get user error:", error)
+    console.error('Get user by ID error:', error)
     return null
   }
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12)
+}
+
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  return bcrypt.compare(password, hashedPassword)
 }
