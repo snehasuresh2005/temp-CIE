@@ -149,16 +149,16 @@ export async function POST(request: NextRequest) {
         purchase_currency: data.purchase_currency || "INR",
         purchase_date: data.purchase_date ? new Date(data.purchase_date) : null,
         created_by: userName,
+        track_individual: data.track_individual || false,
+        individual_items: data.individual_items ? JSON.stringify(data.individual_items) : undefined,
       },
-    })
+    } as any)
 
     console.log("POST /api/lab-components - Created component with created_by:", component.created_by)
 
     // Transform the response to match frontend expectations
     const transformedComponent = {
-      // Add snake_case for the new info dialog
-      ...component,
-
+      ...component as any,
       // Keep camelCase for existing frontend parts
       name: component.component_name,
       description: component.component_description,
@@ -180,6 +180,8 @@ export async function POST(request: NextRequest) {
       purchasedCurrency: component.purchase_currency,
       createdAt: component.created_at,
       updatedAt: component.modified_at,
+      track_individual: (component as any).track_individual,
+      individual_items: (component as any).individual_items ? JSON.parse((component as any).individual_items) : [],
     }
 
     return NextResponse.json({ component: transformedComponent })

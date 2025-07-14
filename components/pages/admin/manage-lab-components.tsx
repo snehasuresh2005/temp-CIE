@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -47,6 +49,11 @@ interface LabComponent {
   imageUrl?: string | null
   backImageUrl?: string | null
   availableQuantity?: number
+}
+
+interface IndividualItem {
+  id: string
+  unique_id: string
 }
 
 // Utility functions for formatting
@@ -96,6 +103,11 @@ export function ManageLabComponents() {
     purchase_currency: "INR"
   })
 
+  // Individual tracking state
+  const [trackIndividual, setTrackIndividual] = useState(false)
+  const [individualItems, setIndividualItems] = useState<IndividualItem[]>([])
+  const [individualItemErrors, setIndividualItemErrors] = useState<Record<string, string>>({})
+
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null)
   const [backImageFile, setBackImageFile] = useState<File | null>(null)
   const [frontImagePreview, setFrontImagePreview] = useState<string | null>(null)
@@ -142,6 +154,48 @@ export function ManageLabComponents() {
     console.log("ManageLabComponents - User name:", user?.name)
     console.log("ManageLabComponents - User role:", user?.role)
   }, [user])
+
+  // Individual item management functions
+  const addIndividualItem = () => {
+    const newItem: IndividualItem = {
+      id: Date.now().toString(),
+      unique_id: ""
+    }
+    setIndividualItems(prev => [...prev, newItem])
+  }
+
+  const removeIndividualItem = (id: string) => {
+    setIndividualItems(prev => prev.filter(item => item.id !== id))
+    setIndividualItemErrors(prev => {
+      const newErrors = { ...prev }
+      delete newErrors[id]
+      return newErrors
+    })
+  }
+
+  const updateIndividualItem = (id: string, unique_id: string) => {
+    setIndividualItems(prev => 
+      prev.map(item => 
+        item.id === id ? { ...item, unique_id } : item
+      )
+    )
+    // Clear error when user starts typing
+    if (unique_id.trim()) {
+      setIndividualItemErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[id]
+        return newErrors
+      })
+    }
+  }
+
+  // Update quantity when individual tracking changes
+  useEffect(() => {
+    if (trackIndividual) {
+      const validItems = individualItems.filter(item => item.unique_id.trim())
+      setNewComponent(prev => ({ ...prev, component_quantity: validItems.length }))
+    }
+  }, [trackIndividual, individualItems])
 
   // Click-outside detection for location input
   useEffect(() => {
@@ -364,9 +418,22 @@ export function ManageLabComponents() {
     const formattedCategory = toTitleCase(newComponent.component_category)
     const formattedLocation = formatLocation(newComponent.component_location)
 
+    // Prepare individual items for API payload
+    let finalQuantity = newComponent.component_quantity
+    let individualItemsPayload: IndividualItem[] = []
+    
+    if (trackIndividual) {
+      const validItems = individualItems.filter(item => item.unique_id.trim())
+      finalQuantity = validItems.length
+      individualItemsPayload = validItems
+    }
+
     console.log("Frontend - handleAddComponent - user object:", user)
     console.log("Frontend - handleAddComponent - user.id:", user?.id)
     console.log("Frontend - handleAddComponent - user.name:", user?.name)
+    console.log("Frontend - handleAddComponent - trackIndividual:", trackIndividual)
+    console.log("Frontend - handleAddComponent - finalQuantity:", finalQuantity)
+    console.log("Frontend - handleAddComponent - individualItemsPayload:", individualItemsPayload)
 
       const response = await fetch("/api/lab-components", {
         method: "POST",
@@ -378,9 +445,12 @@ export function ManageLabComponents() {
           ...newComponent,
           component_category: formattedCategory,
           component_location: formattedLocation,
+          component_quantity: finalQuantity,
           front_image_id: frontImageUrl,
           back_image_id: backImageUrl,
-          created_by: user?.name || "system-fallback"
+          created_by: user?.name || "system-fallback",
+          track_individual: trackIndividual,
+          individual_items: individualItemsPayload
         }),
       })
 
@@ -633,6 +703,7 @@ export function ManageLabComponents() {
   // Validation function
   const validateForm = () => {
     const errors: Record<string, string> = {}
+    const individualErrors: Record<string, string> = {}
 
     // Required fields validation
     if (!newComponent.component_name?.trim()) {
@@ -651,8 +722,43 @@ export function ManageLabComponents() {
       errors.component_location = "Location is required"
     }
 
-    if (newComponent.component_quantity <= 0) {
-      errors.component_quantity = "Quantity must be greater than 0"
+    // Individual tracking validation
+    if (trackIndividual) {
+      if (individualItems.length === 0) {
+        errors.individualItems = "At least one individual item is required when individual tracking is enabled"
+      } else {
+        // Validate each individual item
+        individualItems.forEach((item, index) => {
+          if (!item.unique_id.trim()) {
+            individualErrors[item.id] = "Unique ID is required"
+          }
+        })
+
+        // Check for duplicate unique IDs
+        const uniqueIds = individualItems.map(item => item.unique_id.trim()).filter(id => id)
+        const duplicateIds = uniqueIds.filter((id, index) => uniqueIds.indexOf(id) !== index)
+        
+        if (duplicateIds.length > 0) {
+          individualItems.forEach(item => {
+            if (duplicateIds.includes(item.unique_id.trim())) {
+              individualErrors[item.id] = "Duplicate Unique ID"
+            }
+          })
+        }
+
+        // Update quantity based on valid items
+        const validItems = individualItems.filter(item => item.unique_id.trim())
+        if (validItems.length === 0) {
+          errors.component_quantity = "At least one individual item with valid Unique ID is required"
+        } else {
+          setNewComponent(prev => ({ ...prev, component_quantity: validItems.length }))
+        }
+      }
+    } else {
+      // Regular quantity validation when not tracking individually
+      if (newComponent.component_quantity <= 0) {
+        errors.component_quantity = "Quantity must be greater than 0"
+      }
     }
 
     if (!frontImageFile) {
@@ -682,20 +788,41 @@ export function ManageLabComponents() {
     }
 
     setFormErrors(errors)
-    return Object.keys(errors).length === 0
+    setIndividualItemErrors(individualErrors)
+    return Object.keys(errors).length === 0 && Object.keys(individualErrors).length === 0
   }
 
   // Check if form is valid for button state - using useMemo for reactivity
   const isAddFormValid = useMemo(() => {
-    const isValid = !!(
+    // Basic field validation
+    const basicFieldsValid = !!(
       newComponent.component_name?.trim() &&
       newComponent.component_description?.trim() &&
       newComponent.component_category?.trim() &&
       newComponent.component_location?.trim() &&
-      newComponent.component_quantity > 0 &&
       frontImageFile &&
       backImageFile
     )
+
+    // Quantity validation based on tracking mode
+    let quantityValid = false
+    if (trackIndividual) {
+      const validItems = individualItems.filter(item => item.unique_id.trim())
+      quantityValid = validItems.length > 0
+    } else {
+      quantityValid = newComponent.component_quantity > 0
+    }
+
+    // Individual items validation
+    let individualItemsValid = true
+    if (trackIndividual) {
+      individualItemsValid = individualItems.length > 0 && 
+        individualItems.every(item => item.unique_id.trim()) &&
+        // Check for duplicate unique IDs
+        new Set(individualItems.map(item => item.unique_id.trim()).filter(id => id)).size === individualItems.filter(item => item.unique_id.trim()).length
+    }
+
+    const isValid = basicFieldsValid && quantityValid && individualItemsValid
     
     // Debug log to help troubleshoot
     console.log('Form validation check:', {
@@ -703,9 +830,13 @@ export function ManageLabComponents() {
       description: !!newComponent.component_description?.trim(), 
       category: !!newComponent.component_category?.trim(),
       location: !!newComponent.component_location?.trim(),
-      quantity: newComponent.component_quantity > 0,
+      quantity: quantityValid,
       frontImage: !!frontImageFile,
       backImage: !!backImageFile,
+      trackIndividual,
+      individualItemsCount: individualItems.length,
+      validIndividualItems: individualItems.filter(item => item.unique_id.trim()).length,
+      individualItemsValid,
       isValid
     })
     
@@ -717,7 +848,9 @@ export function ManageLabComponents() {
     newComponent.component_location,
     newComponent.component_quantity,
     frontImageFile,
-    backImageFile
+    backImageFile,
+    trackIndividual,
+    individualItems
   ])
 
   const handleEditComponent = async () => {
@@ -860,6 +993,10 @@ export function ManageLabComponents() {
     setNewCategory("")
     setNewLocation("")
     setIsSubmitting(false)
+    // Reset individual tracking state
+    setTrackIndividual(false)
+    setIndividualItems([])
+    setIndividualItemErrors({})
   }
 
   // Bulk upload functions
@@ -1266,10 +1403,92 @@ export function ManageLabComponents() {
                       </div>
                       <div className="w-20">
                         <Label htmlFor="quantity">Quantity *</Label>
-                        <Input id="quantity" type="number" value={newComponent.component_quantity} onChange={e => setNewComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))} min="1" className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`} />
+                        <Input 
+                          id="quantity" 
+                          type="number" 
+                          value={newComponent.component_quantity} 
+                          onChange={e => setNewComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))} 
+                          min="1" 
+                          disabled={trackIndividual}
+                          className={`mt-1 ${formErrors.component_quantity ? 'border-red-500' : ''}`} 
+                        />
                         {formErrors.component_quantity && <p className="text-red-500 text-xs mt-1">{formErrors.component_quantity}</p>}
-                </div>
+                      </div>
                     </div>
+                    
+                    {/* Individual Tracking Toggle */}
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="track-individual"
+                        checked={trackIndividual}
+                        onCheckedChange={setTrackIndividual}
+                      />
+                      <Label htmlFor="track-individual" className="text-sm font-medium">
+                        Track Individual Items
+                      </Label>
+                    </div>
+                    
+                    {/* Individual Items Section */}
+                    {trackIndividual && (
+                      <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Individual Items</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addIndividualItem}
+                            className="h-8"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Item
+                          </Button>
+                        </div>
+                        
+                        {formErrors.individualItems && (
+                          <p className="text-red-500 text-xs">{formErrors.individualItems}</p>
+                        )}
+                        
+                        {individualItems.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            No individual items added. Click "Add Item" to start tracking individual components.
+                          </p>
+                        ) : (
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {individualItems.map((item, index) => (
+                              <div key={item.id} className="flex flex-col space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <Input
+                                    placeholder={`Unique ID ${index + 1}`}
+                                    value={item.unique_id}
+                                    onChange={(e) => updateIndividualItem(item.id, e.target.value)}
+                                    className={`flex-1 ${individualItemErrors[item.id] ? 'border-red-500 focus:border-red-500' : ''}`}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeIndividualItem(item.id)}
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                {individualItemErrors[item.id] && (
+                                  <p className="text-red-500 text-xs ml-1">{individualItemErrors[item.id]}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {individualItems.length > 0 && (
+                          <div className="text-sm text-gray-600">
+                            Total items: {individualItems.filter(item => item.unique_id.trim()).length} / {individualItems.length}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -1386,7 +1605,13 @@ export function ManageLabComponents() {
                       </TooltipTrigger>
                       {!isAddFormValid && (
                         <TooltipContent>
-                          <p>Please fill in all required fields: Component Name, Description, Category, Location, Quantity, Front Image, and Back Image.</p>
+                          <p>
+                            Please fill in all required fields: Component Name, Description, Category, Location, Front Image, and Back Image.
+                            {trackIndividual 
+                              ? " When individual tracking is enabled, add at least one individual item with a unique ID."
+                              : " Quantity must be greater than 0."
+                            }
+                          </p>
                         </TooltipContent>
                       )}
                     </Tooltip>
