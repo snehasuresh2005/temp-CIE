@@ -92,8 +92,11 @@ export function LabComponentsRequest() {
 
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
+
+
   const [userReturnDialogOpen, setUserReturnDialogOpen] = useState<string | null>(null)
   const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
+
 
   useEffect(() => {
     fetchData()
@@ -300,7 +303,7 @@ export function LabComponentsRequest() {
           "x-user-id": user.id
         },
         body: JSON.stringify({
-          status: "USER_RETURNED",  // Student confirms they have returned the component
+          status: "RETURNED",  // Student confirms they have returned the component
           return_date: new Date().toISOString(),
         }),
       })
@@ -335,8 +338,7 @@ export function LabComponentsRequest() {
       case "collected":
         return "bg-blue-100 text-blue-800"
 
-      case "user_returned":
-        return "bg-purple-100 text-purple-800"
+  
       case "returned":
         return "bg-gray-100 text-gray-800"
       default:
@@ -355,8 +357,6 @@ export function LabComponentsRequest() {
       case "collected":
         return <Package className="h-4 w-4" />
 
-      case "user_returned":
-        return <CheckCircle className="h-4 w-4" />
       case "returned":
         return <CheckCircle className="h-4 w-4" />
       default:
@@ -991,6 +991,34 @@ export function LabComponentsRequest() {
                           </div>
                         </div>
                         
+
+                        {/* Status-specific actions and messages */}
+                        <div className="text-right min-w-0">
+                          {request.status === "COLLECTED" && (
+                            <p className="text-xs text-blue-600">
+                              📦 Collected
+                            </p>
+                          )}
+
+                          {request.status === "RETURNED" && (
+                            <p className="text-xs text-green-600">
+                              ✅ Returned
+                            </p>
+                          )}
+                          
+                          {request.status === "REJECTED" && (
+                            <p className="text-xs text-red-600">
+                              ❌ Rejected
+                            </p>
+                          )}
+
+                          {/* Show overdue warning for collected items */}
+                          {request.status === "COLLECTED" && isOverdue(request.required_date) && (
+                            <p className="text-xs text-red-600 font-medium mt-1">
+                              ⚠️ {getOverdueDays(request.required_date)}d overdue
+                            </p>
+                          )}
+
                         <div className="flex items-center space-x-2">
                           <Badge className={`${getStatusColor(request.status)} text-xs px-2 py-1`}>
                             <div className="flex items-center space-x-1">
@@ -1037,6 +1065,7 @@ export function LabComponentsRequest() {
                               </p>
                             )}
                           </div>
+
                         </div>
                       </div>
                       {request.faculty_notes && (
@@ -1075,6 +1104,14 @@ export function LabComponentsRequest() {
                     <p className="text-sm text-gray-600">You have no overdue component requests.</p>
                   </CardContent>
                 </Card>
+
+              ))
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+
               ) : (
                 overdueRequests.map((request) => (
                   <Card key={request.id} className="border-l-4 border-l-red-400">
@@ -1281,5 +1318,6 @@ export function LabComponentsRequest() {
                     </DialogContent>
                   </Dialog>
     </>
+
   )
 }

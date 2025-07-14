@@ -207,6 +207,7 @@ export async function POST(req: NextRequest) {
       purpose: purpose || `${user.role === "STUDENT" ? "Student" : "Faculty"} component request`,
       required_date: required_date ? new Date(required_date) : null,
       approved_by: coordinatorId, // Assign to coordinator
+      status: "APPROVED", // Set status directly to APPROVED to skip PENDING
     }
 
     if (user.role === "STUDENT") {

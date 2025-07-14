@@ -962,11 +962,72 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                                   Due: {new Date(request.required_date).toLocaleDateString()}
                                 </span>
                               </div>
+        {/* Required date and project */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="required_date">Return Date *</Label>
+                                  <Input
+                                    id="required_date"
+                                    type="date"
+                                    value={newRequest.required_date}
+                                    onChange={(e) => setNewRequest((prev) => ({ ...prev, required_date: e.target.value }))}
+                                    min={new Date().toISOString().split("T")[0]}
+                                    className="text-base py-2 border-gray-200 rounded-lg"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="project">Project *</Label>
+                                  <Select
+                                    value={newRequest.project_id}
+                                    onValueChange={(value) => setNewRequest((prev) => ({ ...prev, project_id: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a project" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {selectedComponent.projects.length > 0 ? (
+                                        selectedComponent.projects
+                                          .filter(componentProject => {
+                                            const fullProject = projects.find(p => p.id === componentProject.id);
+                                            return fullProject?.status === "ONGOING";
+                                          })
+                                          .map((componentProject) => {
+                                            const fullProject = projects.find(p => p.id === componentProject.id)
+                                            return (
+                                              <SelectItem
+                                                key={componentProject.id}
+                                                value={componentProject.id}
+                                              >
+                                                <div className="flex flex-col">
+                                                  <div className="flex items-center gap-2">
+                                                    <span>{componentProject.name}</span>
+                                                    {fullProject?.status === "ONGOING" && (
+                                                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                                        Available
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                  <span className={`text-xs ${getProjectStatusColor(componentProject.id)}`}>
+                                                    {getProjectStatusText(componentProject.id)}
+                                                  </span>
+                                                </div>
+                                              </SelectItem>
+                                            )
+                                          })
+                                      ) : (
+                                        <div className="p-4 text-sm text-center text-gray-500">
+                                          No projects associated with this component.
+                                        </div>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+
                               {request.project_id && (
                                 <div className="mt-1">
                                   <p className="text-xs text-green-600">
                                     Project: {projects.find(p => p.id === request.project_id)?.name || 'Unknown'}
                                   </p>
+
                                 </div>
                               )}
                             </div>
