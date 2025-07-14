@@ -50,6 +50,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import StatusBarChart from "@/components/StatusBarChart";
 
 interface ComponentRequest {
   id: string
@@ -649,7 +650,7 @@ export function CoordinatorDashboard() {
       {hasMultipleRoles && !selectedRole && (
         <div className="space-y-6">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Your Coordinator Role</h2>
+            
             <p className="text-gray-600">Choose which coordinator role you want to manage</p>
                 </div>
           
@@ -712,9 +713,7 @@ export function CoordinatorDashboard() {
       {/* Role-Specific Dashboard Content */}
       {selectedRole && (
         <>
-          <div className="text-sm text-gray-600">
-            Currently managing: <span className="font-medium">{roleName} Coordinator</span>
-          </div>
+
 
           {/* Debug Information for Lab Coordinators */}
           {/* Removed debug card as per user request */}
@@ -764,85 +763,45 @@ export function CoordinatorDashboard() {
           {activeTab === 'analytics' && selectedRole && (
         <div className="space-y-4">
               <h2 className="text-xl font-semibold">{roleName} Analytics Dashboard</h2>
-              <p className="text-gray-600">Insights and statistics for your {roleName.toLowerCase()} coordinator domains</p>
+              
           
-          {/* Analytics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total {roleName} Requests</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                    <div className="text-2xl font-bold">{requests.length}</div>
-                <p className="text-xs text-muted-foreground">
-                      {roleName} requests only
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active {roleName} Items</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                    <div className="text-2xl font-bold">{returnRequests.length}</div>
-                <p className="text-xs text-muted-foreground">
-                      Currently borrowed {roleName.toLowerCase()} items
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Overdue {roleName} Items</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                      {returnRequests.filter(req => isOverdue(req.due_date)).length}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                      {roleName} items past due date
-                </p>
-              </CardContent>
-            </Card>
+          {/* Minimal Stat Cards Row - outside the graph section */}
+          <div className="flex flex-row flex-wrap gap-2 mb-2 justify-center">
+            <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
+              <div className="text-xs text-gray-500 font-medium mb-0.5">Total Requests</div>
+              <div className="text-lg font-bold leading-tight">{requests.length}</div>
+            </div>
+            <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
+              <div className="text-xs text-gray-500 font-medium mb-0.5">Active Loans</div>
+              <div className="text-lg font-bold leading-tight">{returnRequests.length}</div>
+            </div>
+            <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
+              <div className="text-xs text-gray-500 font-medium mb-0.5">Overdue</div>
+              <div className="text-lg font-bold leading-tight text-red-600">{returnRequests.filter(req => isOverdue(req.due_date)).length}</div>
+            </div>
           </div>
-
-              {/* Request Status Overview */}
-          <Card>
-            <CardHeader>
-                  <CardTitle>{roleName} Request Status Overview</CardTitle>
-                  <CardDescription>Distribution of {roleName.toLowerCase()} requests by status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[
-                      { status: 'PENDING', count: pendingRequests.length, color: 'bg-yellow-500' },
-                      { status: 'APPROVED', count: collectionRequests.length, color: 'bg-blue-500' },
-                      { status: 'COLLECTED', count: returnRequests.length, color: 'bg-green-500' },
-                      { status: 'RETURNED', count: requests.filter(req => req.status === "RETURNED").length, color: 'bg-gray-500' },
-                      { status: 'REJECTED', count: requests.filter(req => req.status === "REJECTED").length, color: 'bg-red-500' },
-                ].map(({ status, count, color }) => (
-                  <div key={status} className="flex items-center justify-between">
-                    <div className="text-sm font-medium text-gray-700 capitalize">{status}</div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mx-3">
-                          <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${requests.length > 0 ? (count / requests.length) * 100 : 0}%` }}></div>
-                    </div>
-                    <div className="text-sm font-medium text-gray-700">{count}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Request Status Overview - Only the graph in the card, no extra border or div below */}
+          <div className="bg-white shadow rounded-t-lg px-4 pt-4 pb-2">
+            <div>
+              <StatusBarChart
+                title={''}
+                data={[
+                  { label: 'Pending', count: pendingRequests.length, color: '#FFC107' },
+                  { label: 'Approved', count: collectionRequests.length, color: '#2196F3' },
+                  { label: 'Collected', count: returnRequests.length, color: '#4CAF50' },
+                  { label: 'Returned', count: requests.filter(req => req.status === "RETURNED").length, color: '#757575' },
+                  { label: 'Rejected', count: requests.filter(req => req.status === "REJECTED").length, color: '#F44336' },
+                ]}
+              />
+            </div>
+          </div>
         </div>
       )}
 
           {activeTab === 'collection' && selectedRole && (
         <div className="space-y-4">
               <h2 className="text-xl font-semibold">{roleName} Collection Management</h2>
-              <p className="text-gray-600">Verify if students have collected their approved {roleName.toLowerCase()} items</p>
+              
               
               {collectionRequests.length === 0 ? (
                 <Card>
@@ -967,7 +926,7 @@ export function CoordinatorDashboard() {
           ) : (
             <div className="space-y-4">
                       <h2 className="text-xl font-semibold">{roleName} Active Loans</h2>
-                      <p className="text-gray-600">Manage currently borrowed {roleName.toLowerCase()} items</p>
+                     
                       
               {/* Search and Filter Bar */}
               <div className="flex items-center space-x-4">
@@ -1148,71 +1107,98 @@ export function CoordinatorDashboard() {
           )}
 
           {activeTab === 'history' && selectedRole && (
-        <div className="space-y-4">
-              <h2 className="text-xl font-semibold">{roleName} History</h2>
-              <p className="text-gray-600">View historical {roleName.toLowerCase()} requests and transactions</p>
-              {historyRequests.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No historical requests</h3>
-                    <p className="text-gray-600">No completed or rejected {roleName.toLowerCase()} requests found.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                historyRequests.map((request) => (
-                  <Card key={request.id} className="border-l-4 border-l-gray-400">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">
-                          {getItemName(request)}
-                        </CardTitle>
-                        {getStatusBadge(request.status)}
-        </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterName(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Mail className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterEmail(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <FileText className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterType(request)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div>Quantity: {request.quantity}</div>
-                            <div>Purpose: {request.purpose}</div>
-                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
-                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
-                            {request.return_date && (
-                              <div>Returned: {new Date(request.return_date).toLocaleDateString()}</div>
-                            )}
-                            {request.status === 'REJECTED' && (
-                              <div className="text-red-600">Rejected</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">{roleName} Request History</h2>
+              {/* Table with pagination for historyRequests */}
+              <HistoryTable data={historyRequests} roleName={roleName} />
             </div>
           )}
         </>
       )}
     </div>
   )
+}
+
+
+
+type HistoryTableProps = {
+  data: RequestUnion[];
+  roleName: string;
+};
+
+function HistoryTable({ data, roleName }: HistoryTableProps) {
+  const [page, setPage] = useState<number>(1);
+  const rowsPerPage = 8;
+  const totalPages = Math.ceil(data.length / rowsPerPage);
+  const paginatedData = data.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PENDING': return 'text-yellow-600';
+      case 'APPROVED': return 'text-blue-600';
+      case 'COLLECTED': return 'text-green-600';
+      case 'RETURNED': return 'text-gray-600';
+      case 'REJECTED': return 'text-red-600';
+      default: return 'text-gray-500';
+    }
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+      <table className="min-w-full text-sm">
+        <thead>
+          <tr className="bg-gray-50">
+            <th className="px-4 py-2 text-left font-semibold">Role</th>
+            <th className="px-4 py-2 text-left font-semibold">Requester</th>
+            <th className="px-4 py-2 text-left font-semibold">{roleName === 'Lab' ? 'Component' : 'Item'}</th>
+            {roleName === 'Lab' && <th className="px-4 py-2 text-left font-semibold">Purpose</th>}
+            <th className="px-4 py-2 text-left font-semibold">Status</th>
+            <th className="px-4 py-2 text-left font-semibold">Quantity</th>
+            <th className="px-4 py-2 text-left font-semibold">Request Date</th>
+            <th className="px-4 py-2 text-left font-semibold">Returned/Rejected Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.length === 0 ? (
+            <tr>
+              <td colSpan={roleName === 'Lab' ? 9 : 8} className="text-center py-8 text-gray-400">No history found.</td>
+            </tr>
+          ) : (
+            paginatedData.map((req: RequestUnion) => (
+              <tr key={req.id} className="border-t">
+                <td className="px-4 py-2">{(req as any).student ? 'Student' : 'Faculty'}</td>
+                <td className="px-4 py-2">{(req as any).student?.user?.name || (req as any).requesting_faculty?.user?.name || (req as any).faculty?.user?.name || 'Unknown'}</td>
+                <td className="px-4 py-2">{(req as any).component?.component_name || (req as any).item?.item_name || '-'}</td>
+                {roleName === 'Lab' && <td className="px-4 py-2">{(req as any).purpose || '-'}</td>}
+                <td className={`px-4 py-2 font-semibold ${getStatusColor((req as any).status)}`}>{(req as any).status}</td>
+                <td className="px-4 py-2">{(req as any).quantity}</td>
+                <td className="px-4 py-2">{(req as any).request_date ? new Date((req as any).request_date).toLocaleDateString() : '-'}</td>
+                <td className="px-4 py-2">{(req as any).return_date ? new Date((req as any).return_date).toLocaleDateString() : ((req as any).status === 'REJECTED' && (req as any).collection_date ? new Date((req as any).collection_date).toLocaleDateString() : '-')}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+      {/* Pagination Controls */}
+      <div className="flex justify-between items-center p-2 border-t bg-gray-50">
+        <button
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+        >
+          Previous
+        </button>
+        <span className="text-xs text-gray-600">
+          Page {page} of {totalPages}
+        </span>
+        <button
+          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
 }
