@@ -86,13 +86,13 @@ export async function GET(request: NextRequest) {
               }
             }
           }
-        }
-      }),
+          }
+        }),
       // Recent course enrollments
-      prisma.enrollment.findMany({
+        prisma.enrollment.findMany({
         take: 5,
-        orderBy: { enrolled_at: 'desc' },
-        include: {
+          orderBy: { enrolled_at: 'desc' },
+          include: {
           student: {
             include: {
               user: {
@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
           course: {
             select: { course_name: true, course_code: true }
           }
-        }
-      }),
+          }
+        }),
       // Recent project requests
       prisma.projectRequest.findMany({
         take: 5,
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
             include: {
               user: {
                 select: { name: true }
-              }
+          }
             }
           },
           project: {
