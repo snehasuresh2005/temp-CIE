@@ -58,6 +58,7 @@ model Faculty {
   library_requests     LibraryRequest[]
   library_items       LibraryItem[]
   domain_assignments  DomainCoordinator[] @relation("DomainAssignments")
+  opportunities       Opportunity[]
 
   @@map("faculty")
 }
@@ -80,6 +81,7 @@ model Student {
   attendance_records  StudentAttendance[]
   library_requests   LibraryRequest[]
   user                User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  opportunity_applications OpportunityApplication[]
 
   @@map("students")
 }
@@ -387,6 +389,40 @@ model LibraryItem {
   @@map("library_items")
 }
 
+model Opportunity {
+  id                      String            @id @default(cuid())
+  title                   String
+  type                    OpportunityType
+  description             String
+  startDate               DateTime
+  endDate                 DateTime
+  applicationStartDate    DateTime
+  applicationEndDate      DateTime
+  remuneration            RemunerationType
+  filePath                String?
+  facultyId               String
+  capacity                Int
+  status                  OpportunityStatus @default(OPEN)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  applications            OpportunityApplication[]
+  faculty                 Faculty           @relation(fields: [facultyId], references: [id])
+}
+
+model OpportunityApplication {
+  id             String           @id @default(cuid())
+  opportunityId  String
+  studentId      String
+  resumePath     String?
+  status         ApplicationStatus @default(PENDING)
+  appliedAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  opportunity    Opportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  resumeData     Bytes?
+  resumeName     String?
+}
+
 enum UserRole {
   ADMIN
   FACULTY
@@ -478,5 +514,28 @@ enum ProjectType {
 enum ProjectRequestStatus {
   PENDING
   APPROVED
+  REJECTED
+}
+
+enum OpportunityType {
+  TA
+  RA
+  INTERN
+}
+
+enum RemunerationType {
+  PAID
+  UNPAID
+}
+
+enum OpportunityStatus {
+  OPEN
+  CLOSED
+  COMPLETED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
   REJECTED
 }
