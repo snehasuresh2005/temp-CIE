@@ -71,32 +71,73 @@ export async function GET(request: NextRequest) {
     )
 
     // Transform the data to match frontend expectations
-    const transformedComponents = components.map((component) => {
-      const usedQuantity = componentUsage[component.id] || 0
-      const availableQuantity = component.component_quantity - usedQuantity
-      const associatedProjects = componentProjectsMap[component.id] || []
+    let transformedComponents: any[] = [];
+    components.forEach((component) => {
+      const usedQuantity = componentUsage[component.id] || 0;
+      const availableQuantity = component.component_quantity - usedQuantity;
+      const associatedProjects = componentProjectsMap[component.id] || [];
 
-      return {
-        // Add snake_case for the new info dialog
+      // If track_individual is true and individual_items exist, flatten
+      if (component.track_individual && component.individual_items) {
+        let items: any[] = [];
+        try {
+          items = typeof component.individual_items === 'string'
+            ? JSON.parse(component.individual_items)
+            : component.individual_items;
+        } catch (e) {
+          items = [];
+        }
+        if (Array.isArray(items) && items.length > 0) {
+          items.forEach((item: any, idx: number) => {
+            transformedComponents.push({
+              ...component,
+              projects: associatedProjects,
+              name: component.component_name,
+              description: component.component_description,
+              specifications: component.component_specification,
+              totalQuantity: 1,
+              availableQuantity: 1, // TODO: Optionally, track per-unique-id usage
+              available_quantity: 1,
+              category: component.component_category,
+              location: component.component_location,
+              tagId: component.component_tag_id,
+              imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
+              backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
+              image_url: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
+              back_image_url: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
+              invoiceNumber: component.invoice_number,
+              purchasedFrom: component.purchased_from,
+              purchasedDate: component.purchase_date,
+              purchasedValue: component.purchase_value,
+              purchasedCurrency: component.purchase_currency,
+              createdAt: component.created_at,
+              updatedAt: component.modified_at,
+              unique_id: item.unique_id || item.id || idx,
+              individual_item_index: idx,
+              parent_component_id: component.id,
+              // Optionally, add more fields from the item object
+            });
+          });
+          return;
+        }
+      }
+      // Default: non-individual-tracked or no items
+      transformedComponents.push({
         ...component,
-
-        // Add associated projects
         projects: associatedProjects,
-
-        // Keep camelCase for existing frontend parts
         name: component.component_name,
         description: component.component_description,
         specifications: component.component_specification,
         totalQuantity: component.component_quantity,
         availableQuantity: availableQuantity,
-        available_quantity: availableQuantity, // Add snake_case version for frontend
+        available_quantity: availableQuantity,
         category: component.component_category,
         location: component.component_location,
         tagId: component.component_tag_id,
         imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
         backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
-        image_url: component.front_image_id ? `/lab-images/${component.front_image_id}` : null, // Add snake_case version
-        back_image_url: component.back_image_id ? `/lab-images/${component.back_image_id}` : null, // Add snake_case version
+        image_url: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
+        back_image_url: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
         invoiceNumber: component.invoice_number,
         purchasedFrom: component.purchased_from,
         purchasedDate: component.purchase_date,
@@ -104,8 +145,8 @@ export async function GET(request: NextRequest) {
         purchasedCurrency: component.purchase_currency,
         createdAt: component.created_at,
         updatedAt: component.modified_at,
-      }
-    })
+      });
+    });
 
     return NextResponse.json({ components: transformedComponents })
   } catch (error) {
