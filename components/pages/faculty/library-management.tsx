@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { BookOpen, RotateCcw, Loader2 } from "lucide-react"
+import { BookOpen, RotateCcw, Loader2, Search, Filter } from "lucide-react"
 import { CheckCircle, Clock, AlertTriangle, Package, X, Plus, ChevronRight, ChevronLeft, Info } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 
 // Utility functions - declared at module scope for hoisting
 export function isOverdue(expectedReturnDate: string): boolean {
@@ -87,6 +88,8 @@ export function LibraryManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
   const { toast } = useToast()
+  const [categoryFilter, setCategoryFilter] = useState<string>("All")
+  // Remove locationFilter state
 
   useEffect(() => {
     fetchData()
@@ -138,12 +141,21 @@ export function LibraryManagement() {
     }
   }
 
-  // Filter available items for requesting
+  // Get unique categories and locations
+  const categories = ["All", ...Array.from(new Set(allItems.map(i => i.item_category)).values())]
+  // Remove locations array
+
+  // Updated filtering logic
   const filteredItems = allItems.filter(
-    (item) =>
-      item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.item_description.toLowerCase().includes(searchTerm.toLowerCase()),
+    (item) => {
+      const matchesSearch =
+        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.item_description.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCategory = categoryFilter === "All" || item.item_category === categoryFilter
+      // Remove location filtering
+      return matchesSearch && matchesCategory
+    }
   )
 
   // Handle faculty making their own request
@@ -736,13 +748,32 @@ export function LibraryManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex space-x-4">
-                  <Input
-                    placeholder="Search items by name, category, or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
-                  />
+                <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
+                  <div className="relative w-56">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Search className="h-4 w-4" />
+                    </span>
+                    <Input
+                      placeholder="Search items..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 pr-2 h-9 w-full text-sm"
+                    />
+                  </div>
+                  <span className="flex items-center ml-4 mr-1 text-gray-400"><Filter className="h-5 w-5" /></span>
+                  <span className="text-sm text-gray-600 font-medium ml-1">Category</span>
+                  <div className="w-40 flex flex-col">
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Category">{categoryFilter !== "All" ? categoryFilter : undefined}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

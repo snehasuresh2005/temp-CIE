@@ -113,7 +113,6 @@ export function ManageLibrary() {
   const [locationToDelete, setLocationToDelete] = useState<string | null>(null)
   const [isDeleteLocationDialogOpen, setIsDeleteLocationDialogOpen] = useState(false)
   const [locationOptions, setLocationOptions] = useState<string[]>([])
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<LibraryItem | null>(null)
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
@@ -458,8 +457,8 @@ export function ManageLibrary() {
     setIsSavingLocation(false)
     setLocationToDelete(null)
     setIsDeleteLocationDialogOpen(false)
-    setIsEditDialogOpen(false)
-    setEditingItem(null)
+            setIsAddDialogOpen(false)
+        setEditingItem(null)
     setImageStates({})
     setFormErrors({})
     setIsSubmitting(false)
@@ -792,7 +791,7 @@ export function ManageLibrary() {
         setBackImageFile(null)
         setFrontImagePreview(null)
         setBackImagePreview(null)
-        setIsEditDialogOpen(false)
+        setIsAddDialogOpen(false)
         toast({
           title: "Success",
           description: "Library item updated successfully",
@@ -1031,7 +1030,7 @@ export function ManageLibrary() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-3xl font-bold text-gray-900">Library Items Management</h3>
+          <h3 className="text-3xl font-bold text-gray-900">Library Books Management</h3>
         </div>
         <div className="flex space-x-2">
           <Button onClick={fetchItems} variant="outline">
@@ -1100,6 +1099,7 @@ export function ManageLibrary() {
             setIsAddDialogOpen(open)
             if (!open) {
               resetForm()
+              setEditingItem(null)
             }
           }}>
             <DialogTrigger asChild>
@@ -1110,7 +1110,7 @@ export function ManageLibrary() {
             </DialogTrigger>
             <DialogContent className="max-w-7xl w-full max-h-[98vh] overflow-hidden">
               <DialogHeader>
-                <DialogTitle>{editingItem ? "Edit Library Item" : "Add New Library Item"}</DialogTitle>
+                <DialogTitle>{editingItem ? "Edit Library Book" : "Add New Library Book"}</DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
                 {/* Left Column: Basic Info & Images */}
@@ -1486,7 +1486,6 @@ export function ManageLibrary() {
                 <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">
                   <Button variant="outline" onClick={() => {
                     setIsAddDialogOpen(false)
-                    setIsEditDialogOpen(false)
                     resetForm()
                   }} className="px-6">Cancel</Button>
                   <TooltipProvider>
@@ -1626,16 +1625,7 @@ export function ManageLibrary() {
                       )}
                     </div>
                   )}
-                  <div className="mb-2">
-                    <Label className="text-sm font-medium text-gray-500">Description</Label>
-                    <p className="text-sm text-gray-600 line-clamp-2">{item.item_description}</p>
-                  </div>
-                  {item.item_specification && (
-                    <div className="mb-2">
-                      <Label className="text-sm font-medium text-gray-500">Specifications</Label>
-                      <p className="text-sm text-gray-700">{item.item_specification}</p>
-                    </div>
-                  )}
+
                   <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
                     <div><span className="font-semibold">Total:</span> {item.item_quantity}</div>
                      <div><span className="font-semibold">Location:</span> {item.item_location}</div>
@@ -1646,7 +1636,7 @@ export function ManageLibrary() {
                       size="sm"
                       onClick={() => {
                         setEditingItem(item)
-                        setIsEditDialogOpen(true)
+                        setIsAddDialogOpen(true)
                       }}
                     >
                       <Edit className="h-4 w-4 mr-1" /> Edit
@@ -1671,112 +1661,117 @@ export function ManageLibrary() {
 
       {/* Info Dialog */}
       <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-4xl">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Info className="h-5 w-5 text-blue-600" />
-              Item Details
+              Book Details
             </DialogTitle>
-            <DialogDescription>
-              Detailed information about the library item including purchase details and audit trail.
-            </DialogDescription>
           </DialogHeader>
           {itemToView && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left Column: Basic Information */}
+              <div className="bg-blue-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Name</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_name}</div>
+                    <div className="text-sm font-medium text-gray-900">{itemToView.item_name}</div>
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Category</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_category}</div>
+                    <div className="text-sm font-medium text-gray-900">{itemToView.item_category}</div>
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Location</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_location}</div>
+                    <div className="text-sm font-medium text-gray-900">{itemToView.item_location}</div>
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Tag ID</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_tag_id || '-'}</div>
+                    <div className="text-sm font-medium text-gray-900">{itemToView.item_tag_id || '-'}</div>
                   </div>
                   <div>
                     <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_quantity}</div>
+                    <div className="text-sm font-medium text-gray-900">{itemToView.item_quantity}</div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Available</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.availableQuantity}</div>
-                  </div>
+
                 </div>
-                <div className="mt-4">
+                <div className="mt-3">
                   <Label className="text-xs font-medium text-gray-500">Description</Label>
-                  <div className="text-sm text-gray-700">{itemToView.item_description}</div>
+                  <div className="text-xs text-gray-700 mt-1">{itemToView.item_description}</div>
                 </div>
                 {itemToView.item_specification && (
                   <div className="mt-2">
                     <Label className="text-xs font-medium text-gray-500">Specification</Label>
-                    <div className="text-sm text-gray-700">{itemToView.item_specification}</div>
+                    <div className="text-xs text-gray-700 mt-1">{itemToView.item_specification}</div>
                   </div>
                 )}
               </div>
-              {/* Purchase Details */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
-                  Purchase Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
-                    <div className="text-base text-gray-900">{itemToView.invoice_number || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchased From</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchased_from || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchase Date</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_date || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_value || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Currency</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_currency || '-'}</div>
+              
+              {/* Right Column: Purchase Details and Audit Trail */}
+              <div className="space-y-3">
+                {/* Purchase Details */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    Purchase Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
+                      <div className="text-sm text-gray-900">{itemToView.invoice_number || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchased From</Label>
+                      <div className="text-sm text-gray-900">{itemToView.purchased_from || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Date</Label>
+                      <div className="text-sm text-gray-900">
+                        {itemToView.purchase_date ? new Date(itemToView.purchase_date).toLocaleDateString() : '-'}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
+                      <div className="text-sm text-gray-900">{itemToView.purchase_value || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Currency</Label>
+                      <div className="text-sm text-gray-900">{itemToView.purchase_currency || '-'}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {/* Audit Trail */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Audit Trail
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Created By</Label>
-                    <div className="text-base text-gray-900">{itemToView.created_by || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Created At</Label>
-                    <div className="text-base text-gray-900">{itemToView.created_at || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
-                    <div className="text-base text-gray-900">{itemToView.modified_by || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
-                    <div className="text-base text-gray-900">{itemToView.modified_at || '-'}</div>
+                
+                {/* Audit Trail */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Audit Trail
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created By</Label>
+                      <div className="text-sm text-gray-900">{itemToView.created_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created At</Label>
+                      <div className="text-sm text-gray-900">
+                        {itemToView.created_at ? new Date(itemToView.created_at).toLocaleDateString() : '-'}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
+                      <div className="text-sm text-gray-900">{itemToView.modified_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
+                      <div className="text-sm text-gray-900">
+                        {itemToView.modified_at ? new Date(itemToView.modified_at).toLocaleDateString() : '-'}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

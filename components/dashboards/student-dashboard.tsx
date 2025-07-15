@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Home, User as UserIcon, MapPin, Calendar, BookOpen, FolderOpen, ClipboardCheck, Wrench, Moon, Sun, History } from "lucide-react"
+import { Home, User as UserIcon, MapPin, Calendar, BookOpen, FolderOpen, ClipboardCheck, Wrench, Moon, Sun, History, Briefcase } from "lucide-react"
 import { StudentHome } from "@/components/pages/student/student-home"
 import { StudentCalendar } from "@/components/pages/student/student-calendar"
 import { LabComponentsRequest } from "@/components/pages/student/lab-components-request"
@@ -12,6 +12,7 @@ import { ViewAttendance } from "@/components/pages/student/view-attendance"
 import { UserProfile } from "@/components/common/user-profile"
 import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { StudentRequestHistory } from "@/components/pages/student/request-history"
+import StudentOpportunity from '@/components/pages/student/student-opportunity';
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -22,6 +23,7 @@ const menuItems = [
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
   { id: "library", label: "Library", icon: BookOpen },
+  { id: "opportunities", label: "Opportunities", icon: Briefcase },
 ]
 
 export function StudentDashboard() {
@@ -54,6 +56,8 @@ export function StudentDashboard() {
         return <UserProfile />
       case "library":
         return <LibraryDashboard />
+      case "opportunities":
+        return <StudentOpportunity />
       default:
         return <StudentHome onPageChange={setCurrentPage} />
     }
