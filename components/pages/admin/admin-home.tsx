@@ -98,17 +98,15 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
         return (
           <>
             {/* Colorful Hero Window */}
-            <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-12 min-h-[320px] flex flex-col md:flex-row items-center justify-between mb-4 relative overflow-hidden">
+            <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-12 min-h-[320px] flex flex-col md:flex-row items-center justify-between mb-1  relative overflow-hidden">
               <div className="flex-1 z-10">
-                <div className="flex items-center mb-6">
+                <div className="flex items-center mb-1">
                   <span className="bg-white rounded-xl p-2 shadow mr-6 flex items-center justify-center"><img src="/logo.png" alt="CIE Logo" className="h-16 w-auto" /></span>
                   <span className="text-white text-4xl font-extrabold tracking-tight">CIE Admin Portal</span>
                 </div>
                 <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4">Are you ready to manage innovation?</h2>
                 <p className="text-white/90 mb-8 max-w-2xl text-lg">Welcome to the Centre for Innovation & Entrepreneurship. Oversee faculty, students, courses, and more—all in one place.</p>
                 <div className="flex gap-6">
-                  <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg">Learn More</button>
-                  <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg" onClick={handleQuickActionsClick}>Quick Actions</button>
                 </div>
               </div>
               <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" />
