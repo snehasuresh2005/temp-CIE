@@ -92,18 +92,18 @@ export async function GET(request: NextRequest) {
           student_id: user.student.id
         },
         orderBy: { request_date: 'desc' },
-        include: {
+        include: { 
           component: {
             select: { component_name: true }
           }
         }
-      }),
+        }),
       // Recent library requests by this student
-      prisma.libraryRequest.findMany({
+        prisma.libraryRequest.findMany({
         take: 5,
         where: {
           student_id: user.student.id
-        },
+          },
         orderBy: { request_date: 'desc' },
         include: {
           item: {
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
           student_id: user.student.id
         },
         orderBy: { request_date: 'desc' },
-        include: {
+        include: { 
           project: {
             select: { name: true }
           }
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
       // Recent project submissions by this student
       prisma.projectSubmission.findMany({
         take: 5,
-        where: {
+          where: {
           student_id: user.student.id
         },
         orderBy: { submission_date: 'desc' },
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
             select: { name: true }
           }
         }
-      })
+        })
     ])
 
     // Combine and sort all activities by date

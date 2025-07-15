@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft, AlertTriangle } from "lucide-react"
+import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft, AlertTriangle, Info, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -83,10 +83,14 @@ export function LibraryRequest() {
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
   const [returnDialogOpen, setReturnDialogOpen] = useState<string | null>(null)
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
 
   // State for tracking viewed expired requests
   const [viewedExpiredRequests, setViewedExpiredRequests] = useState<Set<string>>(new Set())
   const [expiredRequestsToShow, setExpiredRequestsToShow] = useState<LibraryRequest[]>([])
+
+  const [categoryFilter, setCategoryFilter] = useState<string>("All")
+  // Remove locationFilter state
 
   const fetchData = async () => {
     if (!user) return
@@ -158,11 +162,21 @@ export function LibraryRequest() {
     )
   }
 
+  // Get unique categories and locations
+  const categories = ["All", ...Array.from(new Set(items.map(i => i.item_category)).values())]
+  // Remove locations array
+
+  // Updated filtering logic
   const filteredItems = items.filter(
-    (item) =>
-      item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.item_description.toLowerCase().includes(searchTerm.toLowerCase()),
+    (item) => {
+      const matchesSearch =
+        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.item_description.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCategory = categoryFilter === "All" || item.item_category === categoryFilter
+      // Remove location filtering
+      return matchesSearch && matchesCategory
+    }
   )
 
   const handleRequestItem = async () => {
@@ -472,38 +486,66 @@ export function LibraryRequest() {
         </TabsList>
 
         <TabsContent value="available" className="space-y-3">
-          <div className="flex items-center space-x-4">
-            <div className="w-80">
-              <Input placeholder="Search items..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
+            <div className="relative w-56">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+                <Search className="h-4 w-4" />
+              </span>
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 pr-2 h-9 w-full text-sm"
+              />
+            </div>
+            <span className="flex items-center ml-4 mr-1 text-gray-400"><Filter className="h-5 w-5" /></span>
+            <span className="text-sm text-gray-600 font-medium ml-1">Category</span>
+            <div className="w-40 flex flex-col">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Category">{categoryFilter !== "All" ? categoryFilter : undefined}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {filteredItems.map((item) => (
-              <Card key={item.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
-                <CardHeader className="p-3">
+              <Card key={item.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white">
+                <CardHeader className="p-3 pb-0">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="flex items-center space-x-2 text-sm">
-                        <Package className="h-4 w-4 flex-shrink-0" />
+                      <CardTitle className="flex items-center space-x-2 text-base font-semibold">
+                        <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
                         <span className="truncate">{item.item_name}</span>
                       </CardTitle>
-                      <CardDescription className="text-xs">{item.item_category}</CardDescription>
+                      <CardDescription className="text-xs text-gray-500">{item.item_category}</CardDescription>
                     </div>
-                    <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5 ml-2 flex-shrink-0`}>
-                      {getAvailabilityText(item.available_quantity, item.item_quantity)}
-                    </Badge>
+                    <div className="flex items-center space-x-1 flex-shrink-0">
+                      <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-2 py-0.5 rounded-full font-medium`}>{getAvailabilityText(item.available_quantity, item.item_quantity)}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                        onClick={() => setInfoDialogOpen(item.id)}
+                      >
+                        <Info className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col p-3 pt-0">
+                <CardContent className="flex-grow flex flex-col p-3 pt-2">
                   <div className="space-y-3 flex-grow">
                     {/* Image Display */}
                     {(item.image_url || item.back_image_url) && (
-                      <div className="relative w-full h-32">
+                      <div className="relative w-full h-32 mb-2">
                         {/* Front Image */}
                         <div 
-                          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                            imageStates[item.id] ? 'opacity-0' : 'opacity-100'
-                          }`}
+                          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}
                         >
                           <img
                             src={item.image_url || '/placeholder.jpg'}
@@ -517,9 +559,7 @@ export function LibraryRequest() {
                         {/* Back Image */}
                         {item.back_image_url && (
                           <div 
-                            className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
-                              imageStates[item.id] ? 'opacity-100' : 'opacity-0'
-                            }`}
+                            className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-100' : 'opacity-0'}`}
                           >
                             <img
                               src={item.back_image_url}
@@ -556,25 +596,25 @@ export function LibraryRequest() {
                             )}
                           </>
                         )}
+                        {/* Image Indicators */}
+                        {item.back_image_url && (
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                            <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${!imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                            <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                          </div>
+                        )}
                       </div>
                     )}
-                    
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-xs text-gray-600 line-clamp-2">{item.item_description}</p>
-                      </div>
-                      
+                    <div className="space-y-1">
                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
                         <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
                         <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
                       </div>
-                      
                       <div className="text-xs text-gray-500">
                         <span className="font-medium">Location:</span> {item.item_location}
                       </div>
                     </div>
                   </div>
-                  
                   <div className="mt-3">
                     <Dialog open={isRequestDialogOpen && selectedItem?.id === item.id} onOpenChange={(isOpen) => {
                       setIsRequestDialogOpen(isOpen)
@@ -751,6 +791,84 @@ export function LibraryRequest() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Library Item Info Dialog */}
+      <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Library Item Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this library item
+            </DialogDescription>
+          </DialogHeader>
+          {infoDialogOpen && (() => {
+            const item = items.find(i => i.id === infoDialogOpen)
+            if (!item) return null
+            
+            return (
+              <div className="space-y-4">
+                {/* Item Name and Category */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-5 w-5 text-gray-500" />
+                    <h3 className="text-lg font-semibold">{item.item_name}</h3>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {item.item_category}
+                  </Badge>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Description</h4>
+                  <p className="text-sm text-gray-600">{item.item_description}</p>
+                </div>
+
+                {/* Specifications */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Specifications</h4>
+                  <p className="text-sm text-gray-600">{item.item_specification}</p>
+                </div>
+
+                {/* Availability */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-sm">Total Quantity</h4>
+                    <p className="text-lg font-semibold text-gray-900">{item.item_quantity}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-sm">Available</h4>
+                    <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {item.available_quantity}
+                    </p>
+                  </div>
+                </div>
+
+                {/* On Loan */}
+                <div className="space-y-1">
+                  <h4 className="font-medium text-sm">Currently On Loan</h4>
+                  <p className="text-lg font-semibold text-blue-600">
+                    {item.item_quantity - item.available_quantity}
+                  </p>
+                </div>
+
+                {/* Location */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Location</h4>
+                  <p className="text-sm text-gray-600">{item.item_location}</p>
+                </div>
+
+                {/* Availability Status */}
+                <div className="pt-2 border-t">
+                  <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)}`}>
+                    {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                  </Badge>
+                </div>
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

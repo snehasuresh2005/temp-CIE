@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { 
   BookOpen, 
@@ -16,7 +17,11 @@ import {
   Search,
   Plus,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  Filter
 } from "lucide-react"
 
 // Utility functions
@@ -62,6 +67,7 @@ interface LibraryItem {
   back_image_url?: string | null
   front_image_id?: string | null
   back_image_id?: string | null
+  item_specification?: string // Added for new dialog
 }
 
 interface LibraryRequest {
@@ -108,6 +114,11 @@ export function LibraryDashboard() {
   const [currentView, setCurrentView] = useState<ViewType>('browse')
   const [currentTime, setCurrentTime] = useState(new Date())
   const { toast } = useToast()
+
+  // Add state for info dialog and image toggle
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null);
+  const [imageStates, setImageStates] = useState<Record<string, boolean>>({}); // false = front, true = back
+  const [categoryFilter, setCategoryFilter] = useState<string>("All")
 
   // Update time every minute for countdown display
   useEffect(() => {
@@ -302,12 +313,19 @@ export function LibraryDashboard() {
       .map((req) => req.item_id)
   )
 
-  // Filter available items for requesting
+  // Get unique categories
+  const categories = ["All", ...Array.from(new Set(items.map(i => i.item_category)).values())]
+
+  // Updated filtering logic
   const filteredItems = items.filter(
-    (item) =>
-      item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.item_description.toLowerCase().includes(searchTerm.toLowerCase()),
+    (item) => {
+      const matchesSearch =
+        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.item_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.item_description.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCategory = categoryFilter === "All" || item.item_category === categoryFilter
+      return matchesSearch && matchesCategory
+    }
   )
 
   // Check if user can borrow a specific book
@@ -351,89 +369,112 @@ export function LibraryDashboard() {
                   const isUrgent = expiryInfo.minutesLeft <= 30 && !expiryInfo.expired
                   
                   return (
-                    <Card key={request.id} className={`hover:shadow-md transition-shadow ${
+                    <Card key={request.id} className={`flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white ${
                       expiryInfo.expired 
                         ? 'border-red-300 bg-red-50' 
                         : isUrgent 
                           ? 'border-orange-300 bg-orange-50' 
                           : ''
                     }`}>
-                      <CardContent className="p-3">
-                        <div className="space-y-3">
-                          {/* Book cover */}
-                          <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden relative">
+                      <CardHeader className="p-3 pb-0">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center space-x-2 text-base font-semibold">
+                              <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                              <span className="truncate">{request.item?.item_name || "Unknown Item"}</span>
+                            </CardTitle>
+                            <CardDescription className="text-xs text-gray-500">{request.item?.item_category || "Unknown Category"}</CardDescription>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Badge className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              expiryInfo.expired 
+                                ? 'bg-red-100 text-red-800' 
+                                : isUrgent 
+                                  ? 'bg-orange-100 text-orange-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {expiryInfo.expired ? 'Expired' : isUrgent ? 'Urgent' : 'Reserved'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      {/* Image Display */}
+                      {request.item?.image_url && (
+                        <div className="relative w-full aspect-[3/4] mb-2 px-8 pt-2 p-3 bg-white border border-gray-200 shadow-sm rounded-lg flex items-center justify-center">
+                          <div className="w-full h-full">
                             <img
-                              src={request.item?.image_url || "/placeholder.jpg"}
-                              alt={request.item?.item_name || "Library Item"}
-                              className="w-full h-full object-cover"
+                              src={request.item.image_url || '/placeholder.jpg'}
+                              alt={`Cover of ${request.item?.item_name || "Library Item"}`}
+                              className="object-contain max-w-[70%] max-h-[80%] mx-auto rounded-md bg-gray-50"
                               onError={(e) => {
                                 e.currentTarget.src = "/placeholder.jpg"
                               }}
                             />
                             {expiryInfo.expired && (
-                              <div className="absolute inset-0 bg-red-600 bg-opacity-75 flex items-center justify-center">
+                              <div className="absolute inset-0 bg-red-600 bg-opacity-75 flex items-center justify-center rounded-md">
                                 <Badge className="bg-red-100 text-red-800 text-xs">
                                   EXPIRED
                                 </Badge>
                               </div>
                             )}
                           </div>
-                          
-                          <div className="space-y-1">
-                            <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                              {request.item?.item_name || "Unknown Item"}
-                            </h3>
-                            <div className="flex items-center space-x-1">
-                              <Clock className={`h-3 w-3 ${
-                                expiryInfo.expired 
-                                  ? 'text-red-600' 
-                                  : isUrgent 
-                                    ? 'text-orange-600' 
-                                    : 'text-blue-600'
-                              }`} />
-                              <p className={`text-xs font-medium ${
-                                expiryInfo.expired 
-                                  ? 'text-red-600' 
-                                  : isUrgent 
-                                    ? 'text-orange-600' 
-                                    : 'text-blue-600'
-                              }`}>
-                                {expiryInfo.expired 
-                                  ? 'Expired' 
-                                  : `${expiryInfo.timeLeft} left`
-                                }
-                              </p>
+                        </div>
+                      )}
+                      
+                      <CardContent className="flex-grow flex flex-col p-3 pt-2">
+                        <div className="flex-grow">
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                            <div>
+                              <span className="font-medium">Reserved:</span> {new Date(request.request_date).toLocaleDateString()}
+                            </div>
+                            <div>
+                              <span className="font-medium">Due:</span> {new Date(request.required_date).toLocaleDateString()}
                             </div>
                           </div>
-                          
-                          <div className="space-y-1 text-xs text-gray-600">
-                            <p>Reserved: {new Date(request.request_date).toLocaleDateString()}</p>
-                            <p className="font-medium text-gray-700">
-                              Due: {new Date(request.required_date).toLocaleDateString()}
+                          <div className="flex items-center space-x-1 mt-1">
+                            <Clock className={`h-3 w-3 ${
+                              expiryInfo.expired 
+                                ? 'text-red-600' 
+                                : isUrgent 
+                                  ? 'text-orange-600' 
+                                  : 'text-blue-600'
+                            }`} />
+                            <p className={`text-xs font-medium ${
+                              expiryInfo.expired 
+                                ? 'text-red-600' 
+                                : isUrgent 
+                                  ? 'text-orange-600' 
+                                  : 'text-blue-600'
+                            }`}>
+                              {expiryInfo.expired 
+                                ? 'Expired' 
+                                : `${expiryInfo.timeLeft} left`
+                              }
                             </p>
-                            {expiryInfo.expired && (
-                              <p className="text-red-600 font-medium text-xs">
-                                ⚠️ This reservation has expired and will be removed
-                              </p>
-                            )}
-                            {isUrgent && !expiryInfo.expired && (
-                              <p className="text-orange-600 font-medium text-xs">
-                                ⏰ Collect soon! Expires in {expiryInfo.timeLeft}
-                              </p>
-                            )}
                           </div>
-                          
                           {expiryInfo.expired && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full h-8 text-xs border-red-300 text-red-700 hover:bg-red-100"
-                              onClick={() => handleDismissExpiredRequest(request.id)}
-                            >
-                              Dismiss
-                            </Button>
+                            <p className="text-red-600 font-medium text-xs mt-1">
+                              ⚠️ This reservation has expired
+                            </p>
+                          )}
+                          {isUrgent && !expiryInfo.expired && (
+                            <p className="text-orange-600 font-medium text-xs mt-1">
+                              ⏰ Collect soon! Expires in {expiryInfo.timeLeft}
+                            </p>
                           )}
                         </div>
+                        
+                        {expiryInfo.expired && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full h-8 text-xs mt-3 border-red-300 text-red-700 hover:bg-red-100"
+                            onClick={() => handleDismissExpiredRequest(request.id)}
+                          >
+                            Dismiss
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   )
@@ -462,43 +503,66 @@ export function LibraryDashboard() {
                   const daysOverdue = request.due_date ? getOverdueDays(request.due_date) : 0
                   
                   return (
-                    <Card key={request.id} className={overdue ? "border-red-200 bg-red-50 hover:shadow-md transition-shadow" : "hover:shadow-md transition-shadow"}>
-                      <CardContent className="p-3">
-                        <div className="space-y-3">
-                          {/* Book cover */}
-                          <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
+                    <Card key={request.id} className={`flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white ${
+                      overdue ? "border-red-200 bg-red-50" : ""
+                    }`}>
+                      <CardHeader className="p-3 pb-0">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center space-x-2 text-base font-semibold">
+                              <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                              <span className="truncate">{request.item?.item_name || "Unknown Item"}</span>
+                            </CardTitle>
+                            <CardDescription className="text-xs text-gray-500">{request.item?.item_category || "Unknown Category"}</CardDescription>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Badge className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              overdue ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                            }`}>
+                              {overdue ? 'Overdue' : 'Active Loan'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      {/* Image Display */}
+                      {request.item?.image_url && (
+                        <div className="relative w-full aspect-[3/4] mb-2 px-8 pt-2 p-3 bg-white border border-gray-200 shadow-sm rounded-lg flex items-center justify-center">
+                          <div className="w-full h-full">
                             <img
-                              src={request.item?.image_url || "/placeholder.jpg"}
-                              alt={request.item?.item_name || "Library Item"}
-                              className="w-full h-full object-cover"
+                              src={request.item.image_url || '/placeholder.jpg'}
+                              alt={`Cover of ${request.item?.item_name || "Library Item"}`}
+                              className="object-contain max-w-[70%] max-h-[80%] mx-auto rounded-md bg-gray-50"
                               onError={(e) => {
                                 e.currentTarget.src = "/placeholder.jpg"
                               }}
                             />
                           </div>
-                          
-                          <div className="space-y-1">
-                            <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                              {request.item?.item_name || "Unknown Item"}
-                            </h3>
+                        </div>
+                      )}
+                      
+                      <CardContent className="flex-grow flex flex-col p-3 pt-2">
+                        <div className="flex-grow">
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                            <div>
+                              <span className="font-medium">Collected:</span> {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "N/A"}
+                            </div>
+                            <div>
+                              <span className="font-medium">Due:</span> {request.due_date ? new Date(request.due_date).toLocaleDateString() : "N/A"}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1 mt-1">
                             <p className={`text-xs font-medium ${
                               overdue ? 'text-red-600' : 'text-green-600'
                             }`}>
                               {overdue ? `${daysOverdue} days overdue` : 'Currently reading'}
                             </p>
                           </div>
-                          
-                          <div className="space-y-1 text-xs text-gray-600">
-                            <p>Collected: {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "N/A"}</p>
-                            <p className={`font-medium ${overdue ? 'text-red-600' : 'text-gray-700'}`}>
-                              Due: {request.due_date ? new Date(request.due_date).toLocaleDateString() : "N/A"}
+                          {overdue && (
+                            <p className="text-red-600 font-medium text-xs mt-1">
+                              Fine: ₹{daysOverdue * 5} (₹5/day)
                             </p>
-                            {overdue && (
-                              <p className="text-red-600 font-medium">
-                                Fine: ₹{daysOverdue * 5} (₹5/day)
-                              </p>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -528,39 +592,58 @@ export function LibraryDashboard() {
                   const fineAmount = daysOverdue * 5 // ₹5 per day
                   
                   return (
-                    <Card key={request.id} className="border-red-300 bg-red-50 hover:shadow-md transition-shadow">
-                      <CardContent className="p-3">
-                        <div className="space-y-3">
-                          {/* Book cover */}
-                          <div className="w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
+                    <Card key={request.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white border-red-300 bg-red-50">
+                      <CardHeader className="p-3 pb-0">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center space-x-2 text-base font-semibold">
+                              <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                              <span className="truncate">{request.item?.item_name || "Unknown Item"}</span>
+                            </CardTitle>
+                            <CardDescription className="text-xs text-gray-500">{request.item?.item_category || "Unknown Category"}</CardDescription>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Badge className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-800">
+                              Overdue
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      {/* Image Display */}
+                      {request.item?.image_url && (
+                        <div className="relative w-full aspect-[3/4] mb-2 px-8 pt-2 p-3 bg-white border border-gray-200 shadow-sm rounded-lg flex items-center justify-center">
+                          <div className="w-full h-full">
                             <img
-                              src={request.item?.image_url || "/placeholder.jpg"}
-                              alt={request.item?.item_name || "Library Item"}
-                              className="w-full h-full object-cover"
+                              src={request.item.image_url || '/placeholder.jpg'}
+                              alt={`Cover of ${request.item?.item_name || "Library Item"}`}
+                              className="object-contain max-w-[70%] max-h-[80%] mx-auto rounded-md bg-gray-50"
                               onError={(e) => {
                                 e.currentTarget.src = "/placeholder.jpg"
                               }}
                             />
                           </div>
-                          
-                          <div className="space-y-1">
-                            <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                              {request.item?.item_name || "Unknown Item"}
-                            </h3>
+                        </div>
+                      )}
+                      
+                      <CardContent className="flex-grow flex flex-col p-3 pt-2">
+                        <div className="flex-grow">
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                            <div>
+                              <span className="font-medium">Due:</span> {request.due_date ? new Date(request.due_date).toLocaleDateString() : "N/A"}
+                            </div>
+                            <div>
+                              <span className="font-medium">Collected:</span> {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "N/A"}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1 mt-1">
                             <p className="text-xs text-red-600 font-medium">
                               {daysOverdue} days overdue
                             </p>
                           </div>
-                          
-                          <div className="space-y-1 text-xs text-gray-600">
-                            <p>Due: {request.due_date ? new Date(request.due_date).toLocaleDateString() : "N/A"}</p>
-                            <p className="font-medium text-red-600">
-                              Fine: ₹{fineAmount} (₹5/day)
-                            </p>
-                            <p className="text-gray-500">
-                              Collected: {request.collection_date ? new Date(request.collection_date).toLocaleDateString() : "N/A"}
-                            </p>
-                          </div>
+                          <p className="text-red-600 font-medium text-xs mt-1">
+                            Fine: ₹{fineAmount} (₹5/day)
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
@@ -577,20 +660,42 @@ export function LibraryDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Search className="h-5 w-5" />
+                  <BookOpen className="h-5 w-5" />
                   <span>Library Items</span>
                 </CardTitle>
                 <CardDescription>
-                  Reserved items will be ready for collection. Do collect within 2 hours of reserving the book.
+                 Do collect within 2 hours of reserving the book.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <Input
-                    placeholder="Search items by name, category, or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                  <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
+                    <div className="relative w-56">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+                        <Search className="h-4 w-4" />
+                      </span>
+                      <Input
+                        placeholder="Search items..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 pr-2 h-9 w-full text-sm"
+                      />
+                    </div>
+                    <span className="flex items-center ml-4 mr-1 text-gray-400"><Filter className="h-5 w-5" /></span>
+                    <span className="text-sm text-gray-600 font-medium ml-1">Category</span>
+                    <div className="w-40 flex flex-col">
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder="Category">{categoryFilter !== "All" ? categoryFilter : undefined}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {filteredItems.length === 0 ? (
@@ -606,118 +711,130 @@ export function LibraryDashboard() {
                         const isOutOfStock = item.available_quantity === 0
                         const canBorrow = canBorrowBook(item)
                         const isUnavailable = isReserved || isBorrowed || isOutOfStock
-                        
                         return (
                           <Card 
                             key={item.id} 
-                            className={`cursor-pointer transition-shadow ${
-                              isUnavailable
-                                ? 'opacity-60 bg-gray-50 border-gray-200' 
-                                : 'hover:shadow-md'
-                            }`}
+                            className={`flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white ${isUnavailable ? 'opacity-60 bg-gray-50 border-gray-200' : ''}`}
                           >
-                            <CardContent className="p-3">
-                              <div className="space-y-3">
-                                {/* Book cover with proper aspect ratio */}
-                                <div className={`w-full aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden relative ${
-                                  isUnavailable ? 'filter grayscale' : ''
-                                }`}>
+                            <CardHeader className="px-3 py-3 mb-0">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="flex items-center space-x-2 text-base font-semibold">
+                                    <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                                    <span className="truncate">{item.item_name}</span>
+                                  </CardTitle>
+                                  <CardDescription className="text-xs text-gray-500">{item.item_category}</CardDescription>
+                                </div>
+                                <div className="flex items-center space-x-1 flex-shrink-0">
+                                  <Badge className={`text-xs px-2 py-0.5 rounded-full font-medium ${item.available_quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.available_quantity > 0 ? ` Available` : 'Out of stock'}</Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                                    onClick={() => setInfoDialogOpen(item.id)}
+                                  >
+                                    <Info className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            {/* Image Display */}
+                            {(item.image_url || item.back_image_url) && (
+                              <div className="relative w-full h-32 mb-2 px-3 bg-white border border-gray-200 shadow-sm rounded-lg flex items-center justify-center">
+                                {/* Front Image */}
+                                <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}>
                                   <img
-                                    src={item.image_url || "/placeholder.jpg"}
-                                    alt={item.item_name}
-                                    className="w-full h-full object-cover"
+                                    src={item.image_url || '/placeholder.jpg'}
+                                    alt={`Front view of ${item.item_name}`}
+                                    className="object-contain w-full h-full rounded-md bg-gray-50"
                                     onError={(e) => {
                                       e.currentTarget.src = "/placeholder.jpg"
                                     }}
                                   />
-                                  {isUnavailable && (
-                                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                                      <Badge className={`text-xs ${
-                                        isReserved 
-                                          ? 'bg-blue-100 text-blue-800' 
-                                          : isBorrowed
-                                            ? 'bg-red-100 text-red-800'
-                                            : 'bg-gray-100 text-gray-800'
-                                      }`}>
-                                        {isReserved 
-                                          ? 'Reserved' 
-                                          : isBorrowed
-                                            ? 'Already Borrowed'
-                                            : 'Out of Stock'
-                                        }
-                                      </Badge>
-                                    </div>
-                                  )}
                                 </div>
-                                
-                                <div className="space-y-1">
-                                  <h3 className={`font-medium text-sm line-clamp-2 leading-tight ${
-                                    isUnavailable ? 'text-gray-500' : ''
-                                  }`}>
-                                    {item.item_name}
-                                  </h3>
-                                  <p className={`text-xs ${
-                                    isUnavailable ? 'text-gray-400' : 'text-gray-600'
-                                  }`}>
-                                    {item.item_category}
-                                  </p>
-                                  <p className={`text-xs line-clamp-2 ${
-                                    isUnavailable ? 'text-gray-400' : 'text-gray-500'
-                                  }`}>
-                                    {item.item_description}
-                                  </p>
-                                </div>
-                                
-                                <div className="flex justify-between items-center text-xs">
-                                  <span className={`font-medium ${
-                                    isUnavailable
-                                      ? 'text-gray-400' 
-                                      : item.available_quantity > 0 
-                                        ? 'text-green-600' 
-                                        : 'text-red-600'
-                                  }`}>
-                                    {isReserved 
-                                      ? 'Reserved' 
-                                      : isBorrowed
-                                        ? 'Already borrowed'
-                                        : item.available_quantity > 0 
-                                          ? `${item.available_quantity} available` 
-                                          : 'Out of stock'
-                                    }
-                                  </span>
-                                  <span className={`${
-                                    isUnavailable ? 'text-gray-400' : 'text-gray-500'
-                                  }`}>
-                                    Total: {item.item_quantity}
-                                  </span>
-                                </div>
-                                
-                                <Button
-                                  size="sm"
-                                  className={`w-full h-8 text-xs ${
-                                    isUnavailable
-                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' 
-                                      : ''
-                                  }`}
-                                  disabled={!canBorrow}
-                                  onClick={() => {
-                                    if (canBorrow) {
-                                      setSelectedItem(item)
-                                      setIsRequestDialogOpen(true)
-                                    }
-                                  }}
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  {isReserved 
-                                    ? 'Reserved' 
-                                    : isBorrowed
-                                      ? 'Already Borrowed'
-                                      : item.available_quantity === 0 
-                                        ? 'Out of Stock' 
-                                        : 'Reserve'
-                                  }
-                                </Button>
+                                {/* Back Image */}
+                                {item.back_image_url && (
+                                  <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-100' : 'opacity-0'}`}>
+                                    <img
+                                      src={item.back_image_url}
+                                      alt={`Back view of ${item.item_name}`}
+                                      className="object-contain w-full h-full rounded-md bg-gray-50"
+                                      onError={(e) => {
+                                        e.currentTarget.src = "/placeholder.jpg"
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                {/* Navigation Buttons */}
+                                {item.back_image_url && (
+                                  <>
+                                    {!imageStates[item.id] && (
+                                      <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                                        onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
+                                      >
+                                        <ChevronRight className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                    {imageStates[item.id] && (
+                                      <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                                        onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
+                                      >
+                                        <ChevronLeft className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                                {/* Image Indicators */}
+                                {item.back_image_url && (
+                                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                                    <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${!imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                                    <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                                  </div>
+                                )}
                               </div>
+                            )}
+                            <CardContent className="flex-grow flex flex-col p-3 pt-0">
+                              {/* Remove space-y-3 from the details area to eliminate extra gap */}
+                              <div className="flex-grow">
+                                <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                                  <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
+                                  <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0">
+                                  <span className="font-medium">Location:</span> {item.item_location}
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                className={`w-full h-8 text-xs mt-3 ${
+                                  isUnavailable
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' 
+                                    : ''
+                                }`}
+                                disabled={!canBorrow}
+                                onClick={() => {
+                                  if (canBorrow) {
+                                    setSelectedItem(item)
+                                    setIsRequestDialogOpen(true)
+                                  }
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                {isReserved 
+                                  ? 'Reserved' 
+                                  : isBorrowed
+                                    ? 'Already Borrowed'
+                                    : item.available_quantity === 0 
+                                      ? 'Out of Stock' 
+                                      : 'Reserve'
+                                }
+                              </Button>
                             </CardContent>
                           </Card>
                         )
@@ -857,7 +974,7 @@ export function LibraryDashboard() {
       <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Reserve Library Item</DialogTitle>
+            <DialogTitle>Reserve Library Book</DialogTitle>
             <DialogDescription>
               Reserve this item for collection. It will be held for you.
             </DialogDescription>
@@ -916,6 +1033,113 @@ export function LibraryDashboard() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Info Dialog for (i) button */}
+      <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Library Book Details</DialogTitle>
+          </DialogHeader>
+          {infoDialogOpen && (() => {
+            const item = items.find(i => i.id === infoDialogOpen)
+            if (!item) return null
+            return (
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Left: Details */}
+                <div className="flex-1 space-y-4 min-w-0">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{item.item_name}</h2>
+                    <p className="text-sm text-gray-500">{item.item_category}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-sm">Total Quantity</h4>
+                      <p className="text-lg font-semibold text-gray-900">{item.item_quantity}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm">Available</h4>
+                      <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>{item.available_quantity}</p>
+                    </div>
+                  </div>
+                  {item.item_description && (
+                    <div>
+                      <h4 className="font-medium text-sm">Description</h4>
+                      <p className="text-sm text-gray-600">{item.item_description}</p>
+                    </div>
+                  )}
+                  {item.item_specification && (
+                    <div>
+                      <h4 className="font-medium text-sm">Specifications</h4>
+                      <p className="text-sm text-gray-600">{item.item_specification}</p>
+                    </div>
+                  )}
+                </div>
+                {/* Right: Image Preview with toggle */}
+                <div className="flex flex-col items-center justify-center w-full md:w-64">
+                  <div className="relative w-full aspect-[3/4] p-2 bg-white border border-gray-200 shadow-sm rounded-lg flex items-center justify-center">
+                    {/* Front Image */}
+                    <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}>
+                      <img
+                        src={item.image_url || '/placeholder.jpg'}
+                        alt={`Front view of ${item.item_name}`}
+                        className="object-contain w-full h-full rounded-md bg-gray-50"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.jpg"
+                        }}
+                      />
+                    </div>
+                    {/* Back Image */}
+                    {item.back_image_url && (
+                      <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-100' : 'opacity-0'}`}>
+                        <img
+                          src={item.back_image_url}
+                          alt={`Back view of ${item.item_name}`}
+                          className="object-contain w-full h-full rounded-md bg-gray-50"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.jpg"
+                          }}
+                        />
+                      </div>
+                    )}
+                    {/* Navigation Buttons */}
+                    {item.back_image_url && (
+                      <>
+                        {!imageStates[item.id] && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                            onClick={() => setImageStates(prev => ({ ...prev, [item.id]: true }))}
+                          >
+                            <ChevronRight className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {imageStates[item.id] && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white/80 hover:bg-white shadow-sm z-10"
+                            onClick={() => setImageStates(prev => ({ ...prev, [item.id]: false }))}
+                          >
+                            <ChevronLeft className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    {/* Image Indicators */}
+                    {item.back_image_url && (
+                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                        <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${!imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                        <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

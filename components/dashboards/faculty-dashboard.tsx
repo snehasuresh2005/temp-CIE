@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Home, Users, User as UserIcon, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench, BookOpen, Settings, Award } from "lucide-react"
+import { Home, Users, User as UserIcon, MapPin, Calendar, FolderOpen, ClipboardCheck, Wrench, BookOpen, Settings, Award, Briefcase, BarChart3 } from "lucide-react"
 import { FacultyHome } from "@/components/pages/faculty/faculty-home"
 import { LabComponentsManagement } from "@/components/pages/faculty/lab-components-management"
 import { LabComponentsRequest } from "@/components/pages/faculty/lab-components-request"
@@ -16,6 +16,8 @@ import { UserProfile } from "@/components/common/user-profile"
 import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { CoordinatorDashboard } from "@/components/pages/faculty/coordinator-dashboard"
 import { useAuth } from "@/components/auth-provider"
+import FacultyOpportunity from '@/components/pages/faculty/faculty-opportunity';
+import FacultyInsights from '@/components/pages/faculty/insights';
 
 export function FacultyDashboard() {
   const { user } = useAuth()
@@ -56,6 +58,8 @@ export function FacultyDashboard() {
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
       { id: "lab-components", label: "Lab Components", icon: Wrench },
       { id: "library", label: "Library", icon: BookOpen },
+      { id: "opportunities", label: "Opportunities", icon: Briefcase }, // Added
+      { id: "insights", label: "Insights", icon: BarChart3 }, // Add Insights
     ]
 
     // Add CIE Coordinator section if user is a coordinator
@@ -95,6 +99,10 @@ export function FacultyDashboard() {
         return <UserProfile />
       case "library":
         return <LibraryDashboard />
+      case "opportunities":
+        return <FacultyOpportunity />
+      case "insights":
+        return <FacultyInsights />;
       default:
         return <FacultyHome onPageChange={setCurrentPage} />
     }

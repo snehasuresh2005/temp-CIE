@@ -39,17 +39,7 @@ export async function PATCH(
 
     // Basic permission checks
     if (user.role === "STUDENT") {
-      const student = await prisma.student.findUnique({ where: { user_id: userId } })
-      if (!student || currentRequest.student_id !== student.id) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-      }
-      // Students can confirm return (USER_RETURNED) for collected items
-      if (status === 'USER_RETURNED' && currentRequest.status !== 'COLLECTED') {
-        return NextResponse.json({ error: 'Can only confirm return for collected items' }, { status: 400 })
-      }
-      if (status !== 'USER_RETURNED') {
-        return NextResponse.json({ error: 'Students can only confirm return' }, { status: 400 })
-      }
+      return NextResponse.json({ error: 'Students can no longer update request status. Please contact the coordinator.' }, { status: 403 })
     } else if (user.role === "FACULTY") {
       const faculty = await prisma.faculty.findUnique({
         where: { user_id: userId },
@@ -60,25 +50,36 @@ export async function PATCH(
         return NextResponse.json({ error: 'Faculty profile not found' }, { status: 404 })
       }
 
-      // Allow faculty to confirm return for their own requests
-      if (status === 'USER_RETURNED' && currentRequest.faculty_id === faculty.id) {
-        if (currentRequest.status !== 'COLLECTED') {
-          return NextResponse.json({ error: 'Can only confirm return for collected items' }, { status: 400 })
-        }
-      } else {
-        // For other status updates, check if faculty is coordinator of the component's domain
-        const isCoordinator = currentRequest.component.domain_id ? 
-          faculty.domain_assignments.some(assignment => assignment.domain_id === currentRequest.component.domain_id) : 
-          true // Allow access to components without specific domain
+      // For status updates, check if faculty is coordinator of the component's domain
+      const isCoordinator = currentRequest.component.domain_id ? 
+        faculty.domain_assignments.some(assignment => assignment.domain_id === currentRequest.component.domain_id) : 
+        true // Allow access to components without specific domain
 
-        if (!isCoordinator) {
-          return NextResponse.json({ error: 'Access denied - Not assigned to this domain' }, { status: 403 })
+      if (!isCoordinator) {
+        return NextResponse.json({ error: 'Access denied - Not assigned to this domain' }, { status: 403 })
+      }
+
+      // Coordinators can mark as COLLECTED, RETURNED, REJECTED, or update due date (renew)
+      if (status === 'RETURNED' && currentRequest.status !== 'COLLECTED') {
+        return NextResponse.json({ error: 'Can only mark as returned after collection' }, { status: 400 })
+      }
+      // Allow renew by updating due_date for both COLLECTED and RENEWED statuses, no need for status: 'RENEWED'
+      if (body.due_date && ['COLLECTED', 'RENEWED'].includes(currentRequest.status)) {
+        // Allow PATCH with just due_date to extend loan
+        let updateData: any = {
+          due_date: new Date(body.due_date),
+          faculty_notes: faculty_notes || currentRequest.faculty_notes
         }
-        
-        // Coordinators can only mark as RETURNED when user has confirmed return (USER_RETURNED)
-        if (status === 'RETURNED' && currentRequest.status !== 'USER_RETURNED') {
-          return NextResponse.json({ error: 'Can only mark as returned after user confirms return' }, { status: 400 })
-        }
+        const updatedRequest = await prisma.componentRequest.update({
+          where: { id: params.id },
+          data: updateData,
+          include: {
+            component: true,
+            student: { include: { user: true } },
+            faculty: { include: { user: true } }
+          }
+        })
+        return NextResponse.json(updatedRequest)
       }
     } else if (user.role !== "ADMIN") {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -93,12 +94,17 @@ export async function PATCH(
     // Handle status-specific updates
     if (status === 'COLLECTED' && collection_date) {
       updateData.collection_date = new Date(collection_date)
+      if (body.due_date) {
+        updateData.due_date = new Date(body.due_date)
+      }
     }
-
-    if ((status === 'RETURNED' || status === 'USER_RETURNED') && return_date) {
+    if (status === 'RETURNED' && return_date) {
       updateData.return_date = new Date(return_date)
-    } else if (status === 'USER_RETURNED' && !return_date) {
+    } else if (status === 'RETURNED' && !return_date) {
       updateData.return_date = new Date()
+    }
+    if (status === 'RENEWED' && body.due_date) {
+      updateData.due_date = new Date(body.due_date)
     }
 
     const updatedRequest = await prisma.componentRequest.update({

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/components/auth-provider"
-import { Users, BookOpen, ClipboardCheck, Clock, AlertTriangle, CheckCircle } from "lucide-react"
+import { Users, BookOpen, ClipboardCheck, Clock, AlertTriangle, CheckCircle, Calendar, MapPin, FolderOpen } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
 import { ManageCourses } from "@/components/pages/admin/manage-courses"
 
@@ -63,7 +63,7 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
     {
       title: "Students",
       value: (dashboardData.stats.students || 0).toString(),
-      description: "Across all classes",
+      description: "Enrolled to your course",
       icon: Users,
       color: "text-green-600",
     },
@@ -89,7 +89,7 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
       color: "text-pink-600",
     },
     {
-      title: "Avg Grade",
+      title: "Avg Grade(*)",
       value: (dashboardData.stats.avgGradeThisSem || "N/A").toString(),
       description: "This semester",
       icon: AlertTriangle,
@@ -100,19 +100,22 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
 
   const quickActions = [
     {
-      title: "Mark Attendance",
-      description: "Record student attendance",
-      action: () => onPageChange?.("attendance"),
+      title: "CIE Coordinator",
+      description: "Manage coordinator tasks",
+      action: () => onPageChange?.("coordinator"),
+      icon: Users,
     },
     {
       title: "Assign Project",
       description: "Create new student project",
       action: () => onPageChange?.("projects"),
+      icon: FolderOpen,
     },
     {
       title: "Book Location",
       description: "Reserve a classroom or lab",
       action: () => onPageChange?.("locations"),
+      icon: MapPin,
     },
   ]
 
@@ -122,23 +125,22 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
         return (
           <>
             {/* Colorful Hero Window */}
-            <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-12 min-h-[320px] flex flex-col md:flex-row items-center justify-between mb-4 relative overflow-hidden">
-              <div className="flex-1 z-10">
-                <div className="flex items-center mb-6">
-                  <span className="bg-white rounded-xl p-2 shadow mr-6 flex items-center justify-center"><img src="/logo.png" alt="CIE Logo" className="h-16 w-auto" /></span>
-                  <span className="text-white text-4xl font-extrabold tracking-tight">CIE Faculty Portal</span>
+            <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-6 min-h-[100px] flex flex-col md:flex-row items-center justify-between mb-0 relative overflow-hidden">
+              <div className="flex-1 z-6">
+                <div className="flex items-center mb-2 justify-between">
+                  <span className="text-white text-3xl font-extrabold tracking-tight">CIE Faculty Portal</span>
+                  <div className="flex gap-4">
+                  <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100">Learn More</button>
+                  <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100" onClick={handleQuickActionsClick}>Quick Actions</button>
+                  </div>
                 </div>
-                <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4">Empower your teaching journey!</h2>
-                <p className="text-white/90 mb-8 max-w-2xl text-lg">Access your courses, manage students, and track progress—all in one place.</p>
-                <div className="flex gap-6">
-                  <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg">Learn More</button>
-                  <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg" onClick={handleQuickActionsClick}>Quick Actions</button>
+                <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-2">Empower your teaching journey!</h2>
+                <p className="text-white/90 mb-4 max-w-2xl text-lg whitespace-nowrap">Access your courses, manage students, and track progress—all in one place.</p>
                 </div>
-              </div>
-              <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" />
+              {/* <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" /> */}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-2">
               {loading ? (
                 Array.from({ length: 6 }).map((_, index) => (
                   <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
@@ -153,18 +155,46 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
                   </Card>
                 ))
               ) : (
-                stats.map((stat, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                      <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stat.value}</div>
-                      <p className="text-xs text-muted-foreground">{stat.description}</p>
-                    </CardContent>
-                  </Card>
-                ))
+                // Remove Attendance Rate card and insert Pending/Active Requests card in its place
+                stats
+                  .filter((stat) => stat.title !== "Attendance Rate")
+                  .map((stat, index) => (
+                    <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{stat.value}</div>
+                        <p className="text-xs text-muted-foreground">{stat.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))
+              )}
+              {/* Insert Pending/Active Requests card in the grid */}
+              {!loading && dashboardData && (
+                <Card className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {dashboardData.isCoordinator ? "Pending Requests(*)" : "Active Requests"}
+                    </CardTitle>
+                    {dashboardData.isCoordinator ? (
+                      <Clock className="h-4 w-4 text-orange-600" />
+                    ) : (
+                      <ClipboardCheck className="h-4 w-4 text-blue-600" />
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {dashboardData.isCoordinator
+                        ? dashboardData.stats.pendingRequests
+                        : dashboardData.stats.activeRequests}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {dashboardData.isCoordinator ? "awaiting approval" : "assigned to you"}
+                    </p>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
@@ -303,6 +333,7 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
               >
                 <CardHeader>
                   <CardTitle>Quick Actions</CardTitle>
+                  <CardDescription>Common faculty tasks</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -310,7 +341,7 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
                       <button 
                         key={idx} 
                         onClick={action.action}
-                        className="p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+                        className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors"
                       >
                         <div className="font-medium">{action.title}</div>
                         <div className="text-sm text-gray-500">{action.description}</div>

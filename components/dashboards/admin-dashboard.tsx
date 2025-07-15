@@ -15,6 +15,7 @@ import { ManageLibrary } from "@/components/pages/admin/manage-library"
 import { ManageDomains } from "@/components/pages/admin/manage-domains"
 import { ManageProjects } from "@/components/pages/admin/manage-projects"
 import AdminInternshipManager from '@/components/internships/AdminInternshipManager'
+import ManageOpportunity from '@/components/pages/admin/manage-opportunity';
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -26,8 +27,12 @@ const menuItems = [
   { id: "locations", label: "Locations", icon: MapPin },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
   { id: "library", label: "Library", icon: BookOpen },
+<<<<<<< HEAD
   { id: "projects", label: "Projects", icon: BookOpen },
   { id: "internships", label: "Internships", icon: BookOpen },
+=======
+  { id: "opportunities", label: "Opportunities", icon: Briefcase },
+>>>>>>> d674cce1b9789c03f5104b82083ffe9037cce466
 ]
 
 export function AdminDashboard() {
@@ -55,10 +60,15 @@ export function AdminDashboard() {
         return <UserProfile />
       case "library":
         return <ManageLibrary />
+<<<<<<< HEAD
       case "projects":
         return <ManageProjects />
       case "internships":
         return <AdminInternshipManager />
+=======
+      case "opportunities":
+        return <ManageOpportunity />
+>>>>>>> d674cce1b9789c03f5104b82083ffe9037cce466
       default:
         return <AdminHome onPageChange={setCurrentPage} />
     }

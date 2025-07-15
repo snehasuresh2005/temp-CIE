@@ -76,7 +76,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
       color: "text-red-600",
     },
     {
-      title: "System Usage",
+      title: "System Usage(*)",
       value: `${dashboardData.stats.systemUsage}%`,
       description: "Active user rate",
       icon: TrendingUp,
@@ -98,23 +98,25 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
         return (
           <>
             {/* Colorful Hero Window */}
-            <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-12 min-h-[320px] flex flex-col md:flex-row items-center justify-between mb-4 relative overflow-hidden">
-              <div className="flex-1 z-10">
-                <div className="flex items-center mb-6">
-                  <span className="bg-white rounded-xl p-2 shadow mr-6 flex items-center justify-center"><img src="/logo.png" alt="CIE Logo" className="h-16 w-auto" /></span>
-                  <span className="text-white text-4xl font-extrabold tracking-tight">CIE Admin Portal</span>
+
+            <div className="rounded-lg shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-4 min-h-[100px] flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
+              <div className="flex-1 z-6">
+                <div className="flex items-center mb-2 justify-between">
+                  <span className="text-white text-2xl font-extrabold tracking-tight">CIE Admin Portal</span>
+                  <div className="flex gap-4">
+                  <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100">Learn More</button>
+                  <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100" onClick={handleQuickActionsClick}>Quick Actions</button>
+                  </div>
                 </div>
-                <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4">Are you ready to manage innovation?</h2>
-                <p className="text-white/90 mb-8 max-w-2xl text-lg">Welcome to the Centre for Innovation & Entrepreneurship. Oversee faculty, students, courses, and more—all in one place.</p>
-                <div className="flex gap-6">
-                  <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg">Learn More</button>
-                  <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg" onClick={handleQuickActionsClick}>Quick Actions</button>
+                <h2 className="text-3xl md:text-3xl font-extrabold text-white mb-2">Are you ready to manage innovation?</h2>
+                <p className="text-white/90 mb-4 max-w-2xl text-lg whitespace-nowrap">Welcome to the Centre for Innovation & Entrepreneurship, oversee faculty, students, courses, and more—all in one place.</p>
+
                 </div>
-              </div>
-              <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" />
+              
+              {/* <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" /> */}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {loading ? (
                 Array.from({ length: 6 }).map((_, index) => (
                   <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
@@ -144,61 +146,11 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
               )}
             </div>
 
-            {/* System Health and Analytics */}
-            {dashboardData?.systemHealth && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card className="border-green-200 bg-green-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-800">Uptime</p>
-                        <p className="text-2xl font-bold text-green-900">{dashboardData.systemHealth.uptime}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-green-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">Response Time</p>
-                        <p className="text-2xl font-bold text-blue-900">{dashboardData.systemHealth.avgResponseTime}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-blue-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-purple-200 bg-purple-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-purple-800">Error Rate</p>
-                        <p className="text-2xl font-bold text-purple-900">{dashboardData.systemHealth.errorRate}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-purple-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-orange-200 bg-orange-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-orange-800">Active Users</p>
-                        <p className="text-2xl font-bold text-orange-900">{dashboardData.systemHealth.activeConnections}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-orange-600 rounded-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                 <CardHeader>
-                  <CardTitle>System Alerts</CardTitle>
-                  <CardDescription>Critical items requiring attention</CardDescription>
+                  <CardTitle className="text-xl">System Alerts</CardTitle>
+                  <CardDescription className="text-md">Critical items requiring attention</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -271,8 +223,8 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
               </Card>
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                 <CardHeader>
-                  <CardTitle>Recent Activities</CardTitle>
-                  <CardDescription>Latest system activities</CardDescription>
+                  <CardTitle className="text-xl">Recent Activities</CardTitle>
+                  <CardDescription className="text-md">Latest system activities</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -306,7 +258,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                                 <p className="text-xs text-gray-500">{timeAgo}</p>
                                 {activity.status && (
                                   <>
-                                    <span className="text-xs text-gray-300">•</span>
+                                <span className="text-xs text-gray-300">•</span>
                                     <span className={`text-xs px-2 py-0.5 rounded ${
                                       activity.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
                                       activity.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
@@ -314,7 +266,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                                       'bg-gray-100 text-gray-800'
                                     }`}>
                                       {activity.status}
-                                    </span>
+                                </span>
                                   </>
                                 )}
                               </div>
@@ -338,8 +290,8 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                 className={`transform transition-transform duration-300 hover:scale-105 focus:scale-105 ${highlightQuickActions ? 'scale-110 ring-4 ring-blue-400/60 z-20' : ''}`}
               >
                 <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Common administrative tasks</CardDescription>
+                  <CardTitle className="text-xl">Quick Actions</CardTitle>
+                  <CardDescription className="text-md">Common administrative tasks</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">

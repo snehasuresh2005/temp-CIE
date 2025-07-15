@@ -423,7 +423,7 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                 Add Course
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[90vw] w-[1100px] max-h-[90vh] h-[750px] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>Add New Course</DialogTitle>
                 <DialogDescription>
@@ -431,7 +431,7 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 overflow-y-auto">
                 {/* Course Form */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Course Details</h3>
@@ -564,10 +564,9 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t mt-4">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="px-6">Cancel</Button>
                 <Button 
                   onClick={handleAddCourse}
                   disabled={!isFormValid}

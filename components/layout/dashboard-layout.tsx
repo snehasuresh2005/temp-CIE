@@ -28,9 +28,9 @@ import {
   MapPin,
   Calendar,
   Moon,
-  Settings,
   Sun,
   Bell,
+  BarChart3,
 } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
@@ -370,73 +370,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
 
           {/* Bottom navigation items */}
           <div className="px-2 py-1 mt-auto">
-            {/* My Profile */}
-            <div className="mb-2">
-              <button
-                className={cn(
-                  "w-full flex items-center p-3 transition-all duration-200 rounded-lg mx-1",
-                  sidebarCollapsed ? "justify-center px-2" : "px-4",
-                  "text-gray-800 hover:bg-blue-100 hover:text-indigo-800"
-                )}
-                onClick={() => {
-                  onPageChange('profile');
-                  setSidebarOpen(false);
-                }}
-                title={sidebarCollapsed ? "Settings" : undefined}
-              >
-                <Settings 
-                  className={cn(
-                    "h-5 w-5 transition-transform duration-300",
-                    !sidebarCollapsed && "mr-3",
-                    "text-gray-600"
-                  )} 
-                />
-                {!sidebarCollapsed && (
-                  <span className="text-sm font-medium">
-                    Settings
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Get Help */}
-            <div className="mb-2">
-              <button
-                className={cn(
-                  "w-full flex items-center p-3 transition-all duration-200 rounded-lg mx-1",
-                  sidebarCollapsed ? "justify-center px-2" : "px-4",
-                  "text-gray-800 hover:bg-blue-100 hover:text-indigo-800"
-                )}
-                onClick={() => {
-                  // You can add help navigation logic here
-                  console.log("Get Help clicked");
-                }}
-                title={sidebarCollapsed ? "Get Help" : undefined}
-              >
-                <svg 
-                  className={cn(
-                    "h-5 w-5 transition-transform duration-300",
-                    !sidebarCollapsed && "mr-3",
-                    "text-gray-600"
-                  )} 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-                  />
-                </svg>
-                {!sidebarCollapsed && (
-                  <span className="text-sm font-medium">
-                    Get Help
-                  </span>
-                )}
-              </button>
-            </div>
+            {/* Bottom navigation items removed */}
           </div>
 
           {/* Collapse button */}
