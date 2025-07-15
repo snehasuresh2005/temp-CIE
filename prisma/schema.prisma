@@ -283,6 +283,8 @@ model LabComponent {
   component_requests      ComponentRequest[]
   domain_id               String?
   domain                  Domain?            @relation(fields: [domain_id], references: [id])
+  track_individual        Boolean            @default(false)
+  individual_items        Json?              // Array of individual items with unique IDs
 
   @@map("lab_components")
 }
