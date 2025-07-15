@@ -27,12 +27,12 @@ const menuItems = [
   { id: "locations", label: "Locations", icon: MapPin },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
   { id: "library", label: "Library", icon: BookOpen },
-<<<<<<< HEAD
+//<<<<<<< HEAD
   { id: "projects", label: "Projects", icon: BookOpen },
   { id: "internships", label: "Internships", icon: BookOpen },
-=======
+/*=======
   { id: "opportunities", label: "Opportunities", icon: Briefcase },
->>>>>>> d674cce1b9789c03f5104b82083ffe9037cce466
+>>>>>>> d674cce1b9789c03f5104b82083ffe9037cce466*/
 ]
 
 export function AdminDashboard() {
