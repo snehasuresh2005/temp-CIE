@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft, ClipboardCheck, AlertTriangle, Info } from "lucide-react"
+import { Plus, Package, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, ChevronLeft, ClipboardCheck, AlertTriangle, Info, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -106,6 +106,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
   const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
   const [currentView, setCurrentView] = useState<ViewType>('available')
   const [showBack, setShowBack] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("All")
 
   useEffect(() => {
     fetchData()
@@ -372,14 +373,20 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
     return Array.from(linkedComponentIds)
   }
 
-  // Filter components by search term only (show all components)
-  const filteredComponents = components.filter(component => {
-    const matchesSearch = component.component_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.component_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.component_description.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    return matchesSearch
-  })
+  // Get unique categories
+  const categories = ["All", ...Array.from(new Set(components.map(i => i.component_category)).values())]
+
+  // Updated filtering logic
+  const filteredComponents = components.filter(
+    (component) => {
+      const matchesSearch =
+        component.component_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        component.component_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        component.component_description.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCategory = categoryFilter === "All" || component.component_category === categoryFilter
+      return matchesSearch && matchesCategory
+    }
+  )
 
   // Calculate stats for the stats bar
   const activeRequests = requests.filter(req => req.status === "PENDING" || req.status === "ONGOING");
@@ -528,13 +535,32 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex space-x-4">
-                  <Input
-                    placeholder="Search components by name, category, or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
-                  />
+                <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
+                  <div className="relative w-56">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Search className="h-4 w-4" />
+                    </span>
+                    <Input
+                      placeholder="Search components..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 pr-2 h-9 w-full text-sm"
+                    />
+                  </div>
+                  <span className="flex items-center ml-4 mr-1 text-gray-400"><Filter className="h-5 w-5" /></span>
+                  <span className="text-sm text-gray-600 font-medium ml-1">Category</span>
+                  <div className="w-40 flex flex-col">
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Category">{categoryFilter !== "All" ? categoryFilter : undefined}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

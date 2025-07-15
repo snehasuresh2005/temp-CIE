@@ -98,6 +98,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
         return (
           <>
             {/* Colorful Hero Window */}
+
             <div className="rounded-lg shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-4 min-h-[100px] flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
               <div className="flex-1 z-6">
                 <div className="flex items-center mb-2 justify-between">
@@ -109,6 +110,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                 </div>
                 <h2 className="text-3xl md:text-3xl font-extrabold text-white mb-2">Are you ready to manage innovation?</h2>
                 <p className="text-white/90 mb-4 max-w-2xl text-lg whitespace-nowrap">Welcome to the Centre for Innovation & Entrepreneurship, oversee faculty, students, courses, and more—all in one place.</p>
+
                 </div>
               
               {/* <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" /> */}

@@ -51,12 +51,12 @@ export async function POST(request: NextRequest) {
     // Generate unique filename with timestamp and student ID
     const timestamp = Date.now()
     const fileName = `${timestamp}_${student.student_id}_resume.pdf`
-    const filePath = path.join(process.cwd(), 'public', 'resumes', fileName)
+    const filePath = path.join(process.cwd(), 'public', 'Resume', fileName)
 
     // Delete old resume if exists
     if (student.resume_id) {
       try {
-        const oldFilePath = path.join(process.cwd(), 'public', 'resumes', student.resume_id)
+        const oldFilePath = path.join(process.cwd(), 'public', 'Resume', student.resume_id)
         await unlink(oldFilePath)
         console.log(`Deleted old resume: ${student.resume_id}`)
       } catch (error) {
@@ -74,11 +74,11 @@ export async function POST(request: NextRequest) {
       where: { id: student.id },
       data: {
         resume_id: fileName,
-        resume_path: 'resumes',
+        resume_path: 'Resume',
       },
     })
 
-    const resumeUrl = `/resumes/${fileName}`
+    const resumeUrl = `/Resume/${fileName}`
     
     return NextResponse.json({ 
       success: true,
@@ -120,7 +120,7 @@ export async function DELETE(request: NextRequest) {
 
     // Delete resume file
     try {
-      const filePath = path.join(process.cwd(), 'public', 'resumes', student.resume_id)
+      const filePath = path.join(process.cwd(), 'public', 'Resume', student.resume_id)
       await unlink(filePath)
       console.log(`Deleted resume file: ${student.resume_id}`)
     } catch (error) {
