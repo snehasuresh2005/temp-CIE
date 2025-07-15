@@ -1648,7 +1648,7 @@ export function ManageLabComponents() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-gray-500" />
-                    <h3 className="text-lg font-semibold">{component.component_name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{component.component_name}</h3>
                   </div>
                   <Button
                     variant="outline"
@@ -1789,9 +1789,10 @@ export function ManageLabComponents() {
                           setBackImagePreview(component.backImageUrl)
                         }
                       }}
-                      className="text-blue-600 hover:text-blue-700"
+                      className="btn-edit"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
                     </Button>
                     <Button
                       variant="outline"
@@ -1800,9 +1801,10 @@ export function ManageLabComponents() {
                         setComponentToDelete(component)
                         setIsDeleteDialogOpen(true)
                       }}
-                      className="text-red-600 hover:text-red-700"
+                      className="btn-delete"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -2109,7 +2111,7 @@ export function ManageLabComponents() {
 
       {/* Info Dialog */}
       <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-full max-h-[800px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Info className="h-5 w-5 text-blue-600" />
@@ -2120,156 +2122,22 @@ export function ManageLabComponents() {
             </DialogDescription>
           </DialogHeader>
           {componentToView && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Basic Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium text-blue-700">Component Name:</span>
-                    <p className="text-blue-900 font-semibold">{componentToView.component_name}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-blue-700">Category:</span>
-                    <p className="text-blue-900">{componentToView.component_category}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-blue-700">Location:</span>
-                    <p className="text-blue-900">{componentToView.component_location}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-blue-700">Tag ID:</span>
-                    <p className="text-blue-900">{componentToView.component_tag_id || "Not assigned"}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-blue-700">Total Quantity:</span>
-                    <p className="text-blue-900 font-semibold">{componentToView.component_quantity}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-blue-700">Available Quantity:</span>
-                    <p className="text-blue-900 font-semibold">{componentToView.availableQuantity || 0}</p>
-                  </div>
-                </div>
-                {componentToView.component_description && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-blue-700">Description:</span>
-                    <p className="text-blue-900 mt-1">{componentToView.component_description}</p>
-                  </div>
-                )}
-                {componentToView.component_specification && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-blue-700">Specifications:</span>
-                    <p className="text-blue-900 mt-1">{componentToView.component_specification}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Purchase Information */}
-              {(componentToView.invoice_number || componentToView.purchased_from || componentToView.purchase_value) && (
-                <div className="bg-green-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center gap-2">
-                    <Receipt className="h-5 w-5" />
-                    Purchase Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {componentToView.invoice_number && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Invoice Number:</span>
-                        <p className="text-green-900 font-mono">{componentToView.invoice_number}</p>
-                      </div>
-                    )}
-                    {componentToView.purchased_from && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Purchased From:</span>
-                        <p className="text-green-900">{componentToView.purchased_from}</p>
-                      </div>
-                    )}
-                    {componentToView.purchase_date && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Purchase Date:</span>
-                        <p className="text-green-900">{new Date(componentToView.purchase_date).toLocaleDateString()}</p>
-                      </div>
-                    )}
-                    {componentToView.purchase_value && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Purchase Value:</span>
-                        <p className="text-green-900 font-semibold">
-                          {componentToView.purchase_currency} {typeof componentToView.purchase_value === 'number' ? componentToView.purchase_value.toLocaleString() : componentToView.purchase_value}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Audit Information */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Audit Trail
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Created By:</span>
-                    <p className="text-gray-900">{componentToView.created_by || "Unknown"}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Created Date:</span>
-                    <p className="text-gray-900">
-                      {componentToView.created_at 
-                        ? new Date(componentToView.created_at).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                          })
-                        : "Unknown"
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Last Modified By:</span>
-                    <p className="text-gray-900">{componentToView.modified_by || "Not modified"}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Last Modified Date:</span>
-                    <p className="text-gray-900">
-                      {componentToView.modified_at 
-                        ? new Date(componentToView.modified_at).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                          })
-                        : "Not modified"
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Images */}
-              {(componentToView.imageUrl || componentToView.backImageUrl) && (
-                <div className="bg-purple-50 rounded-lg p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left: Images and Audit Trail */}
+              <div className="flex flex-col gap-4">
+                <div className="preview-section preview-section-image">
                   <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center gap-2">
                     <Image className="h-5 w-5" />
                     Component Images
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-2">
                     {componentToView.imageUrl && (
                       <div>
                         <span className="text-sm font-medium text-purple-700">Front Image:</span>
                         <img
                           src={componentToView.imageUrl}
                           alt="Front view"
-                          className="mt-2 w-full h-48 object-contain rounded-lg bg-white"
+                          className="mt-2 w-full h-24 object-contain rounded-lg bg-white"
                         />
                       </div>
                     )}
@@ -2279,23 +2147,65 @@ export function ManageLabComponents() {
                         <img
                           src={componentToView.backImageUrl}
                           alt="Back view"
-                          className="mt-2 w-full h-48 object-contain rounded-lg bg-white"
+                          className="mt-2 w-full h-24 object-contain rounded-lg bg-white"
                         />
                       </div>
                     )}
                   </div>
                 </div>
-              )}
-
-              <div className="flex justify-end pt-4">
-                <Button
-                  onClick={() => {
-                    setIsInfoDialogOpen(false)
-                    setComponentToView(null)
-                  }}
-                >
-                  Close
-                </Button>
+                <div className="preview-section preview-section-audit p-3 text-sm">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <History className="h-5 w-5" />
+                    Audit Trail
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label className="text-xs font-medium text-gray-500">Created By</Label><div className="text-base text-gray-900 break-words">{componentToView.created_by || '-'}</div></div>
+                    <div><Label className="text-xs font-medium text-gray-500">Created At</Label><div className="text-base text-gray-900 break-words">{componentToView.created_at || '-'}</div></div>
+                    <div><Label className="text-xs font-medium text-gray-500">Last Modified By</Label><div className="text-base text-gray-900 break-words">{componentToView.modified_by || '-'}</div></div>
+                    <div><Label className="text-xs font-medium text-gray-500">Last Modified At</Label><div className="text-base text-gray-900 break-words">{componentToView.modified_at || '-'}</div></div>
+                  </div>
+                </div>
+              </div>
+              {/* Right: Details and Purchase Info */}
+              <div className="flex flex-col gap-4">
+                <div className="preview-section preview-section-details p-3 text-sm">
+                  <h3 className="text-base font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Basic Information
+                  </h3>
+                  <div><span className="font-medium text-blue-700">Component Name:</span> <span className="text-blue-900 font-semibold break-words">{componentToView.component_name}</span></div>
+                  <div><span className="font-medium text-blue-700">Category:</span> <span className="text-blue-900 break-words">{componentToView.component_category}</span></div>
+                  <div><span className="font-medium text-blue-700">Location:</span> <span className="text-blue-900 break-words">{componentToView.component_location}</span></div>
+                  <div><span className="font-medium text-blue-700">Tag ID:</span> <span className="text-blue-900 break-words">{componentToView.component_tag_id || "Not assigned"}</span></div>
+                  <div><span className="font-medium text-blue-700">Total Quantity:</span> <span className="text-blue-900 font-semibold">{componentToView.component_quantity}</span></div>
+                  <div><span className="font-medium text-blue-700">Available Quantity:</span> <span className="text-blue-900 font-semibold">{componentToView.availableQuantity || 0}</span></div>
+                  {componentToView.component_description && (
+                    <div className="mt-2"><span className="font-medium text-blue-700">Description:</span> <span className="text-blue-900 mt-1 break-words">{componentToView.component_description}</span></div>
+                  )}
+                  {componentToView.component_specification && (
+                    <div className="mt-2"><span className="font-medium text-blue-700">Specifications:</span> <span className="text-blue-900 mt-1 break-words">{componentToView.component_specification}</span></div>
+                  )}
+                </div>
+                <div className="preview-section preview-section-purchase p-3 text-sm">
+                  <h3 className="text-base font-medium text-gray-900 border-b pb-1 mb-2">Purchase Details</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label className="text-xs font-medium text-gray-500">Invoice Number</Label><div className="text-base text-gray-900 break-words">{componentToView.invoice_number || '-'}</div></div>
+                    <div><Label className="text-xs font-medium text-gray-500">Purchased From</Label><div className="text-base text-gray-900 break-words">{componentToView.purchased_from || '-'}</div></div>
+                    <div><Label className="text-xs font-medium text-gray-500">Purchase Date</Label><div className="text-base text-gray-900 break-words">{componentToView.purchase_date || '-'}</div></div>
+                    <div><Label className="text-xs font-medium text-gray-500">Purchase Value</Label><div className="text-base text-gray-900 break-words">{componentToView.purchase_value || '-'}</div></div>
+                    <div><Label className="text-xs font-medium text-gray-500">Currency</Label><div className="text-base text-gray-900 break-words">{componentToView.purchase_currency || '-'}</div></div>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button
+                    onClick={() => {
+                      setIsInfoDialogOpen(false)
+                      setComponentToView(null)
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
             </div>
           )}

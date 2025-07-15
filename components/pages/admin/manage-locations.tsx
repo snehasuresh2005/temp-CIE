@@ -217,7 +217,7 @@ export function ManageLocations() {
       }
     } catch (error) {
       console.error('Error saving location:', error);
-    toast({
+      toast({
         title: 'Error',
         description: 'Failed to save location',
         variant: 'destructive',
@@ -780,11 +780,11 @@ export function ManageLocations() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{capitalizeWords(location.name)}</CardTitle>
+                    <CardTitle className="text-lg text-gray-900 dark:text-white">{capitalizeWords(location.name)}</CardTitle>
                     <p className="text-sm text-gray-600">{location.room_number}</p>
                   </div>
                   <Badge className={getLocationTypeColor(location.location_type)}>
-                    {location.location_type.replace('_', ' ')}
+                    {location.location_type.replace(/_/g, ' ')}
                   </Badge>
                   </div>
               </CardHeader>
@@ -811,30 +811,36 @@ export function ManageLocations() {
                 )}
 
                 <div className="flex items-center justify-between pt-2">
-                  <Badge variant={location.is_available ? "default" : "secondary"}>
-                    {location.is_available ? 'Available' : 'Unavailable'}
-                  </Badge>
+                  {location.is_available ? (
+                    <span className="tag-available">Available</span>
+                  ) : (
+                    <Badge variant="secondary">Unavailable</Badge>
+                  )}
                   
                   <div className="flex space-x-2">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => openEditDialog(location)}
+                      className="btn-edit"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
                     </Button>
                     <Button
                       size="sm"
-                    variant="outline"
+                      variant="outline"
                       onClick={() => { setLocationToDelete(location); setDeleteDialogOpen(true); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                      className="btn-delete"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
       </div>
       )}
 

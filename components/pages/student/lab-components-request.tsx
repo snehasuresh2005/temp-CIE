@@ -405,7 +405,7 @@ export function LabComponentsRequest() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Lab Components</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Lab Components</h1>
           </div>
           <Button onClick={fetchData} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -688,7 +688,7 @@ export function LabComponentsRequest() {
                                           {/* Top row: Name and Quantity */}
                                           <div className="flex flex-col md:flex-row md:items-center md:space-x-6">
                                             <div className="flex-1 mb-2 md:mb-0">
-                                              <h2 className="text-xl font-bold text-gray-900">{selectedComponent.component_name}</h2>
+                                              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedComponent.component_name}</h2>
                                               <p className="text-sm text-gray-500">{selectedComponent.component_category}</p>
                                             </div>
                                             <div className="flex items-center space-x-2">

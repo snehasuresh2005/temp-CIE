@@ -218,7 +218,7 @@ export function ManageStudents() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Manage Students</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Students</h1>
           <p className="text-gray-500">View, add, and manage student records and enrollments.</p>
         </div>
         <div className="flex space-x-2">
@@ -429,7 +429,7 @@ export function ManageStudents() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      No students found.
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No students found</h3>
                     </TableCell>
                   </TableRow>
                 )}

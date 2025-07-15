@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         profilePhotoUrl: `/profile-img/${f.faculty_id}`, // Use faculty_id for image URL
       }
     })
-
+ 
     return NextResponse.json({ faculty: facultyWithPhoto })
   } catch (error) {
     console.error("Get faculty error:", error)
@@ -116,5 +116,88 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Create faculty error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const {
+      id,
+      name,
+      email,
+      phone,
+      department,
+      office,
+      specialization,
+      facultyId,
+      officeHours,
+      user
+    } = body;
+
+    // Validate required fields
+    if (!id || !name || !email || !department || !facultyId || !officeHours) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Update user
+    await prisma.user.update({
+      where: { id: user?.id },
+      data: {
+        name,
+        email,
+        phone: phone || null,
+      },
+    });
+
+    // Update faculty
+    const updatedFaculty = await prisma.faculty.update({
+      where: { id },
+      data: {
+        department,
+        office,
+        specialization,
+        faculty_id: facultyId,
+        office_hours: officeHours,
+      },
+      include: { user: true },
+    });
+
+    return NextResponse.json({
+      faculty: {
+        ...updatedFaculty,
+        facultyId: updatedFaculty.faculty_id,
+        officeHours: updatedFaculty.office_hours,
+        profilePhotoUrl: `/profile-img/${updatedFaculty.faculty_id}`,
+      }
+    });
+  } catch (error) {
+    console.error("Update faculty error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing faculty id" }, { status: 400 });
+    }
+
+    // Find faculty to get user_id
+    const faculty = await prisma.faculty.findUnique({ where: { id } });
+    if (!faculty) {
+      return NextResponse.json({ error: "Faculty not found" }, { status: 404 });
+    }
+
+    // Delete the user (cascades to faculty if set up, or delete faculty first)
+    await prisma.user.delete({ where: { id: faculty.user_id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Delete faculty error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

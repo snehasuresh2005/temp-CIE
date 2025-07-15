@@ -574,36 +574,13 @@ export function ManageClassSchedules() {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="flex items-center space-x-2">
+                        <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
                           <Calendar className="h-5 w-5" />
                           <span>{schedule.course.course_name}</span>
                         </CardTitle>
                         <CardDescription>
                           {schedule.faculty.user.name} • {schedule.room} • Section {schedule.section}
                         </CardDescription>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingSchedule(schedule)
-                            setIsEditDialogOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setScheduleToDelete(schedule)
-                            setIsDeleteDialogOpen(true)
-                          }}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   </CardHeader>
@@ -621,6 +598,16 @@ export function ManageClassSchedules() {
                       </div>
                     </div>
                   </CardContent>
+                  <div className="flex gap-3 mt-2 ml-6 mb-4">
+                    <Button className="btn-edit" onClick={() => { setEditingSchedule(schedule); setIsEditDialogOpen(true); }}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button className="btn-delete" onClick={() => { setScheduleToDelete(schedule); setIsDeleteDialogOpen(true); }}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
                 </Card>
               ))
             )}

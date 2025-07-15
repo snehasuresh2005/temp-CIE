@@ -550,9 +550,13 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                             <CardDescription className="text-xs">{component.component_category}</CardDescription>
                           </div>
                           <div className="flex items-center space-x-1 flex-shrink-0">
-                            <Badge className={`${getAvailabilityColor(component.available_quantity, component.component_quantity)} text-xs px-1 py-0.5`}>
-                              {getAvailabilityText(component.available_quantity, component.component_quantity)}
-                            </Badge>
+                            {getAvailabilityText(component.available_quantity, component.component_quantity) === 'Available' ? (
+                              <span className="tag-available">Available</span>
+                            ) : (
+                              <Badge className={`${getAvailabilityColor(component.available_quantity, component.component_quantity)} text-xs px-1 py-0.5`}>
+                                {getAvailabilityText(component.available_quantity, component.component_quantity)}
+                              </Badge>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -759,9 +763,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                                                       <div className="flex items-center gap-2">
                                                         <span>{componentProject.name}</span>
                                                         {fullProject?.status === "ONGOING" && (
-                                                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                                                            Available
-                                                          </Badge>
+                                                          <span className="tag-available">Available</span>
                                                         )}
                                                       </div>
                                                       <span className={`text-xs ${getProjectStatusColor(componentProject.id)}`}>
@@ -1148,7 +1150,11 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                         <Package className="h-5 w-5 text-gray-500" />
                         {component.component_name}
                       </h3>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isAvailable ? 'Available' : 'Not Available'}</span>
+                      {isAvailable ? (
+                        <span className="tag-available">Available</span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">Not Available</span>
+                      )}
                     </div>
                     <div className="flex flex-row items-end justify-center pl-8">
                       <div>

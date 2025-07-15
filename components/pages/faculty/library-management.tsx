@@ -621,7 +621,7 @@ export function LibraryManagement() {
                 <p className="text-2xl font-bold">
                   {items.reduce((sum, item) => sum + item.available_quantity, 0)}
                 </p>
-                <p className="text-sm text-gray-600">Available Items</p>
+                <span className="tag-available">Available</span>
               </div>
             </div>
           </CardContent>
@@ -758,7 +758,13 @@ export function LibraryManagement() {
                             <CardDescription className="text-xs text-gray-500">{item.item_category}</CardDescription>
                           </div>
                           <div className="flex items-center space-x-1 flex-shrink-0">
-                            <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-2 py-0.5 rounded-full font-medium`}>{getAvailabilityText(item.available_quantity, item.item_quantity)}</Badge>
+                            {getAvailabilityText(item.available_quantity, item.item_quantity) === 'Available' ? (
+                              <span className="tag-available">Available</span>
+                            ) : (
+                              <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-2 py-0.5 rounded-full font-medium`}>
+                                {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                              </Badge>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1291,9 +1297,10 @@ export function LibraryManagement() {
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-medium text-sm">Available</h4>
-                    <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {item.available_quantity}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>{item.available_quantity}</p>
+                      {item.available_quantity > 0 && <span className="tag-available">Available</span>}
+                    </div>
                   </div>
                 </div>
 
@@ -1313,9 +1320,11 @@ export function LibraryManagement() {
 
                 {/* Availability Status */}
                 <div className="pt-2 border-t">
-                  <Badge className={`${item.available_quantity > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                    {item.available_quantity > 0 ? "Available" : "Out of Stock"}
-                  </Badge>
+                  {item.available_quantity > 0 ? (
+                    <span className="tag-available">Available</span>
+                  ) : (
+                    <Badge className="bg-red-100 text-red-800">Out of Stock</Badge>
+                  )}
                 </div>
               </div>
             )

@@ -1525,7 +1525,7 @@ export function ManageLibrary() {
           <Card className="col-span-full">
             <CardContent className="p-8 text-center">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No items found</h3>
               <p className="text-gray-600">Add your first library item to get started.</p>
             </CardContent>
           </Card>
@@ -1536,7 +1536,7 @@ export function ManageLibrary() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Package className="h-5 w-5 text-gray-500" />
-                    <h3 className="text-lg font-semibold">{item.item_name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{item.item_name}</h3>
                   </div>
                   <Button
                     variant="outline"
@@ -1641,25 +1641,13 @@ export function ManageLibrary() {
                      <div><span className="font-semibold">Location:</span> {item.item_location}</div>
                   </div>
                   <div className="flex space-x-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingItem(item)
-                        setIsEditDialogOpen(true)
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-1" /> Edit
+                    <Button className="btn-edit" onClick={() => { setEditingItem(item); setIsEditDialogOpen(true); }}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setItemToDelete(item)
-                        setIsDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" /> Delete
+                    <Button className="btn-delete" onClick={() => { setItemToDelete(item); setIsDeleteDialogOpen(true); }}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -1671,7 +1659,7 @@ export function ManageLibrary() {
 
       {/* Info Dialog */}
       <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-full">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Info className="h-5 w-5 text-blue-600" />
@@ -1682,101 +1670,117 @@ export function ManageLibrary() {
             </DialogDescription>
           </DialogHeader>
           {itemToView && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Basic Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Name</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_name}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Category</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_category}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Location</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_location}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Tag ID</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_tag_id || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.item_quantity}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Available</Label>
-                    <div className="text-base font-medium text-gray-900">{itemToView.availableQuantity}</div>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left: Images and Basic Info */}
+              <div className="space-y-4">
+                <div className="preview-section preview-section-image">
+                  {(itemToView.imageUrl || itemToView.backImageUrl) && (
+                    <div className="relative w-full h-64">
+                      {/* Front Image */}
+                      <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[itemToView.id] ? 'opacity-0' : 'opacity-100'}`}>
+                        <img
+                          src={itemToView.imageUrl || '/placeholder.jpg'}
+                          alt={`Front view of ${itemToView.item_name}`}
+                          className="w-full h-full object-contain rounded-lg bg-gray-50"
+                        />
+                      </div>
+                      {/* Back Image */}
+                      {itemToView.backImageUrl && (
+                        <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[itemToView.id] ? 'opacity-100' : 'opacity-0'}`}>
+                          <img
+                            src={itemToView.backImageUrl}
+                            alt={`Back view of ${itemToView.item_name}`}
+                            className="w-full h-full object-contain rounded-lg bg-gray-50"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-4">
-                  <Label className="text-xs font-medium text-gray-500">Description</Label>
-                  <div className="text-sm text-gray-700">{itemToView.item_description}</div>
-                </div>
-                {itemToView.item_specification && (
-                  <div className="mt-2">
-                    <Label className="text-xs font-medium text-gray-500">Specification</Label>
-                    <div className="text-sm text-gray-700">{itemToView.item_specification}</div>
-                  </div>
-                )}
-              </div>
-              {/* Purchase Details */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
-                  Purchase Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
-                    <div className="text-base text-gray-900">{itemToView.invoice_number || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchased From</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchased_from || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchase Date</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_date || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_value || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Currency</Label>
-                    <div className="text-base text-gray-900">{itemToView.purchase_currency || '-'}</div>
-                  </div>
+                <div className="preview-section preview-section-details">
+                  <Label className="text-sm font-medium">Description</Label>
+                  <p className="text-sm text-gray-700 mt-1">{itemToView.item_description}</p>
+                  {itemToView.item_specification && (
+                    <div>
+                      <Label className="text-sm font-medium">Specifications</Label>
+                      <p className="text-sm text-gray-700 mt-1">{itemToView.item_specification}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-              {/* Audit Trail */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Audit Trail
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Created By</Label>
-                    <div className="text-base text-gray-900">{itemToView.created_by || '-'}</div>
+              {/* Right: Details, Purchase Info, Audit Trail */}
+              <div className="space-y-6">
+                <div className="preview-section preview-section-details">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Category</Label>
+                      <div className="text-base text-gray-900">{itemToView.item_category}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Location</Label>
+                      <div className="text-base text-gray-900">{itemToView.item_location}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Tag ID</Label>
+                      <div className="text-base text-gray-900">{itemToView.item_tag_id || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
+                      <div className="text-base text-gray-900">{itemToView.item_quantity}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Available</Label>
+                      <div className="text-base text-gray-900">{itemToView.availableQuantity}</div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Created At</Label>
-                    <div className="text-base text-gray-900">{itemToView.created_at || '-'}</div>
+                </div>
+                <div className="preview-section preview-section-purchase">
+                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-2">Purchase Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
+                      <div className="text-base text-gray-900">{itemToView.invoice_number || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchased From</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchased_from || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Date</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchase_date || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchase_value || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Currency</Label>
+                      <div className="text-base text-gray-900">{itemToView.purchase_currency || '-'}</div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
-                    <div className="text-base text-gray-900">{itemToView.modified_by || '-'}</div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
-                    <div className="text-base text-gray-900">{itemToView.modified_at || '-'}</div>
+                </div>
+                <div className="preview-section preview-section-audit">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <History className="h-5 w-5" />
+                    Audit Trail
+                  </h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created By</Label>
+                      <div className="text-base text-gray-900">{itemToView.created_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created At</Label>
+                      <div className="text-base text-gray-900">{itemToView.created_at || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
+                      <div className="text-base text-gray-900">{itemToView.modified_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
+                      <div className="text-base text-gray-900">{itemToView.modified_at || '-'}</div>
+                    </div>
                   </div>
                 </div>
               </div>

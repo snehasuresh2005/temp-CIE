@@ -49,7 +49,7 @@ export function LoginForm() {
         <div className="w-full max-w-lg space-y-10">
           <div className="flex flex-col items-center">
             <Icons.logo className="h-16 w-auto mb-6" />
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+            <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'black', fontWeight: 'bold', textAlign: 'center', WebkitTextStroke: 'unset', textShadow: 'unset', background: 'unset', boxShadow: 'unset', filter: 'unset', zIndex: 1, position: 'relative' }}>Welcome back</h1>
             <p className="text-base text-muted-foreground mt-3">
               Enter your email to sign in to your account
             </p>

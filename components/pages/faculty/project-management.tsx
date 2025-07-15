@@ -574,7 +574,7 @@ export function ProjectManagement() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                        <CardTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
                           <FolderOpen className="h-6 w-6 mr-3 text-blue-500" />
                           {project.name}
                         </CardTitle>

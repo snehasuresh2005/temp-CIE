@@ -346,7 +346,7 @@ export function LocationBooking() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Location Booking</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Location Booking</h1>
         </div>
       </div>
 
@@ -692,7 +692,7 @@ export function LocationBooking() {
           {calendarLocation && (
             <div className="mt-4">
               <LocationCalendar
-                userRole="faculty"
+                userRole="FACULTY"
                 userId={user?.id}
                 locationId={calendarLocation.id}
               />

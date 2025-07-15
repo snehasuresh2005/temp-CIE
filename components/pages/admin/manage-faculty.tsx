@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Mail, Phone, RefreshCw } from "lucide-react"
+import { Plus, Mail, Phone, RefreshCw, Edit, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Faculty {
@@ -72,6 +72,14 @@ export function ManageFaculty() {
   const [newFacultyImage, setNewFacultyImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
+  const [imageRefreshKey, setImageRefreshKey] = useState<number>(0);
+
+  const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [facultyToDelete, setFacultyToDelete] = useState<Faculty | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editFacultyImage, setEditFacultyImage] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
 
   // Image preview handler
   useEffect(() => {
@@ -83,6 +91,17 @@ export function ManageFaculty() {
       setImagePreview(null)
     }
   }, [newFacultyImage])
+
+  // Image preview handler for edit dialog
+  useEffect(() => {
+    if (editFacultyImage) {
+      const reader = new FileReader();
+      reader.onload = (e) => setEditImagePreview(e.target?.result as string);
+      reader.readAsDataURL(editFacultyImage);
+    } else {
+      setEditImagePreview(null);
+    }
+  }, [editFacultyImage]);
 
   // Add form validation check
   const isFormValid = useMemo(() => {
@@ -215,15 +234,13 @@ export function ManageFaculty() {
     if (failedImages.has(faculty.facultyId)) {
       return '/placeholder-user.jpg';
     }
-    
     // Use facultyId for image URL (from profilePhotoUrl or construct it)
     if (faculty.profilePhotoUrl) {
       // Try the URL from API first (without extension)
-      return `${faculty.profilePhotoUrl}.jpg`;
+      return `${faculty.profilePhotoUrl}.jpg?refresh=${imageRefreshKey}`;
     }
-    
     // Fallback: construct URL using facultyId
-    return `/profile-img/${faculty.facultyId}.jpg`;
+    return `/profile-img/${faculty.facultyId}.jpg?refresh=${imageRefreshKey}`;
   };
 
   const handleImageError = (faculty: Faculty, e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -249,6 +266,69 @@ export function ManageFaculty() {
     console.log(`All extensions failed for faculty ${faculty.facultyId}, using placeholder`);
     setFailedImages(prev => new Set(prev).add(faculty.facultyId));
     e.currentTarget.src = '/placeholder-user.jpg';
+  };
+
+  // Handler to update faculty
+  const handleUpdateFaculty = async (updatedFaculty: Faculty) => {
+    try {
+      const payload = {
+        id: updatedFaculty.id,
+        name: updatedFaculty.user.name,
+        email: updatedFaculty.user.email,
+        phone: updatedFaculty.user.phone,
+        department: updatedFaculty.department,
+        office: updatedFaculty.office,
+        specialization: updatedFaculty.specialization,
+        facultyId: updatedFaculty.facultyId,
+        officeHours: updatedFaculty.officeHours,
+        user: { id: updatedFaculty.user.id },
+      };
+      const response = await fetch(`/api/faculty`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        // If a new image was selected, upload it
+        if (editFacultyImage) {
+          const formData = new FormData();
+          formData.append('file', editFacultyImage);
+          formData.append('facultyId', updatedFaculty.id);
+          await fetch('/api/faculty/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          setImageRefreshKey(Date.now()); // update key to force image refresh
+        }
+        setFaculty((prev) => prev.map(f => f.id === updatedFaculty.id ? { ...f, ...updatedFaculty } : f));
+        setIsEditDialogOpen(false);
+        setEditingFaculty(null);
+        setEditFacultyImage(null);
+        setEditImagePreview(null);
+        toast({ title: "Success", description: "Faculty updated successfully" });
+      } else {
+        toast({ title: "Error", description: "Failed to update faculty", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update faculty", variant: "destructive" });
+    }
+  };
+
+  // Handler to delete faculty
+  const handleDeleteFaculty = async (facultyId: string) => {
+    try {
+      const response = await fetch(`/api/faculty?id=${facultyId}`, { method: "DELETE" });
+      if (response.ok) {
+        setFaculty((prev) => prev.filter(f => f.id !== facultyId));
+        setIsDeleteDialogOpen(false);
+        setFacultyToDelete(null);
+        toast({ title: "Success", description: "Faculty deleted successfully" });
+      } else {
+        toast({ title: "Error", description: "Failed to delete faculty", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete faculty", variant: "destructive" });
+    }
   };
 
   if (loading) {
@@ -439,7 +519,7 @@ export function ManageFaculty() {
         {filteredFaculty.length === 0 ? (
           <Card className="col-span-2">
             <CardContent className="p-8 text-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No faculty members found</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No faculty members found</h3>
               <p className="text-gray-600">Add your first faculty member to get started.</p>
             </CardContent>
           </Card>
@@ -458,7 +538,7 @@ export function ManageFaculty() {
                       onError={(e) => handleImageError(member, e)}
                     />
                     <div>
-                      <CardTitle className="text-2xl font-bold">{member.user.name}</CardTitle>
+                      <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">{member.user.name}</CardTitle>
                       <CardDescription>{member.department}</CardDescription>
                     </div>
                   </div>
@@ -515,6 +595,16 @@ export function ManageFaculty() {
                         )}
                       </div>
                     </div>
+                    <div className="flex gap-3 mt-4">
+                      <Button className="btn-edit" onClick={() => { setEditingFaculty(member); setIsEditDialogOpen(true); }}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button className="btn-delete" onClick={() => { setFacultyToDelete(member); setIsDeleteDialogOpen(true); }}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -522,6 +612,98 @@ export function ManageFaculty() {
           })
         )}
       </div>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Faculty</DialogTitle>
+            <DialogDescription>Update faculty details below.</DialogDescription>
+          </DialogHeader>
+          {editingFaculty && (
+            <div className="space-y-4">
+              <Input
+                value={editingFaculty.user.name}
+                onChange={e => setEditingFaculty(f => f ? { ...f, user: { ...f.user, name: e.target.value } } : f)}
+                placeholder="Full Name"
+              />
+              <Input
+                value={editingFaculty.user.email}
+                onChange={e => setEditingFaculty(f => f ? { ...f, user: { ...f.user, email: e.target.value } } : f)}
+                placeholder="Email"
+              />
+              <Input
+                value={editingFaculty.facultyId}
+                onChange={e => setEditingFaculty(f => f ? { ...f, facultyId: e.target.value } : f)}
+                placeholder="Faculty ID"
+              />
+              <Input
+                value={editingFaculty.department}
+                onChange={e => setEditingFaculty(f => f ? { ...f, department: e.target.value } : f)}
+                placeholder="Department"
+              />
+              <Input
+                value={editingFaculty.office}
+                onChange={e => setEditingFaculty(f => f ? { ...f, office: e.target.value } : f)}
+                placeholder="Office"
+              />
+              <Input
+                value={editingFaculty.specialization}
+                onChange={e => setEditingFaculty(f => f ? { ...f, specialization: e.target.value } : f)}
+                placeholder="Specialization"
+              />
+              <Input
+                value={editingFaculty.officeHours}
+                onChange={e => setEditingFaculty(f => f ? { ...f, officeHours: e.target.value } : f)}
+                placeholder="Office Hours"
+              />
+              {/* Image Upload Section */}
+              <div>
+                <Label htmlFor="edit-image">Profile Image</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setEditFacultyImage(e.target.files?.[0] || null)}
+                  className="mb-2"
+                />
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Preview</Label>
+                {editImagePreview ? (
+                  <div className="border rounded-lg p-2 bg-gray-50">
+                    <img
+                      src={editImagePreview}
+                      alt="Profile Preview"
+                      className="w-full h-32 object-contain rounded bg-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50 h-32 flex items-center justify-center">
+                    <div className="text-gray-400">
+                      <svg className="mx-auto h-8 w-8 mb-1" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <p className="text-xs text-gray-500">No image selected</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditFacultyImage(null); setEditImagePreview(null); }}>Cancel</Button>
+                <Button onClick={() => editingFaculty && handleUpdateFaculty(editingFaculty)}>Save</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Faculty</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this faculty member? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => facultyToDelete && handleDeleteFaculty(facultyToDelete.id)}>Delete</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -180,4 +180,86 @@ body {
   .focus-visible\:border-transparent:focus-visible {
     border-color: hsl(var(--input)) !important;
   }
+
+  /* Edit Button Style (reference: black text/icon, white bg, border) */
+  .btn-edit {
+    @apply bg-white border border-gray-300 text-gray-900 font-medium rounded-lg px-6 py-2 flex items-center gap-2 shadow-sm transition-colors duration-150;
+    background-color: #fff !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
+  }
+  .btn-edit:hover {
+    @apply bg-gray-50 border-gray-400;
+    background-color: #f9fafb !important;
+    border: 1px solid #9ca3af !important;
+  }
+  .btn-edit:active {
+    @apply bg-gray-100;
+    background-color: #f3f4f6 !important;
+  }
+  /* Delete Button Style - force red background and white text */
+  .btn-delete {
+    @apply bg-red-600 text-white font-medium rounded-lg px-6 py-2 flex items-center gap-2 shadow-sm transition-colors duration-150;
+    background-color: #dc2626 !important;
+    color: #fff !important;
+    border: none !important;
+  }
+  .btn-delete:hover {
+    @apply bg-red-700;
+    background-color: #b91c1c !important;
+  }
+  .btn-delete:active {
+    @apply bg-red-800;
+    background-color: #991b1b !important;
+  }
+}
+
+.preview-section-image {
+  background-color: #f0f8ff; /* Light blue */
+}
+.preview-section-details {
+  background-color: #f9fbe7; /* Light green */
+}
+.preview-section-purchase {
+  background-color: #fff3e0; /* Light orange */
+}
+.preview-section-audit {
+  background-color: #fce4ec; /* Light pink */
+}
+.preview-section {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.tag-available {
+  display: inline-block;
+  background-color: #4ef58c;
+  color: #111;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  box-shadow: none;
+  border: none;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  color: #fffcfc !important;
+}
+@media (prefers-color-scheme: dark) {
+  h1 {
+    color: #f16832 !important;
+  }
+}
+/* Remove global color for h2–h6 to allow local text color classes to work */
+h2, h3, h4, h5, h6 {
+  /* color: hsl(0, 100%, 100%); */
+}
+@media (prefers-color-scheme: dark) {
+  h2, h3, h4, h5, h6 {
+    /* color: #fff !important; */
+  }
 }

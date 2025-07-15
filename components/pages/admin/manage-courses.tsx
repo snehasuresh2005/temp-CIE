@@ -23,7 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Plus, Trash2, BookOpen, Calendar, Users, RefreshCw, List, X } from "lucide-react"
+import { Plus, Trash2, BookOpen, Calendar, Users, RefreshCw, List, X, Edit } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -407,7 +407,7 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Course Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Course Management</h1>
         </div>
 
         <div className="flex space-x-2">
@@ -607,7 +607,7 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <BookOpen className="h-4 w-4 text-gray-500" />
-                      <span className="text-xl font-bold text-gray-900 truncate">{course.course_name}</span>
+                      <span className="text-xl font-bold text-gray-900 dark:text-white truncate">{course.course_name}</span>
                     </div>
                     <CardDescription className="mt-1 text-gray-600 text-sm truncate">{course.course_description}</CardDescription>
                   </div>
@@ -634,15 +634,16 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                       <List className="h-4 w-4 mr-1" />
                       View Units
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => {
+                    <Button className="btn-edit" onClick={() => openEditDialog(course)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button className="btn-delete" onClick={() => {
                       setCourseToDelete(course)
                       setIsDeleteDialogOpen(true)
                     }}>
-                      <Trash2 className="h-4 w-4 mr-1" />
+                      <Trash2 className="h-4 w-4 mr-2" />
                       Delete
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => openEditDialog(course)}>
-                      Edit
                     </Button>
                   </div>
                 </div>
@@ -877,7 +878,10 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                 <Button variant="destructive" onClick={() => {
                   handleDeleteCourse(courseToDelete.id)
                   setIsDeleteDialogOpen(false)
-                }}>Delete Course</Button>
+                }}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Course
+                </Button>
               </div>
             </div>
           )}
