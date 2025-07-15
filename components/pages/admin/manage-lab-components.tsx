@@ -1180,11 +1180,11 @@ export function ManageLabComponents() {
                 Add Component
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-7xl w-full max-h-[98vh] overflow-hidden">
+            <DialogContent className="max-w-[90vw] w-[1100px] max-h-[90vh] h-[750px] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>Add New Lab Component</DialogTitle>
               </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 overflow-y-auto">
                 {/* Left Column: Basic Info & Images */}
                 <div className="space-y-6 pr-3 pl-3">
                   <div className="space-y-3">
@@ -1199,6 +1199,7 @@ export function ManageLabComponents() {
                         <Input id="tagId" value={newComponent.component_tag_id} onChange={e => setNewComponent(prev => ({ ...prev, component_tag_id: e.target.value }))} className="mt-1" />
                   </div>
                 </div>
+                  </div>
                     <div className="flex gap-3 items-end">
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
@@ -1354,7 +1355,7 @@ export function ManageLabComponents() {
                     
                     {/* Individual Items Section */}
                     {trackIndividual && (
-                      <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                      <div className="space-y-2 border rounded-lg p-2 bg-gray-50">
                         <div className="flex items-center justify-between">
                           <Label className="text-sm font-medium">Individual Items</Label>
                           <Button
@@ -1362,7 +1363,7 @@ export function ManageLabComponents() {
                             variant="outline"
                             size="sm"
                             onClick={addIndividualItem}
-                            className="h-8"
+                            className="h-6 text-xs"
                           >
                             <Plus className="h-3 w-3 mr-1" />
                             Add Item
@@ -1374,26 +1375,26 @@ export function ManageLabComponents() {
                         )}
                         
                         {individualItems.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-4">
+                          <p className="text-xs text-gray-500 text-center py-2">
                             No individual items added. Click "Add Item" to start tracking individual components.
                           </p>
                         ) : (
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                          <div className="space-y-1 max-h-24 overflow-y-auto">
                             {individualItems.map((item, index) => (
-                              <div key={item.id} className="flex flex-col space-y-1">
-                                <div className="flex items-center space-x-2">
+                              <div key={item.id} className="flex flex-col space-y-0.5">
+                                <div className="flex items-center space-x-1">
                                   <Input
                                     placeholder={`Unique ID ${index + 1}`}
                                     value={item.unique_id}
                                     onChange={(e) => updateIndividualItem(item.id, e.target.value)}
-                                    className={`flex-1 ${individualItemErrors[item.id] ? 'border-red-500 focus:border-red-500' : ''}`}
+                                    className={`flex-1 h-7 text-xs ${individualItemErrors[item.id] ? 'border-red-500 focus:border-red-500' : ''}`}
                                   />
                                   <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => removeIndividualItem(item.id)}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                    className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
@@ -1407,13 +1408,13 @@ export function ManageLabComponents() {
                         )}
                         
                         {individualItems.length > 0 && (
-                          <div className="text-sm text-gray-600">
+                          <div className="text-xs text-gray-600">
                             Total items: {individualItems.filter(item => item.unique_id.trim()).length} / {individualItems.length}
                           </div>
                         )}
                       </div>
                     )}
-                  </div>
+                    
                   <div className="space-y-3">
                   <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Component Images</h3>
@@ -1507,40 +1508,40 @@ export function ManageLabComponents() {
                   </div>
                 </div>
                 </div>
-                {/* Form Actions */}
-                <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="px-6">Cancel</Button>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span tabIndex={0}>
-                          <Button 
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              handleAddComponent()
-                            }} 
-                            disabled={!isAddFormValid || isSubmitting}
-                          >
-                            {isSubmitting ? "Adding..." : "Add Component"}
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {!isAddFormValid && (
-                        <TooltipContent>
-                          <p>
-                            Please fill in all required fields: Component Name, Description, Category, Location, Front Image, and Back Image.
-                            {trackIndividual 
-                              ? " When individual tracking is enabled, add at least one individual item with a unique ID."
-                              : " Quantity must be greater than 0."
-                            }
-                          </p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+              </div>
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t mt-4">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="px-6">Cancel</Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button 
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleAddComponent()
+                          }} 
+                          disabled={!isAddFormValid || isSubmitting}
+                        >
+                          {isSubmitting ? "Adding..." : "Add Component"}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!isAddFormValid && (
+                      <TooltipContent>
+                        <p>
+                          Please fill in all required fields: Component Name, Description, Category, Location, Front Image, and Back Image.
+                          {trackIndividual 
+                            ? " When individual tracking is enabled, add at least one individual item with a unique ID."
+                            : " Quantity must be greater than 0."
+                          }
+                        </p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </DialogContent>
           </Dialog>
@@ -1587,11 +1588,11 @@ export function ManageLabComponents() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-6">
+                <div className="space-y-6">
                   {/* Image Display with Fade Animation */}
                   {(component.imageUrl || component.backImageUrl) && (
-                    <div className="relative w-full h-64">
+                    <div className="relative w-full h-100">
                       {/* Front Image */}
                       <div 
                         className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${

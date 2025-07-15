@@ -179,28 +179,20 @@ export function CoordinatorDashboard() {
 
   const fetchCoordinatorDomains = async () => {
     try {
+      console.log("[CoordinatorDashboard] Fetching coordinator domains for user:", user?.id);
       const response = await fetch("/api/coordinators/check", {
         headers: { "x-user-id": user?.id || "" }
       })
       const data = await response.json()
+      console.log("[CoordinatorDashboard] /api/coordinators/check response:", JSON.stringify(data, null, 2));
       
       // Enhance domain data with inventory information
       const enhancedDomains = await Promise.all(
         (data.assignedDomains || []).map(async (domain: any) => {
           try {
-            // Check if this domain has library items
-            const libraryResponse = await fetch(`/api/library-items?domain_id=${domain.id}`, {
-              headers: { "x-user-id": user?.id || "" }
-            })
-            const libraryData = await libraryResponse.json()
-            const hasLibraryItems = (libraryData.items || []).length > 0
-
-            // Check if this domain has lab components
-            const labResponse = await fetch(`/api/lab-components?domain_id=${domain.id}`, {
-              headers: { "x-user-id": user?.id || "" }
-            })
-            const labData = await labResponse.json()
-            const hasLabComponents = (labData.components || []).length > 0
+            // Always show roles if assigned, regardless of inventory
+            const hasLibraryItems = domain.name.toLowerCase().includes("library");
+            const hasLabComponents = domain.name.toLowerCase().includes("lab");
 
             return {
               ...domain,
@@ -651,6 +643,15 @@ export function CoordinatorDashboard() {
   const hasMultipleRoles = coordinatorDomains.some(domain => domain.hasLibraryItems) && 
                           coordinatorDomains.some(domain => domain.hasLabComponents)
 
+  if (!loading && coordinatorDomains.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">CIE Team Coordinator Dashboard</h1>
+        <div className="text-lg text-gray-600">You are not assigned as a coordinator for any domain.</div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -822,7 +823,6 @@ export function CoordinatorDashboard() {
         <div className="space-y-4">
               <h2 className="text-xl font-semibold">{roleName} Collection Management</h2>
               
-              
               {collectionRequests.length === 0 ? (
                 <Card>
                   <CardContent className="p-8 text-center">
@@ -832,80 +832,88 @@ export function CoordinatorDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                collectionRequests.map((request) => (
-            <Card key={request.id} className="border-l-4 border-l-blue-400">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {getItemName(request)}
-                  </CardTitle>
-                  {getStatusBadge(request.status)}
-                </div>
-              </CardHeader>
-                    <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
-                          <div className="space-y-1 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterName(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Mail className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterEmail(request)}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterType(request)}</span>
-                    </div>
-                  </div>
-                    </div>
-                        
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div>Quantity: {request.quantity}</div>
-                            <div>Purpose: {request.purpose}</div>
-                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
-                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                </div>
-
-                      <div className="mt-4 flex space-x-2">
-                  <Button 
-                    onClick={() => {
-                            if (selectedRole === 'library') {
-                              handleUpdateLibraryRequest(request.id, "COLLECTED")
-                      } else {
-                              handleMarkAsCollected(request)
-                      }
-                    }}
-                          className="bg-green-600 hover:bg-green-700"
-                  >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Mark as Collected
-                  </Button>
-                  
-                  <Button 
-                          variant="outline"
-                    onClick={() => {
-                            if (selectedRole === 'library') {
-                              handleUpdateLibraryRequest(request.id, "REJECTED")
-                      } else {
-                              handleUpdateComponentRequest(request.id, "REJECTED")
-                      }
-                    }}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject Request
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-                ))
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-left text-black font-bold">Requester</TableHead>
+                          <TableHead className="text-left text-black font-bold">{roleName} Item</TableHead>
+                          <TableHead className="text-center text-black font-bold">Qty</TableHead>
+                          <TableHead className="text-center text-black font-bold">Request Date</TableHead>
+                          <TableHead className="text-center text-black font-bold">Required Date</TableHead>
+                          <TableHead className="text-center text-black font-bold">Status</TableHead>
+                          <TableHead className="text-center text-black font-bold">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {collectionRequests.map((request) => {
+                          const requesterId = request.student?.student_id || "N/A";
+                          const requesterType = getRequesterType(request);
+                          
+                          return (
+                            <TableRow key={request.id} className="hover:bg-gray-50">
+                              <TableCell className="font-medium text-sm text-left">
+                                <div>
+                                  <div className="font-medium text-sm">{getRequesterName(request)}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {requesterType === "Student" ? `SRN: ${requesterId}` : requesterType}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{getRequesterEmail(request)}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium text-sm text-left">{getItemName(request)}</TableCell>
+                              <TableCell className="text-sm font-medium text-center">{request.quantity}</TableCell>
+                              <TableCell className="text-sm text-center">
+                                {new Date(request.request_date).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-sm text-center">
+                                {new Date(request.required_date).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {getStatusBadge(request.status)}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex justify-center items-center space-x-1">
+                                  <Button 
+                                    size="sm"
+                                    onClick={() => {
+                                      if (selectedRole === 'library') {
+                                        handleUpdateLibraryRequest(request.id, "COLLECTED")
+                                      } else {
+                                        handleMarkAsCollected(request)
+                                      }
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Collect
+                                  </Button>
+                                  
+                                  <Button 
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (selectedRole === 'library') {
+                                        handleUpdateLibraryRequest(request.id, "REJECTED")
+                                      } else {
+                                        handleUpdateComponentRequest(request.id, "REJECTED")
+                                      }
+                                    }}
+                                    className="text-red-600 border-red-200 hover:bg-red-50"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               )}
             </div>
           )}
@@ -1342,3 +1350,5 @@ function HistoryTable({ data, roleName, searchTerm = "", filter = "all", isOverd
     </div>
   );
 }
+
+export default CoordinatorDashboard;
