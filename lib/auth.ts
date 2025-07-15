@@ -67,7 +67,12 @@ export async function getUserById(id: string): Promise<AuthUser | null> {
       where: { id },
       include: {
         admin: true,
-        faculty: true,
+        faculty: {
+          include: {
+            platform_manager_assignments: true,
+            developer_assignments: true,
+          }
+        },
         student: true,
       },
     })
@@ -86,6 +91,9 @@ export async function getUserById(id: string): Promise<AuthUser | null> {
     } else if (user.faculty) {
       role = 'FACULTY'
       profileData = user.faculty
+      // Add platform manager and developer flags
+      profileData.isPlatformManager = (user.faculty.platform_manager_assignments?.length ?? 0) > 0;
+      profileData.isDeveloper = (user.faculty.developer_assignments?.length ?? 0) > 0;
     } else if (user.student) {
       role = 'STUDENT'
       profileData = user.student
