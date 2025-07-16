@@ -1508,7 +1508,6 @@ export function ManageLabComponents() {
                   </div>
                 </div>
                 </div>
-              
               </div>
               {/* Form Actions */}
               <div className="flex justify-end space-x-3 pt-4 border-t mt-4">
