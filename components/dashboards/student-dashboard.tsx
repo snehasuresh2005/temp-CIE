@@ -12,7 +12,6 @@ import { ViewAttendance } from "@/components/pages/student/view-attendance"
 import { UserProfile } from "@/components/common/user-profile"
 import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { StudentRequestHistory } from "@/components/pages/student/request-history"
-import { useRouter } from 'next/navigation'
 import StudentOpportunity from '@/components/pages/student/student-opportunity';
 
 const menuItems = [
@@ -21,7 +20,6 @@ const menuItems = [
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "courses", label: "Courses", icon: BookOpen },
   { id: "projects", label: "Projects", icon: FolderOpen },
-  { id: "internships", label: "Internships", icon: BookOpen },
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
   { id: "library", label: "Library", icon: BookOpen },
@@ -30,7 +28,6 @@ const menuItems = [
 
 export function StudentDashboard() {
   const [currentPage, setCurrentPage] = useState("home")
-  const router = useRouter()
 
   const renderPage = () => {
     switch (currentPage) {
@@ -51,9 +48,6 @@ export function StudentDashboard() {
         return <ViewCourses />
       case "projects":
         return <ViewProjects />
-      case "internships":
-        router.push('/student/internships')
-        return null
       case "attendance":
         return <ViewAttendance />
       case "lab-components":

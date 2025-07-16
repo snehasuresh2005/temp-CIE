@@ -11,7 +11,6 @@ import { FacultyViewCourses } from "@/components/pages/faculty/view-courses"
 import { ProjectManagement } from "@/components/pages/faculty/project-management"
 import { AttendanceManagement } from "@/components/pages/faculty/attendance-management"
 import { LocationBooking } from "@/components/pages/faculty/location-booking"
-import { useRouter } from 'next/navigation'
 import { UserProfile } from "@/components/common/user-profile"
 import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { CoordinatorDashboard } from "@/components/pages/faculty/coordinator-dashboard"
@@ -54,8 +53,7 @@ export function FacultyDashboard() {
       { id: "locations", label: "Book Locations", icon: MapPin },
       { id: "calendar", label: "Calendar", icon: Calendar },
       { id: "projects", label: "Projects", icon: FolderOpen },
-      { id: "internships", label: "Internships", icon: BookOpen },
-  { id: "attendance", label: "Attendance", icon: ClipboardCheck },
+      { id: "attendance", label: "Attendance", icon: ClipboardCheck },
       { id: "lab-components", label: "Lab Components", icon: Wrench },
       { id: "library", label: "Library", icon: BookOpen },
       { id: "opportunities", label: "Opportunities", icon: Briefcase }, // Added
@@ -70,7 +68,6 @@ export function FacultyDashboard() {
     // Remove Lab Management if present (ensure it is not in the sidebar)
     return baseItems.filter(item => item.id !== "lab-management")
   }
-  const router = useRouter()
 
   const renderPage = () => {
     switch (currentPage) {
@@ -88,9 +85,6 @@ export function FacultyDashboard() {
         return <FacultyCalendar />
       case "projects":
         return <ProjectManagement />
-      case "internships":
-        router.push('/faculty/internships')
-        return null
       case "attendance":
         return <AttendanceManagement />
       case "lab-components":
