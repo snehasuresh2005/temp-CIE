@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { user: userData } = await response.json()
         setUser(userData)
         localStorage.setItem("cie-user", JSON.stringify(userData))
+        localStorage.setItem("userId", userData.id)
       } else if (response.status === 404 || response.status === 401) {
         // If user not found or session invalid, clear the session
         console.warn("User session invalid, logging out")
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("User state updated after login")
         }, 0)
         
+        localStorage.setItem("userId", userData.id)
         return true
       } else {
         const { error } = await response.json()
@@ -116,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null)
     localStorage.removeItem("cie-user")
+    localStorage.removeItem("userId")
   }
 
   const refreshUser = async () => {
