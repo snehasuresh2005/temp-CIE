@@ -48,6 +48,8 @@ interface Project {
   type: string
   submissions?: ProjectSubmission[]
   project_requests?: ProjectRequest[]
+  mentor?: string
+  mentor_email?: string
 }
 
 interface ProjectSubmission {
@@ -436,6 +438,17 @@ export function ProjectManagement() {
     }
   }
 
+  // Filter projects where the faculty is the mentor (assuming mentor email is stored in accepted_by or similar field)
+  const myMentorProjects = projects.filter(
+    (project) => project.mentor === user?.email || project.accepted_by === user?.id || project.mentor_email === user?.email
+  );
+
+  // Helper to get applicants for a project
+  const getApplicants = (projectId: string) =>
+    projectRequests.filter(
+      (req) => req.project_id === projectId && ["PENDING", "APPROVED"].includes(req.status)
+    );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -559,7 +572,7 @@ export function ProjectManagement() {
 
       <Tabs defaultValue="projects" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="projects">My Projects</TabsTrigger>
+          <TabsTrigger value="projects">My Allotted Projects</TabsTrigger>
           <TabsTrigger value="requests">Student Projects</TabsTrigger>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
         </TabsList>

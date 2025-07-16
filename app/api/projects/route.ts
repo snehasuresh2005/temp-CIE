@@ -168,6 +168,28 @@ export async function POST(request: NextRequest) {
       components_needed: components_needed || [],
       expected_completion_date: new Date(expected_completion_date),
       type,
+// Placeholder in-memory store
+let projects: any[] = []
+
+export async function GET(req: NextRequest) {
+  // Return all projects from the database
+  const projects = await prisma.project.findMany()
+  return NextResponse.json(projects)
+}
+
+export async function POST(req: NextRequest) {
+  const data = await req.json()
+  // Create a new project in the database, including mentor email
+  const newProject = await prisma.project.create({
+    data: {
+      name: data.title,
+      description: data.description || "",
+      studentsRequired: Number(data.studentsRequired) || 1,
+      mentor: data.mentor,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+      department: data.department,
+      created_by: data.created_by || "admin", // fallback
       created_date: new Date(),
       modified_date: new Date(),
     }
@@ -281,6 +303,11 @@ export async function POST(request: NextRequest) {
     console.error("Error creating project:", error)
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 })
   }
+      status: "PENDING",
+      type: "FACULTY_ASSIGNED",
+    },
+  })
+  return NextResponse.json(newProject, { status: 201 })
 }
 
 export async function DELETE(request: NextRequest) {
