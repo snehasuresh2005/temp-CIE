@@ -119,6 +119,9 @@ export function ManageLibrary() {
   // Add form validation state
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // AI analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   // Bulk upload state
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false)
@@ -428,6 +431,63 @@ export function ManageLibrary() {
     }
   }
 
+  // AI Analysis function
+  const handleAIAnalysis = async () => {
+    if (!frontImageFile || !backImageFile) {
+      toast({
+        title: "Error",
+        description: "Both front and back images are required for AI analysis",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsAnalyzing(true)
+    
+    try {
+      const formData = new FormData()
+      formData.append('frontImage', frontImageFile)
+      formData.append('backImage', backImageFile)
+
+      const response = await fetch('/api/ai-analyze-images', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze images')
+      }
+
+      const data = await response.json()
+      
+      if (data.status === 'success' && data.result) {
+        setNewItem(prev => ({
+          ...prev,
+          item_name: data.result.name,
+          item_description: data.result.description,
+          item_specification: data.result.specifications
+        }))
+        
+        toast({
+          title: "AI Analysis Complete",
+          description: "Item name, description and specifications have been generated successfully",
+        })
+      } else {
+        throw new Error(data.error || 'AI analysis failed')
+      }
+      
+    } catch (error) {
+      console.error('AI Analysis Error:', error)
+      toast({
+        title: "AI Analysis Failed",
+        description: error instanceof Error ? error.message : "Failed to analyze images",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
   const resetForm = () => {
     setNewItem({
       item_name: "",
@@ -449,6 +509,7 @@ export function ManageLibrary() {
     setBackImagePreview(null)
     setNewCategory("")
     setIsSavingCategory(false)
+    setIsAnalyzing(false)
     setShowAddCategory(false)
     setCategoryToDelete(null)
     setIsDeleteCategoryDialogOpen(false)
@@ -1304,8 +1365,20 @@ export function ManageLibrary() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Book Images</h3>
-                      <Button variant="outline" size="sm" type="button" className="h-8">
-                        <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        type="button" 
+                        className="h-8"
+                        onClick={handleAIAnalysis}
+                        disabled={!frontImageFile || !backImageFile || isAnalyzing}
+                        title={!frontImageFile || !backImageFile ? "Upload both front and back images first" : "Analyze images with AI"}
+                      >
+                        {isAnalyzing ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
+                        )}
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
