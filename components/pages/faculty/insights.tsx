@@ -15,6 +15,10 @@ export default function FacultyInsights() {
   const [submitting, setSubmitting] = useState(false);
   const [insights, setInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const cardsPerPage = 2;
+  const totalPages = Math.max(1, Math.ceil(insights.length / cardsPerPage));
+  const paginatedInsights = insights.slice((page - 1) * cardsPerPage, page * cardsPerPage);
 
   useEffect(() => {
     fetchInsights();
@@ -104,18 +108,26 @@ export default function FacultyInsights() {
           ) : insights.length === 0 ? (
             <div className="text-gray-500 text-sm">No insights submitted yet.</div>
           ) : (
-            <div className="space-y-3">
-              {insights.map(insight => (
-                <div key={insight.id} className="border rounded p-3 bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{insight.title}</div>
-                    <Badge variant="outline">{insight.status}</Badge>
+            <>
+              <div className="space-y-3">
+                {paginatedInsights.map(insight => (
+                  <div key={insight.id} className="border rounded p-3 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium">{insight.title}</div>
+                      <Badge variant="outline">{insight.status}</Badge>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">{insight.description}</div>
+                    <div className="text-xs text-gray-400 mt-1">Submitted: {new Date(insight.created_at).toLocaleString()}</div>
                   </div>
-                  <div className="text-xs text-gray-600 mt-1">{insight.description}</div>
-                  <div className="text-xs text-gray-400 mt-1">Submitted: {new Date(insight.created_at).toLocaleString()}</div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              {/* Pagination Controls */}
+              <div className="flex justify-between items-center mt-4">
+                <Button size="sm" variant="outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
+                <span className="text-xs text-gray-600">Page {page} of {totalPages}</span>
+                <Button size="sm" variant="outline" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

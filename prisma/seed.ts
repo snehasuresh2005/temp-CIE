@@ -151,6 +151,7 @@ async function main() {
   userData.forEach(user => {
     console.log(`   - ${user.name} (${user.email}) - ${user.role}`);
   });
+  
 }
 
 main()

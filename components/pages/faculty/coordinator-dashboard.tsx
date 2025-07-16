@@ -203,6 +203,11 @@ export function CoordinatorDashboard() {
     }
   }, [coordinatorDomains, selectedRole, hasPlatformManagerRole, hasDeveloperRole]);
 
+  // Reset activeTab to 'analytics' whenever selectedRole changes
+  useEffect(() => {
+    setActiveTab('analytics');
+  }, [selectedRole]);
+
   const fetchCoordinatorDomains = async () => {
     try {
       console.log("[CoordinatorDashboard] Fetching coordinator domains for user:", user?.id);
@@ -933,43 +938,41 @@ export function CoordinatorDashboard() {
           {/* Dashboard Tabs - removed as per user request, navigation is now only via cards */}
 
           {/* Tab Content */}
-          {activeTab === 'analytics' && selectedRole && (
-        <div className="space-y-4">
+          {activeTab === 'analytics' && (selectedRole === 'library' || selectedRole === 'lab') && (
+            <div className="space-y-4">
               <h2 className="text-xl font-semibold">{roleName} Analytics Dashboard</h2>
-              
-          
-          {/* Minimal Stat Cards Row - outside the graph section */}
-          <div className="flex flex-row flex-wrap gap-2 mb-2 justify-center">
-            <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
-              <div className="text-xs text-gray-500 font-medium mb-0.5">Total Requests</div>
-              <div className="text-lg font-bold leading-tight">{requests.length}</div>
+              {/* Minimal Stat Cards Row - outside the graph section */}
+              <div className="flex flex-row flex-wrap gap-2 mb-2 justify-center">
+                <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium mb-0.5">Total Requests</div>
+                  <div className="text-lg font-bold leading-tight">{requests.length}</div>
+                </div>
+                <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium mb-0.5">Active Loans</div>
+                  <div className="text-lg font-bold leading-tight">{returnRequests.length}</div>
+                </div>
+                <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium mb-0.5">Overdue</div>
+                  <div className="text-lg font-bold leading-tight text-red-600">{returnRequests.filter(req => isOverdue(req.due_date)).length}</div>
+                </div>
+              </div>
+              {/* Request Status Overview - Only the graph in the card, no extra border or div below */}
+              <div className="bg-white shadow rounded-t-lg px-4 pt-4 pb-2">
+                <div>
+                  <StatusBarChart
+                    title={''}
+                    data={[
+                      { label: 'Pending', count: pendingRequests.length, color: '#FFC107' },
+                      { label: 'Awaiting', count: collectionRequests.length, color: '#2196F3' },
+                      { label: 'Collected', count: returnRequests.length, color: '#4CAF50' },
+                      { label: 'Returned', count: requests.filter(req => req.status === "RETURNED").length, color: '#757575' },
+                      { label: 'Rejected', count: requests.filter(req => req.status === "REJECTED").length, color: '#F44336' },
+                    ]}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
-              <div className="text-xs text-gray-500 font-medium mb-0.5">Active Loans</div>
-              <div className="text-lg font-bold leading-tight">{returnRequests.length}</div>
-            </div>
-            <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
-              <div className="text-xs text-gray-500 font-medium mb-0.5">Overdue</div>
-              <div className="text-lg font-bold leading-tight text-red-600">{returnRequests.filter(req => isOverdue(req.due_date)).length}</div>
-            </div>
-          </div>
-          {/* Request Status Overview - Only the graph in the card, no extra border or div below */}
-          <div className="bg-white shadow rounded-t-lg px-4 pt-4 pb-2">
-            <div>
-              <StatusBarChart
-                title={''}
-                data={[
-                  { label: 'Pending', count: pendingRequests.length, color: '#FFC107' },
-                  { label: 'Awaiting', count: collectionRequests.length, color: '#2196F3' },
-                  { label: 'Collected', count: returnRequests.length, color: '#4CAF50' },
-                  { label: 'Returned', count: requests.filter(req => req.status === "RETURNED").length, color: '#757575' },
-                  { label: 'Rejected', count: requests.filter(req => req.status === "REJECTED").length, color: '#F44336' },
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
           {activeTab === 'collection' && selectedRole && (
         <div className="space-y-4">

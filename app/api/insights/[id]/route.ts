@@ -20,10 +20,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       update.approved_by = userId;
       update.approved_at = new Date();
     } else if (action === "reject") {
+      if (!rejection_reason || rejection_reason.trim() === "") {
+        return NextResponse.json({ error: "Rejection reason is required." }, { status: 400 });
+      }
       update.status = "REJECTED";
       update.approved_by = userId;
       update.approved_at = new Date();
-      if (rejection_reason) update.rejection_reason = rejection_reason;
+      update.rejection_reason = rejection_reason;
     } else if (action === "start") {
       update.status = "IN_PROGRESS";
     } else if (action === "done") {
