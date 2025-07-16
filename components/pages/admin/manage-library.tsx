@@ -113,7 +113,6 @@ export function ManageLibrary() {
   const [locationToDelete, setLocationToDelete] = useState<string | null>(null)
   const [isDeleteLocationDialogOpen, setIsDeleteLocationDialogOpen] = useState(false)
   const [locationOptions, setLocationOptions] = useState<string[]>([])
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<LibraryItem | null>(null)
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
 
@@ -458,8 +457,8 @@ export function ManageLibrary() {
     setIsSavingLocation(false)
     setLocationToDelete(null)
     setIsDeleteLocationDialogOpen(false)
-    setIsEditDialogOpen(false)
-    setEditingItem(null)
+            setIsAddDialogOpen(false)
+        setEditingItem(null)
     setImageStates({})
     setFormErrors({})
     setIsSubmitting(false)
@@ -792,7 +791,7 @@ export function ManageLibrary() {
         setBackImageFile(null)
         setFrontImagePreview(null)
         setBackImagePreview(null)
-        setIsEditDialogOpen(false)
+        setIsAddDialogOpen(false)
         toast({
           title: "Success",
           description: "Library item updated successfully",
@@ -1031,7 +1030,7 @@ export function ManageLibrary() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-3xl font-bold text-gray-900">Library Items Management</h3>
+          <h3 className="text-3xl font-bold text-gray-900">Library Books Management</h3>
         </div>
         <div className="flex space-x-2">
           <Button onClick={fetchItems} variant="outline">
@@ -1100,6 +1099,7 @@ export function ManageLibrary() {
             setIsAddDialogOpen(open)
             if (!open) {
               resetForm()
+              setEditingItem(null)
             }
           }}>
             <DialogTrigger asChild>
@@ -1110,7 +1110,7 @@ export function ManageLibrary() {
             </DialogTrigger>
             <DialogContent className="max-w-7xl w-full max-h-[98vh] overflow-hidden">
               <DialogHeader>
-                <DialogTitle>{editingItem ? "Edit Library Item" : "Add New Library Item"}</DialogTitle>
+                <DialogTitle>{editingItem ? "Edit Library Book" : "Add New Library Book"}</DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-[calc(90vh-120px)] overflow-y-auto">
                 {/* Left Column: Basic Info & Images */}
@@ -1486,7 +1486,6 @@ export function ManageLibrary() {
                 <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">
                   <Button variant="outline" onClick={() => {
                     setIsAddDialogOpen(false)
-                    setIsEditDialogOpen(false)
                     resetForm()
                   }} className="px-6">Cancel</Button>
                   <TooltipProvider>
@@ -1626,24 +1625,17 @@ export function ManageLibrary() {
                       )}
                     </div>
                   )}
-                  <div className="mb-2">
-                    <Label className="text-sm font-medium text-gray-500">Description</Label>
-                    <p className="text-sm text-gray-600 line-clamp-2">{item.item_description}</p>
-                  </div>
-                  {item.item_specification && (
-                    <div className="mb-2">
-                      <Label className="text-sm font-medium text-gray-500">Specifications</Label>
-                      <p className="text-sm text-gray-700">{item.item_specification}</p>
-                    </div>
-                  )}
+
                   <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
                     <div><span className="font-semibold">Total:</span> {item.item_quantity}</div>
                      <div><span className="font-semibold">Location:</span> {item.item_location}</div>
                   </div>
                   <div className="flex space-x-2 pt-2">
+
                     <Button className="btn-edit" onClick={() => { setEditingItem(item); setIsEditDialogOpen(true); }}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
+
                     </Button>
                     <Button className="btn-delete" onClick={() => { setItemToDelete(item); setIsDeleteDialogOpen(true); }}>
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -1659,17 +1651,17 @@ export function ManageLibrary() {
 
       {/* Info Dialog */}
       <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
+
         <DialogContent className="max-w-4xl w-full">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
+
               <Info className="h-5 w-5 text-blue-600" />
-              Item Details
+              Book Details
             </DialogTitle>
-            <DialogDescription>
-              Detailed information about the library item including purchase details and audit trail.
-            </DialogDescription>
           </DialogHeader>
           {itemToView && (
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left: Images and Basic Info */}
               <div className="space-y-4">
@@ -1780,6 +1772,7 @@ export function ManageLibrary() {
                     <div>
                       <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
                       <div className="text-base text-gray-900">{itemToView.modified_at || '-'}</div>
+
                     </div>
                   </div>
                 </div>

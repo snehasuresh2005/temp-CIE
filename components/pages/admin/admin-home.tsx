@@ -98,6 +98,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
         return (
           <>
             {/* Colorful Hero Window */}
+
             <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-12 min-h-[320px] flex flex-col md:flex-row items-center justify-between mb-4 relative overflow-hidden">
               <div className="flex-1 z-10">
                 <div className="flex items-center mb-6">
@@ -108,12 +109,13 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                 <div className="flex gap-6">
                   <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg">Learn More</button>
                   <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg" onClick={handleQuickActionsClick}>Quick Actions</button>
+
                 </div>
-              </div>
-              <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" />
+              
+              {/* <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" /> */}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {loading ? (
                 Array.from({ length: 6 }).map((_, index) => (
                   <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
@@ -143,11 +145,11 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
               )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                 <CardHeader>
-                  <CardTitle>System Alerts</CardTitle>
-                  <CardDescription>Critical items requiring attention</CardDescription>
+                  <CardTitle className="text-xl">System Alerts</CardTitle>
+                  <CardDescription className="text-md">Critical items requiring attention</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -220,8 +222,8 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
               </Card>
               <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
                 <CardHeader>
-                  <CardTitle>Recent Activities</CardTitle>
-                  <CardDescription>Latest system activities</CardDescription>
+                  <CardTitle className="text-xl">Recent Activities</CardTitle>
+                  <CardDescription className="text-md">Latest system activities</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -287,8 +289,8 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
                 className={`transform transition-transform duration-300 hover:scale-105 focus:scale-105 ${highlightQuickActions ? 'scale-110 ring-4 ring-blue-400/60 z-20' : ''}`}
               >
                 <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Common administrative tasks</CardDescription>
+                  <CardTitle className="text-xl">Quick Actions</CardTitle>
+                  <CardDescription className="text-md">Common administrative tasks</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">

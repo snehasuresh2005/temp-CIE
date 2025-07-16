@@ -50,6 +50,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import StatusBarChart from "@/components/StatusBarChart";
+import PlatformManagerInsights from "@/components/pages/faculty/platform-manager-insights";
+import DeveloperInsights from "@/components/pages/faculty/developer-insights";
 
 interface ComponentRequest {
   id: string
@@ -148,8 +150,8 @@ export function CoordinatorDashboard() {
   // New state for selected domain
   const [selectedDomain, setSelectedDomain] = useState(coordinatorDomains[0])
 
-  // Add role selection state
-  const [selectedRole, setSelectedRole] = useState<'library' | 'lab' | null>(null)
+  // Update selectedRole state to include new roles
+  const [selectedRole, setSelectedRole] = useState<'library' | 'lab' | 'platformManager' | 'developer' | null>(null)
 
   // In the CoordinatorDashboard component, add state for history search and filter:
   const [historySearchTerm, setHistorySearchTerm] = useState("");
@@ -157,50 +159,66 @@ export function CoordinatorDashboard() {
 
   const [activeLoansPage, setActiveLoansPage] = useState(1);
 
+  // Add detection for platform manager and developer roles
+  const [hasPlatformManagerRole, setHasPlatformManagerRole] = useState(false);
+  const [hasDeveloperRole, setHasDeveloperRole] = useState(false);
+
   useEffect(() => {
     fetchRequests()
     fetchCoordinatorDomains()
-  }, [])
+    // Replace roles array check with profileData flags
+    if (user?.profileData) {
+      setHasPlatformManagerRole(!!user.profileData.isPlatformManager);
+      setHasDeveloperRole(!!user.profileData.isDeveloper);
+    }
+  }, [user])
 
   // Auto-select role if faculty has only one role
   useEffect(() => {
-    if (coordinatorDomains.length > 0 && !selectedRole) {
-      const hasLibraryRole = coordinatorDomains.some(domain => domain.hasLibraryItems)
-      const hasLabRole = coordinatorDomains.some(domain => domain.hasLabComponents)
-      
-      if (hasLibraryRole && !hasLabRole) {
-        setSelectedRole('library')
-      } else if (hasLabRole && !hasLibraryRole) {
-        setSelectedRole('lab')
+    if (!selectedRole) {
+      const hasLibraryRole = coordinatorDomains.some(domain => domain.hasLibraryItems);
+      const hasLabRole = coordinatorDomains.some(domain => domain.hasLabComponents);
+      // Treat a domain named 'Platform Manager', 'Platform Management', or 'Developer' as special roles
+      const hasPlatformManagerDomain = coordinatorDomains.some(domain => {
+        const name = domain.name?.toLowerCase() || '';
+        return name.includes('platform manager') || name.includes('platform management');
+      });
+      const hasDeveloperDomain = coordinatorDomains.some(domain => {
+        const name = domain.name?.toLowerCase() || '';
+        return name.includes('developer');
+      });
+      const hasPlatformManagerRoleUnified = hasPlatformManagerRole || hasPlatformManagerDomain;
+      const hasDeveloperRoleUnified = hasDeveloperRole || hasDeveloperDomain;
+
+      if (hasLibraryRole && !hasLabRole && !hasPlatformManagerRoleUnified && !hasDeveloperRoleUnified) {
+        setSelectedRole('library');
+      } else if (hasLabRole && !hasLibraryRole && !hasPlatformManagerRoleUnified && !hasDeveloperRoleUnified) {
+        setSelectedRole('lab');
+      } else if (hasPlatformManagerRoleUnified && !hasLibraryRole && !hasLabRole && !hasDeveloperRoleUnified) {
+        setSelectedRole('platformManager');
+      } else if (hasDeveloperRoleUnified && !hasLibraryRole && !hasLabRole && !hasPlatformManagerRoleUnified) {
+        setSelectedRole('developer');
       }
-      // If both roles exist, don't auto-select - let user choose
+      // If multiple roles exist, don't auto-select - let user choose
     }
-  }, [coordinatorDomains, selectedRole])
+  }, [coordinatorDomains, selectedRole, hasPlatformManagerRole, hasDeveloperRole]);
 
   const fetchCoordinatorDomains = async () => {
     try {
+      console.log("[CoordinatorDashboard] Fetching coordinator domains for user:", user?.id);
       const response = await fetch("/api/coordinators/check", {
         headers: { "x-user-id": user?.id || "" }
       })
       const data = await response.json()
+      console.log("[CoordinatorDashboard] /api/coordinators/check response:", JSON.stringify(data, null, 2));
       
       // Enhance domain data with inventory information
       const enhancedDomains = await Promise.all(
         (data.assignedDomains || []).map(async (domain: any) => {
           try {
-            // Check if this domain has library items
-            const libraryResponse = await fetch(`/api/library-items?domain_id=${domain.id}`, {
-              headers: { "x-user-id": user?.id || "" }
-            })
-            const libraryData = await libraryResponse.json()
-            const hasLibraryItems = (libraryData.items || []).length > 0
-
-            // Check if this domain has lab components
-            const labResponse = await fetch(`/api/lab-components?domain_id=${domain.id}`, {
-              headers: { "x-user-id": user?.id || "" }
-            })
-            const labData = await labResponse.json()
-            const hasLabComponents = (labData.components || []).length > 0
+            // Always show roles if assigned, regardless of inventory
+            const hasLibraryItems = domain.name.toLowerCase().includes("library");
+            const hasLabComponents = domain.name.toLowerCase().includes("lab");
 
             return {
               ...domain,
@@ -647,9 +665,46 @@ export function CoordinatorDashboard() {
 
   const { requests, pendingRequests, collectionRequests, returnRequests, pendingReturnRequests, historyRequests, roleName } = getRoleSpecificRequests()
 
-  // Check if faculty has multiple roles
-  const hasMultipleRoles = coordinatorDomains.some(domain => domain.hasLibraryItems) && 
-                          coordinatorDomains.some(domain => domain.hasLabComponents)
+  // Check if faculty has multiple roles (coordinator, platform manager, developer)
+  const hasAnyCoordinatorRole = coordinatorDomains.length > 0;
+  const hasAnySpecialRole = hasPlatformManagerRole || hasDeveloperRole;
+  const hasMultipleRoles = (
+    (coordinatorDomains.some(domain => domain.hasLibraryItems) && coordinatorDomains.some(domain => domain.hasLabComponents)) ||
+    (hasAnyCoordinatorRole && hasPlatformManagerRole) ||
+    (hasAnyCoordinatorRole && hasDeveloperRole) ||
+    (hasPlatformManagerRole && hasDeveloperRole)
+  );
+
+  // Role detection: build a list of all roles
+  const hasLibraryRole = coordinatorDomains.some(domain => domain.hasLibraryItems);
+  const hasLabRole = coordinatorDomains.some(domain => domain.hasLabComponents);
+  const hasPlatformManagerDomain = coordinatorDomains.some(domain => {
+    const name = domain.name?.toLowerCase() || '';
+    return name.includes('platform manager') || name.includes('platform management');
+  });
+  const hasDeveloperDomain = coordinatorDomains.some(domain => {
+    const name = domain.name?.toLowerCase() || '';
+    return name.includes('developer');
+  });
+  const hasPlatformManagerRoleUnified = hasPlatformManagerRole || hasPlatformManagerDomain;
+  const hasDeveloperRoleUnified = hasDeveloperRole || hasDeveloperDomain;
+  // Use these unified flags everywhere below
+
+  // Build roles array for card/toggle rendering
+  const userRoles: Array<'library' | 'lab' | 'platformManager' | 'developer'> = [];
+  if (hasLibraryRole) userRoles.push('library');
+  if (hasLabRole) userRoles.push('lab');
+  if (hasPlatformManagerRoleUnified) userRoles.push('platformManager');
+  if (hasDeveloperRoleUnified) userRoles.push('developer');
+
+  if (!loading && !hasAnyCoordinatorRole && !hasAnySpecialRole) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">CIE Team Coordinator Dashboard</h1>
+        <div className="text-lg text-gray-600">You are not assigned as a coordinator, platform manager, or developer.</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -659,9 +714,78 @@ export function CoordinatorDashboard() {
     )
   }
 
+  // Show role selection cards if user has any of the roles
+  if ((userRoles.length > 1 || (!hasAnyCoordinatorRole && hasAnySpecialRole)) && !selectedRole) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">CIE Team Coordinator Dashboard</h1>
+          <p className="text-gray-600">Choose which role you want to manage</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          {userRoles.includes('library') && (
+            <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-50 hover:border-blue-300" onClick={() => setSelectedRole('library')}>
+              <CardContent className="p-8 text-center">
+                <BookOpen className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Library Coordinator</h3>
+                <p className="text-gray-600 mb-4">Manage library items, requests, and inventory</p>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <Package className="h-4 w-4" />
+                  <span>Library Management</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {userRoles.includes('lab') && (
+            <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-green-50 hover:border-green-300" onClick={() => setSelectedRole('lab')}>
+              <CardContent className="p-8 text-center">
+                <Package className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Lab Coordinator</h3>
+                <p className="text-gray-600 mb-4">Manage lab components, requests, and inventory</p>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <Package className="h-4 w-4" />
+                  <span>Lab Components Management</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {userRoles.includes('platformManager') && (
+            <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-indigo-50 hover:border-indigo-300" onClick={() => setSelectedRole('platformManager')}>
+              <CardContent className="p-8 text-center">
+                <Settings className="h-16 w-16 text-indigo-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Platform Manager</h3>
+                <p className="text-gray-600 mb-4">Review and approve faculty insights, assign to developers</p>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <Settings className="h-4 w-4" />
+                  <span>Insights Management</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {userRoles.includes('developer') && (
+            <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-pink-50 hover:border-pink-300" onClick={() => setSelectedRole('developer')}>
+              <CardContent className="p-8 text-center">
+                <BarChart3 className="h-16 w-16 text-pink-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Developer</h3>
+                <p className="text-gray-600 mb-4">Work on approved insights and mark as done</p>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Insights Tasks</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Always render the tabbed dashboard interface below
   return (
     <div className="space-y-6">
+      <div style={{ position: 'fixed', top: 60, right: 20, zIndex: 9999, background: '#fffbe6', color: '#333', padding: '8px 16px', border: '1px solid #ffe58f', borderRadius: 6, fontSize: 14 }}>
+        Debug: selectedRole = {String(selectedRole)}
+      </div>
       <div>
         <h1 className="text-3xl font-bold text-gray-900">CIE Team Coordinator Dashboard</h1>
       </div>
@@ -674,7 +798,7 @@ export function CoordinatorDashboard() {
             <p className="text-gray-600">Choose which coordinator role you want to manage</p>
                 </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
         <Card 
               className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-50 hover:border-blue-300"
               onClick={() => setSelectedRole('library')}
@@ -704,30 +828,59 @@ export function CoordinatorDashboard() {
             </div>
           </CardContent>
         </Card>
+        {hasPlatformManagerRoleUnified && (
+          <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-indigo-50 hover:border-indigo-300" onClick={() => setSelectedRole('platformManager')}>
+            <CardContent className="p-8 text-center">
+              <Settings className="h-16 w-16 text-indigo-600 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Platform Manager</h3>
+              <p className="text-gray-600 mb-4">Review and approve faculty insights, assign to developers</p>
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                <Settings className="h-4 w-4" />
+                <span>Insights Management</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {hasDeveloperRoleUnified && (
+          <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-pink-50 hover:border-pink-300" onClick={() => setSelectedRole('developer')}>
+            <CardContent className="p-8 text-center">
+              <BarChart3 className="h-16 w-16 text-pink-600 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Developer</h3>
+              <p className="text-gray-600 mb-4">Work on approved insights and mark as done</p>
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                <BarChart3 className="h-4 w-4" />
+                <span>Insights Tasks</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
           </div>
         </div>
       )}
 
       {/* Role Selection Buttons - Show when role is selected to allow switching */}
-      {hasMultipleRoles && selectedRole && (
-        <div className="flex flex-wrap gap-4">
-          <Button
-            variant={selectedRole === 'library' ? 'default' : 'outline'}
-            onClick={() => setSelectedRole('library')}
-            className="flex items-center space-x-2"
-          >
-            <BookOpen className="h-4 w-4" />
-            <span>Library Coordinator</span>
-          </Button>
-          <Button
-            variant={selectedRole === 'lab' ? 'default' : 'outline'}
-            onClick={() => setSelectedRole('lab')}
-            className="flex items-center space-x-2"
-          >
-            <Package className="h-4 w-4" />
-            <span>Lab Coordinator</span>
-          </Button>
-            </div>
+      {userRoles.length > 1 && selectedRole && (
+        <div className="flex flex-wrap gap-4 mb-4">
+          {userRoles.map(role => (
+            <Button
+              key={role}
+              variant={selectedRole === role ? 'default' : 'outline'}
+              onClick={() => setSelectedRole(role)}
+              className="flex items-center space-x-2"
+            >
+              {role === 'library' && <BookOpen className="h-4 w-4" />}
+              {role === 'lab' && <Package className="h-4 w-4" />}
+              {role === 'platformManager' && <Settings className="h-4 w-4" />}
+              {role === 'developer' && <BarChart3 className="h-4 w-4" />}
+              <span>
+                {role === 'library' && 'Library Coordinator'}
+                {role === 'lab' && 'Lab Coordinator'}
+                {role === 'platformManager' && 'Platform Manager'}
+                {role === 'developer' && 'Developer'}
+              </span>
+            </Button>
+          ))}
+        </div>
       )}
 
       {/* Role-Specific Dashboard Content */}
@@ -822,7 +975,6 @@ export function CoordinatorDashboard() {
         <div className="space-y-4">
               <h2 className="text-xl font-semibold">{roleName} Collection Management</h2>
               
-              
               {collectionRequests.length === 0 ? (
                 <Card>
                   <CardContent className="p-8 text-center">
@@ -832,80 +984,88 @@ export function CoordinatorDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                collectionRequests.map((request) => (
-            <Card key={request.id} className="border-l-4 border-l-blue-400">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {getItemName(request)}
-                  </CardTitle>
-                  {getStatusBadge(request.status)}
-                </div>
-              </CardHeader>
-                    <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Requester Details</h4>
-                          <div className="space-y-1 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterName(request)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Mail className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterEmail(request)}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4 text-gray-500" />
-                              <span>{getRequesterType(request)}</span>
-                    </div>
-                  </div>
-                    </div>
-                        
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
-                          <div className="space-y-1 text-sm">
-                            <div>Quantity: {request.quantity}</div>
-                            <div>Purpose: {request.purpose}</div>
-                            <div>Request Date: {new Date(request.request_date).toLocaleDateString()}</div>
-                            <div>Required Date: {new Date(request.required_date).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                </div>
-
-                      <div className="mt-4 flex space-x-2">
-                  <Button 
-                    onClick={() => {
-                            if (selectedRole === 'library') {
-                              handleUpdateLibraryRequest(request.id, "COLLECTED")
-                      } else {
-                              handleMarkAsCollected(request)
-                      }
-                    }}
-                          className="bg-green-600 hover:bg-green-700"
-                  >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Mark as Collected
-                  </Button>
-                  
-                  <Button 
-                          variant="outline"
-                    onClick={() => {
-                            if (selectedRole === 'library') {
-                              handleUpdateLibraryRequest(request.id, "REJECTED")
-                      } else {
-                              handleUpdateComponentRequest(request.id, "REJECTED")
-                      }
-                    }}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject Request
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-                ))
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-left text-black font-bold">Requester</TableHead>
+                          <TableHead className="text-left text-black font-bold">{roleName} Item</TableHead>
+                          <TableHead className="text-center text-black font-bold">Qty</TableHead>
+                          <TableHead className="text-center text-black font-bold">Request Date</TableHead>
+                          <TableHead className="text-center text-black font-bold">Required Date</TableHead>
+                          <TableHead className="text-center text-black font-bold">Status</TableHead>
+                          <TableHead className="text-center text-black font-bold">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {collectionRequests.map((request) => {
+                          const requesterId = request.student?.student_id || "N/A";
+                          const requesterType = getRequesterType(request);
+                          
+                          return (
+                            <TableRow key={request.id} className="hover:bg-gray-50">
+                              <TableCell className="font-medium text-sm text-left">
+                                <div>
+                                  <div className="font-medium text-sm">{getRequesterName(request)}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {requesterType === "Student" ? `SRN: ${requesterId}` : requesterType}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{getRequesterEmail(request)}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium text-sm text-left">{getItemName(request)}</TableCell>
+                              <TableCell className="text-sm font-medium text-center">{request.quantity}</TableCell>
+                              <TableCell className="text-sm text-center">
+                                {new Date(request.request_date).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-sm text-center">
+                                {new Date(request.required_date).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {getStatusBadge(request.status)}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex justify-center items-center space-x-1">
+                                  <Button 
+                                    size="sm"
+                                    onClick={() => {
+                                      if (selectedRole === 'library') {
+                                        handleUpdateLibraryRequest(request.id, "COLLECTED")
+                                      } else {
+                                        handleMarkAsCollected(request)
+                                      }
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Collect
+                                  </Button>
+                                  
+                                  <Button 
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (selectedRole === 'library') {
+                                        handleUpdateLibraryRequest(request.id, "REJECTED")
+                                      } else {
+                                        handleUpdateComponentRequest(request.id, "REJECTED")
+                                      }
+                                    }}
+                                    className="text-red-600 border-red-200 hover:bg-red-50"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               )}
             </div>
           )}
@@ -1220,6 +1380,12 @@ export function CoordinatorDashboard() {
               <HistoryTable data={historyRequests} roleName={roleName} searchTerm={historySearchTerm} filter={historyFilter} isOverdue={isOverdue} />
             </div>
           )}
+          {selectedRole === 'platformManager' && (
+            <PlatformManagerInsights />
+          )}
+          {selectedRole === 'developer' && (
+            <DeveloperInsights />
+          )}
         </>
       )}
     </div>
@@ -1342,3 +1508,5 @@ function HistoryTable({ data, roleName, searchTerm = "", filter = "all", isOverd
     </div>
   );
 }
+
+export default CoordinatorDashboard;

@@ -94,6 +94,7 @@ export function StudentHome({ onPageChange }: StudentHomeProps) {
         return (
           <>
             {/* Colorful Hero Window */}
+
             <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-12 min-h-[320px] flex flex-col md:flex-row items-center justify-between mb-4 relative overflow-hidden">
               <div className="flex-1 z-10">
                 <div className="flex items-center mb-6">
@@ -104,12 +105,12 @@ export function StudentHome({ onPageChange }: StudentHomeProps) {
                 <div className="flex gap-6">
                   <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg">Learn More</button>
                   <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow transition-colors text-lg" onClick={handleQuickActionsClick}>Quick Actions</button>
+
                 </div>
-              </div>
-              <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" />
+              {/* <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" /> */}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-2">
               {loading ? (
                 Array.from({ length: 6 }).map((_, index) => (
                   <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
