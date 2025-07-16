@@ -4,8 +4,14 @@ FROM node:18-alpine
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Install necessary packages for Prisma and health checks
-RUN apk add --no-cache openssl netcat-openbsd
+# Install necessary packages for Prisma, health checks, and tsx
+RUN apk add --no-cache \
+  openssl \
+  netcat-openbsd \
+  python3 \
+  make \
+  g++ \
+  && npm install -g tsx
 
 # Set working directory
 WORKDIR /app
@@ -38,7 +44,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'pnpm prisma migrate deploy' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "Seeding database..."' >> /app/start.sh && \
-    echo 'pnpm prisma db seed' >> /app/start.sh && \
+    echo 'pnpm exec tsx prisma/seed.ts' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "Starting application..."' >> /app/start.sh && \
     echo 'pnpm start' >> /app/start.sh
@@ -50,4 +56,4 @@ RUN chmod +x /app/start.sh
 EXPOSE 3000
 
 # Start the application
-CMD ["/app/start.sh"] 
+CMD ["/app/start.sh"]

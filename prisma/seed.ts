@@ -104,8 +104,13 @@ async function main() {
         });
         createdUsers[userInfo.email] = user;
       } else if (userInfo.role === 'STUDENT') {
+/*<<<<<<< HEAD
         const studentId = `STU${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
         const user = await prisma.user.create({
+=======*/
+        const studentId = `STU${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        await prisma.user.create({
+//>>>>>>> 9bc1b44 (Recovered internship and upload feature)
           data: {
             email: userInfo.email,
             name: userInfo.name,
