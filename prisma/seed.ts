@@ -266,7 +266,7 @@ async function main() {
       component_quantity: 10,
       component_tag_id: "445RO",
       component_category: "Microcontroller",
-      component_location: electronicsLab.name,
+      component_location: "electronicsLab",
       image_path: "lab-images",
       front_image_id: "arduino-front.jpg",
       back_image_id: "arduino-back.jpg",

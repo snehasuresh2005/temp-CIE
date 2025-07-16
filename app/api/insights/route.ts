@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status;
     // For developer dashboard: show all tasks for all developers
     if (developer_id === "me") {
-      where.status = { in: ["APPROVED", "IN_PROGRESS", "DONE", "REJECTED"] };
+      where.status = { in: ["APPROVED", "IN_PROGRESS", "DONE", "REJECTED", "COMPLETED"] };
     }
     const insights = await prisma.insight.findMany({
       where,
