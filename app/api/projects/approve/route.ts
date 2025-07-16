@@ -50,9 +50,9 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 })
     }
 
-    if (!["ONGOING", "REJECTED"].includes(status)) {
+    if (!["APPROVED", "REJECTED"].includes(status)) {
       return NextResponse.json({ 
-        error: "Invalid status. Must be ONGOING or REJECTED" 
+        error: "Invalid status. Must be APPROVED or REJECTED" 
       }, { status: 400 })
     }
 
@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest) {
     const updatedProject = await prisma.project.update({
       where: { id: project_id },
       data: {
-        status: status as "ONGOING" | "REJECTED",
+        status: status as "APPROVED" | "REJECTED",
         modified_by: userId,
         modified_date: new Date(),
         // You could add a notes field to the project model if needed

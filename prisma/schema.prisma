@@ -165,6 +165,10 @@ model Project {
   name                     String
   status                   ProjectStatus       @default(PENDING)
   type                     ProjectType         @default(FACULTY_ASSIGNED)
+  enrollment_status        EnrollmentStatus    @default(NOT_STARTED)
+  enrollment_cap           Int?
+  enrollment_start_date    DateTime?
+  enrollment_end_date      DateTime?
   component_requests       ComponentRequest[]
   project_requests         ProjectRequest[]
   submissions              ProjectSubmission[]
@@ -439,6 +443,7 @@ enum CourseStatus {
 
 enum ProjectStatus {
   PENDING
+  APPROVED
   ONGOING
   COMPLETED
   OVERDUE
@@ -517,6 +522,12 @@ enum ProjectRequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum EnrollmentStatus {
+  NOT_STARTED
+  OPEN
+  CLOSED
 }
 
 enum OpportunityType {

@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText, Trash2, Settings } from "lucide-react"
+import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText, Trash2, Settings, User, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import {
@@ -46,6 +46,10 @@ interface Project {
   accepted_by?: string
   status: string
   type: string
+  enrollment_status: string
+  enrollment_cap?: number
+  enrollment_start_date?: string
+  enrollment_end_date?: string
   submissions?: ProjectSubmission[]
   project_requests?: ProjectRequest[]
 }
@@ -130,6 +134,11 @@ export function ProjectManagement() {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const [showFacultyRequests, setShowFacultyRequests] = useState(false)
   const [isLabComponentsCoordinator, setIsLabComponentsCoordinator] = useState(false)
+  const [isEnrollmentDialogOpen, setIsEnrollmentDialogOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [enrollmentCap, setEnrollmentCap] = useState<number>(1)
+  const [isApplicationsDialogOpen, setIsApplicationsDialogOpen] = useState(false)
+  const [selectedProjectApplications, setSelectedProjectApplications] = useState<ProjectRequest[]>([])
   const { toast } = useToast()
 
   const [newProject, setNewProject] = useState({
@@ -363,6 +372,8 @@ export function ProjectManagement() {
     switch (status) {
       case "PENDING":
         return "bg-yellow-100 text-yellow-800"
+      case "APPROVED":
+        return "bg-green-100 text-green-800"
       case "ONGOING":
         return "bg-blue-100 text-blue-800"
       case "COMPLETED":
@@ -433,6 +444,138 @@ export function ProjectManagement() {
     } finally {
       setIsDeleteDialogOpen(false)
       setProjectToDelete(null)
+    }
+  }
+
+  const handleStartEnrollment = async () => {
+    if (!selectedProject || enrollmentCap < 1) return
+
+    try {
+      const response = await fetch(`/api/projects/enrolment`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+        },
+        body: JSON.stringify({
+          project_id: selectedProject.id,
+          action: "start",
+          enrollment_cap: enrollmentCap,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProjects((prev) => 
+          prev.map((project) => 
+            project.id === selectedProject.id ? { ...project, ...data.project } : project
+          )
+        )
+        toast({
+          title: "Success",
+          description: data.message,
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to start enrollment")
+      }
+    } catch (error) {
+      console.error("Error starting enrollment:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to start enrollment",
+        variant: "destructive",
+      })
+    } finally {
+      setIsEnrollmentDialogOpen(false)
+      setSelectedProject(null)
+      setEnrollmentCap(1)
+    }
+  }
+
+  
+
+  const handleCloseEnrollment = async (projectId: string) => {
+    try {
+      const response = await fetch(`/api/projects/enrolment`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "close",
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProjects((prev) => 
+          prev.map((project) => 
+            project.id === projectId ? { ...project, ...data.project } : project
+          )
+        )
+        toast({
+          title: "Success",
+          description: data.message,
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to close enrollment")
+      }
+    } catch (error) {
+      console.error("Error closing enrollment:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to close enrollment",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleApplicationAction = async (applicationId: string, action: "APPROVED" | "REJECTED") => {
+    try {
+      const response = await fetch(`/api/project-requests/${applicationId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+        },
+        body: JSON.stringify({
+          status: action,
+          faculty_notes: action === "APPROVED" ? "Application approved by faculty" : "Application rejected by faculty"
+        }),
+      })
+
+      if (response.ok) {
+        // Update the applications list
+        setSelectedProjectApplications(prev => 
+          prev.map(app => 
+            app.id === applicationId 
+              ? { ...app, status: action, faculty_notes: action === "APPROVED" ? "Application approved by faculty" : "Application rejected by faculty" }
+              : app
+          )
+        )
+        
+        // Refresh the projects data
+        fetchData()
+        
+        toast({
+          title: "Success",
+          description: `Application ${action.toLowerCase()} successfully`,
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Failed to ${action.toLowerCase()} application`)
+      }
+    } catch (error) {
+      console.error(`Error ${action.toLowerCase()} application:`, error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : `Failed to ${action.toLowerCase()} application`,
+        variant: "destructive",
+      })
     }
   }
 
@@ -596,6 +739,12 @@ export function ProjectManagement() {
                           <span>Waiting for coordinator approval</span>
                         </div>
                       )}
+                      {project.status === "APPROVED" && project.enrollment_status === "NOT_STARTED" && (
+                        <div className="mt-2 flex items-center text-sm text-green-600">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          <span>Approved - Ready to start enrollment</span>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex-grow">
@@ -646,18 +795,87 @@ export function ProjectManagement() {
                     </div>
                   </CardContent>
                   
-                  <div className="p-6 pt-0">
-                    <Button
-                      variant="destructive"
-                      className="w-full"
-                      onClick={() => {
-                        setProjectToDelete(project)
-                        setIsDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Project
-                    </Button>
+                  <div className="p-6 pt-0 space-y-3">
+                    {/* Enrollment Status */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-gray-700">Enrollment:</span>
+                      <Badge 
+                        variant={
+                          project.enrollment_status === "OPEN" ? "default" : 
+                          project.enrollment_status === "CLOSED" ? "destructive" : 
+                          "secondary"
+                        }
+                      >
+                        {project.enrollment_status?.replace("_", " ") || "NOT STARTED"}
+                      </Badge>
+                    </div>
+
+                    {project.enrollment_cap && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Applications:</span>
+                        <span className="font-medium">
+                          {project.project_requests?.length || 0} total
+                          {project.project_requests?.filter(req => req.status === "APPROVED").length ? 
+                            ` (${project.project_requests.filter(req => req.status === "APPROVED").length} approved)` : ''}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Enrollment Management Buttons */}
+                    <div className="space-y-2">
+                      {project.status === "APPROVED" && project.enrollment_status === "NOT_STARTED" && (
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedProject(project)
+                            setIsEnrollmentDialogOpen(true)
+                          }}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          Start Enrollment
+                        </Button>
+                      )}
+                      
+                      {project.enrollment_status === "OPEN" && (
+                        <Button
+                          variant="secondary"
+                          className="w-full"
+                          onClick={() => handleCloseEnrollment(project.id)}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Close Enrollment
+                        </Button>
+                      )}
+
+                      {/* View Applications Button */}
+                      {(project.enrollment_status === "OPEN" || project.enrollment_status === "CLOSED") && 
+                       project.project_requests && project.project_requests.length > 0 && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedProjectApplications(project.project_requests || [])
+                            setSelectedProject(project)
+                            setIsApplicationsDialogOpen(true)
+                          }}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          View Applications ({project.project_requests.length})
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        onClick={() => {
+                          setProjectToDelete(project)
+                          setIsDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Project
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               )
@@ -888,6 +1106,48 @@ export function ProjectManagement() {
         </TabsContent>
       </Tabs>
 
+      {/* Start Enrollment Dialog */}
+      <Dialog open={isEnrollmentDialogOpen} onOpenChange={setIsEnrollmentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start Enrollment</DialogTitle>
+            <DialogDescription>
+              Set the maximum number of students who can be selected for this project.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-name">Project Name</Label>
+              <Input
+                id="project-name"
+                value={selectedProject?.name || ""}
+                disabled
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="enrollment-cap">Maximum Students</Label>
+              <Input
+                id="enrollment-cap"
+                type="number"
+                min="1"
+                max="50"
+                value={enrollmentCap}
+                onChange={(e) => setEnrollmentCap(parseInt(e.target.value) || 1)}
+                placeholder="Enter maximum number of students"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsEnrollmentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleStartEnrollment}>
+              Start Enrollment
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Project Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -909,6 +1169,90 @@ export function ProjectManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* View Applications Dialog */}
+      <Dialog open={isApplicationsDialogOpen} onOpenChange={setIsApplicationsDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Project Applications</DialogTitle>
+            <DialogDescription>
+              Students who have applied for: {selectedProject?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedProjectApplications.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No applications yet.</p>
+            ) : (
+              selectedProjectApplications.map((application) => (
+                <Card key={application.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span className="font-semibold">{application.student.user.name}</span>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            application.status === "APPROVED" ? "border-green-500 text-green-700" :
+                            application.status === "REJECTED" ? "border-red-500 text-red-700" :
+                            "border-blue-500 text-blue-700"
+                          }
+                        >
+                          {application.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">{application.student.user.email}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">
+                          Applied: {new Date(application.request_date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {application.student_notes && (
+                        <div className="mt-2 p-2 bg-gray-50 rounded">
+                          <p className="text-sm text-gray-700">
+                            <strong>Student Notes:</strong> {application.student_notes}
+                          </p>
+                        </div>
+                      )}
+                      {application.faculty_notes && (
+                        <div className="mt-2 p-2 bg-blue-50 rounded">
+                          <p className="text-sm text-blue-700">
+                            <strong>Your Notes:</strong> {application.faculty_notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col space-y-2 ml-4">
+                      {application.status === "PENDING" && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleApplicationAction(application.id, "APPROVED")}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleApplicationAction(application.id, "REJECTED")}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
