@@ -2445,122 +2445,110 @@ export function ProjectManagement() {
 
       {/* Candidate Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[1400px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-purple-600" />
-              AI Analysis Details
-            </DialogTitle>
-            <DialogDescription>
-              Detailed AI analysis for {selectedCandidateDetails?.student_name}
-            </DialogDescription>
-          </DialogHeader>
+  <DialogContent className="sm:max-w-[1400px] max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+        <Info className="h-5 w-5 text-purple-600" />
+        AI Analysis Details
+      </DialogTitle>
+      <DialogDescription>
+        Detailed AI analysis for {selectedCandidateDetails?.student_name}
+      </DialogDescription>
+    </DialogHeader>
 
-          {selectedCandidateDetails && (
-            <div className="space-y-6">
-              {/* Candidate Info Header (Cleaner) */}
-              <div className="flex justify-between items-start p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900">
-                    {selectedCandidateDetails.student_name}
-                  </h3>
-                  <p className="text-gray-600">
-                    {selectedCandidateDetails.student_email}
-                  </p>
-                  <div className="mt-2">
-                    <Badge className="bg-green-100 text-green-800">
-                      Match Score:{" "}
-                      {(selectedCandidateDetails.score * 100).toFixed(1)}%
-                    </Badge>
-                  </div>
-                </div>
-                {selectedCandidateDetails.file_path && (
-                  <a
-                    href={`/${selectedCandidateDetails.file_path.replace(
-                      /^.*[\\\/]public[\\\/]/,
-                      ""
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-800 underline"
-                  >
-                    <FileText className="h-4 w-4 mr-1" />
-                    View Resume
-                  </a>
-                )}
-              </div>
-
-              {/* Extracted Skills */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                  Extracted Skills
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {(selectedCandidateDetails.ai_analysis?.skills || []).map(
-                    (skill: any, index: number) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="px-3 py-1"
-                      >
-                        {typeof skill === "object"
-                          ? JSON.stringify(skill)
-                          : String(skill)}
-                      </Badge>
-                    )
-                  )}
-                  {(!selectedCandidateDetails.ai_analysis?.skills ||
-                    selectedCandidateDetails.ai_analysis.skills.length ===
-                      0) && (
-                    <p className="text-gray-500 italic">No skills extracted</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Why AI Selected (as a list) */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <Brain className="h-4 w-4 mr-2 text-purple-600" />
-                  Why AI Selected This Candidate
-                </h4>
-                {(selectedCandidateDetails.ai_analysis?.reasons || []).length >
-                0 ? (
-                  <ul className="list-disc pl-6 text-sm text-blue-900 space-y-2">
-                    {selectedCandidateDetails.ai_analysis.reasons.map(
-                      (reason: any, index: number) => (
-                        <li key={index}>
-                          {typeof reason === "object"
-                            ? JSON.stringify(reason)
-                            : String(reason)}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">
-                    No specific reasons available
-                  </p>
-                )}
-              </div>
-
-              {/* Disclaimer */}
-              <div className="bg-amber-50 p-4 rounded-lg">
-                <p className="text-amber-800 text-sm">
-                  <strong>Note:</strong> This AI analysis is a recommendation to
-                  help you make informed decisions. Always review the actual
-                  resume and use your professional judgment for final candidate
-                  selection.
-                </p>
-              </div>
-            </div>
+    {selectedCandidateDetails && (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left: AI Reasoning */}
+        <div className="lg:col-span-2 bg-purple-50 rounded-lg p-6 flex flex-col">
+          <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+            <Brain className="h-5 w-5 mr-2 text-purple-600" />
+            Why AI Selected This Candidate
+          </h4>
+          {(selectedCandidateDetails.ai_analysis?.reasons || []).length > 0 ? (
+            <ul className="list-disc pl-6 text-base text-blue-900 space-y-3">
+              {selectedCandidateDetails.ai_analysis.reasons.map(
+                (reason: any, index: number) => (
+                  <li key={index}>
+                    {typeof reason === "object"
+                      ? JSON.stringify(reason)
+                      : String(reason)}
+                  </li>
+                )
+              )}
+            </ul>
+          ) : (
+            <p className="text-gray-500 italic">
+              No specific reasons available
+            </p>
           )}
+        </div>
 
-          <div className="flex justify-end mt-6">
-            <Button onClick={() => setIsDetailsDialogOpen(false)}>Close</Button>
+        {/* Right: Profile (top) and Skills (bottom) */}
+        <div className="flex flex-col gap-6">
+          {/* Profile */}
+          <div className="bg-white rounded-lg shadow p-6 flex flex-col gap-2">
+            <h4 className="font-semibold text-gray-900 mb-2">Profile</h4>
+            <div>
+              <span className="font-medium">Name: </span>
+              {selectedCandidateDetails.student_name}
+            </div>
+            <div>
+              <span className="font-medium">Email: </span>
+              {selectedCandidateDetails.student_email}
+            </div>
+            <div>
+              <Badge className="bg-green-100 text-green-800">
+                Match Score: {(selectedCandidateDetails.score * 100).toFixed(1)}%
+              </Badge>
+            </div>
+            {selectedCandidateDetails.file_path && (
+              <a
+                href={`/${selectedCandidateDetails.file_path.replace(
+                  /^.*[\\\/]public[\\\/]/,
+                  ""
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-blue-600 hover:text-blue-800 underline mt-2"
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                View Resume
+              </a>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Skills */}
+          <div className="bg-white rounded-lg shadow p-6 flex flex-col gap-2">
+            <h4 className="font-semibold text-gray-900 mb-2">Skills</h4>
+            <div className="flex flex-wrap gap-2">
+              {(selectedCandidateDetails.ai_analysis?.skills || []).map(
+                (skill: any, index: number) => (
+                  <Badge
+                    key={index}
+                    variant="secondary"
+                    className="px-3 py-1"
+                  >
+                    {typeof skill === "object"
+                      ? JSON.stringify(skill)
+                      : String(skill)}
+                  </Badge>
+                )
+              )}
+              {(!selectedCandidateDetails.ai_analysis?.skills ||
+                selectedCandidateDetails.ai_analysis.skills.length === 0) && (
+                <p className="text-gray-500 italic">No skills extracted</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div className="flex justify-end mt-6">
+      <Button onClick={() => setIsDetailsDialogOpen(false)}>Close</Button>
+    </div>
+  </DialogContent>
+</Dialog>
 
       {/* Application Details Dialog (for notes) */}
       <Dialog
