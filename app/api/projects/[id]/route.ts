@@ -19,36 +19,32 @@ export async function PUT(
 
     const { id } = params
     const body = await request.json()
-    const { name, description, expected_completion_date, components_needed } = body
+    const { name, description, enrollment_cap } = body
+
+    // Only allow editing these specific fields
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (description !== undefined) updateData.description = description  
+    if (enrollment_cap !== undefined) updateData.enrollment_cap = enrollment_cap
 
     // Verify the project belongs to this faculty member
     const existingProject = await prisma.project.findUnique({
-      where: { id },
-      include: { faculty: true }
+      where: { id }
     })
 
     if (!existingProject) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 })
     }
 
-    if (existingProject.faculty.user_id !== userId) {
+    if (existingProject.created_by !== userId) {
       return NextResponse.json({ error: "Access denied - Not your project" }, { status: 403 })
     }
 
     // Update the project
     const updatedProject = await prisma.project.update({
       where: { id },
-      data: {
-        name,
-        description,
-        expected_completion_date: new Date(expected_completion_date),
-        components_needed: components_needed || []
-      },
+      data: updateData,
       include: {
-        faculty: {
-          include: { user: true }
-        },
-        course: true,
         project_requests: {
           include: {
             student: {
