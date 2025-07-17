@@ -64,6 +64,7 @@ export function ManageDomains() {
   const [newDomain, setNewDomain] = useState({ name: '', description: '' })
   const [editDomain, setEditDomain] = useState({ id: '', name: '', description: '' })
   const [newAssignment, setNewAssignment] = useState({ domain_id: '', faculty_id: '' })
+  const [editMode, setEditMode] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -250,13 +251,20 @@ export function ManageDomains() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">CIE Coordinator Management</h1>
+          <h1 className="admin-page-title">CIE Coordinator Management</h1>
           <p className="text-sm text-gray-600 mt-1">Assign faculty members as coordinators for different domains</p>
         </div>
         <div className="flex space-x-2">
           <Button onClick={fetchData} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-1" />
             Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
           </Button>
           <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
             <DialogTrigger asChild>
@@ -434,7 +442,7 @@ export function ManageDomains() {
           const hasCoordinator = domainAssignments.length > 0
           
           return (
-            <Card key={domain.id} className="border shadow-sm bg-gray-50">
+            <div key={domain.id} className={hasCoordinator ? 'border-green-200 bg-green-50 dark:bg-green-50 dark:text-gray-900' : 'admin-card'}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center text-base">
@@ -486,15 +494,19 @@ export function ManageDomains() {
                   </AccordionItem>
                 </Accordion>
               </CardContent>
+              {editMode && (
               <div className="flex justify-end gap-2 p-3 border-t bg-gray-100">
-                <Button size="sm" variant="default" className="bg-black text-white hover:bg-gray-900" onClick={() => { setEditDomain({ id: domain.id, name: domain.name, description: domain.description || '' }); setIsEditDomainDialogOpen(true); }}>
+                <button className="btn-edit" onClick={() => { setEditDomain({ id: domain.id, name: domain.name, description: domain.description || '' }); setIsEditDomainDialogOpen(true); }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
                   Edit
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => { setDomainToDelete(domain); }}>
+                </button>
+                <button className="btn-delete" onClick={() => { setDomainToDelete(domain); }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                   Delete
-                </Button>
+                </button>
               </div>
-            </Card>
+              )}
+            </div>
           )
         })}
       </div>
@@ -514,7 +526,7 @@ export function ManageDomains() {
               const isCoordinator = facultyAssignments.length > 0
               
               return (
-                <div key={f.id} className={`p-3 border rounded-md ${isCoordinator ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
+                <div key={f.id} className={isCoordinator ? 'border-green-200 bg-green-50 dark:bg-green-50 dark:text-gray-900' : 'admin-card border-gray-200'}>
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium text-sm">{f.user.name}</h4>
@@ -522,7 +534,7 @@ export function ManageDomains() {
                       <p className="text-xs text-gray-500">{f.user.email}</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {facultyAssignments.map((assignment) => (
-                          <Badge key={assignment.id} variant="outline" className="text-xs px-1 py-0">
+                          <Badge key={assignment.id} variant="outline" className="text-xs px-1 py-0 dark:text-gray-900">
                             {domains.find(d => d.id === assignment.domain_id)?.name || assignment.domain_name}
                           </Badge>
                         ))}

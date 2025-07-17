@@ -128,6 +128,8 @@ export function ManageLibrary() {
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null)
   const [isBulkUploading, setIsBulkUploading] = useState(false)
 
+  const [editMode, setEditMode] = useState(false);
+
   useEffect(() => {
     fetchItems()
     fetchCategories()
@@ -1089,14 +1091,20 @@ export function ManageLibrary() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-3xl font-bold text-gray-900">Library Books Management</h3>
+          <h1 className="admin-page-title">Library Management</h1>
         </div>
         <div className="flex space-x-2">
           <Button onClick={fetchItems} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
           </Button>
           <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
             <DialogTrigger asChild>
@@ -1603,7 +1611,7 @@ export function ManageLibrary() {
           </Card>
         ) : (
           filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-lg transition-shadow">
+            <div key={item.id} className="admin-card rounded-xl shadow-sm border hover:shadow-md transition-shadow flex flex-col justify-between h-full">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -1699,35 +1707,42 @@ export function ManageLibrary() {
                     </div>
                   )}
 
+                  {/* Description below image */}
+                  <p className="text-sm text-gray-500 mt-2 line-clamp-2">{item.item_description}</p>
+
                   <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
                     <div><span className="font-semibold">Total:</span> {item.item_quantity}</div>
                      <div><span className="font-semibold">Location:</span> {item.item_location}</div>
                   </div>
                   <div className="flex space-x-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingItem(item)
-                        setIsAddDialogOpen(true)
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-1" /> Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setItemToDelete(item)
-                        setIsDeleteDialogOpen(true)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" /> Delete
-                    </Button>
+                    {editMode && (
+                      <>
+                        <button
+                          className="btn-edit"
+                          onClick={() => {
+                            setEditingItem(item)
+                            setIsAddDialogOpen(true)
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                          Edit
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={() => {
+                            setItemToDelete(item)
+                            setIsDeleteDialogOpen(true)
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           ))
         )}
       </div>

@@ -128,7 +128,7 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
             <div className="rounded-3xl shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-6 min-h-[100px] flex flex-col md:flex-row items-center justify-between mb-0 relative overflow-hidden">
               <div className="flex-1 z-6">
                 <div className="flex items-center mb-2 justify-between">
-                  <span className="text-white text-3xl font-extrabold tracking-tight">CIE Faculty Portal</span>
+                  <span className="faculty-page-title">CIE Faculty Portal</span>
                   <div className="flex gap-4">
                   <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100">Learn More</button>
                   <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100" onClick={handleQuickActionsClick}>Quick Actions</button>
