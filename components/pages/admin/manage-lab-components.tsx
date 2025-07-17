@@ -131,6 +131,9 @@ export function ManageLabComponents() {
   // Add form validation state
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // AI analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   // Bulk upload state
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false)
@@ -967,6 +970,63 @@ export function ManageLabComponents() {
     editingComponent.component_category.trim() !== "" &&
     editingComponent.component_location.trim() !== ""
 
+  // AI Analysis function
+  const handleAIAnalysis = async () => {
+    if (!frontImageFile || !backImageFile) {
+      toast({
+        title: "Error",
+        description: "Both front and back images are required for AI analysis",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsAnalyzing(true)
+    
+    try {
+      const formData = new FormData()
+      formData.append('frontImage', frontImageFile)
+      formData.append('backImage', backImageFile)
+
+      const response = await fetch('/api/ai-analyze-images', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze images')
+      }
+
+      const data = await response.json()
+      
+      if (data.status === 'success' && data.result) {
+        setNewComponent(prev => ({
+          ...prev,
+          component_name: data.result.name,
+          component_description: data.result.description,
+          component_specification: data.result.specifications
+        }))
+        
+        toast({
+          title: "AI Analysis Complete",
+          description: "Component name, description and specifications have been generated successfully",
+        })
+      } else {
+        throw new Error(data.error || 'AI analysis failed')
+      }
+      
+    } catch (error) {
+      console.error('AI Analysis Error:', error)
+      toast({
+        title: "AI Analysis Failed",
+        description: error instanceof Error ? error.message : "Failed to analyze images",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
   // Reset form and errors
   const resetForm = () => {
     setNewComponent({
@@ -993,6 +1053,7 @@ export function ManageLabComponents() {
     setNewCategory("")
     setNewLocation("")
     setIsSubmitting(false)
+    setIsAnalyzing(false)
     // Reset individual tracking state
     setTrackIndividual(false)
     setIndividualItems([])
@@ -1000,119 +1061,43 @@ export function ManageLabComponents() {
   }
 
   // Bulk upload functions
-  const downloadSampleCSV = (e: React.MouseEvent) => {
+  const downloadSampleCSV = async (e: React.MouseEvent) => {
     e.preventDefault()
-    const headers = [
-      'component_name',
-      'component_description', 
-      'component_specification',
-      'component_quantity',
-      'component_tag_id',
-      'component_category',
-      'component_location',
-      'front_image_id',
-      'back_image_id',
-      'invoice_number',
-      'purchase_value',
-      'purchased_from',
-      'purchase_currency',
-      'purchase_date'
-    ]
     
-    const sampleData = [
-      [
-        'Arduino Uno R3',
-        'Microcontroller board based on the ATmega328P',
-        'Operating Voltage: 5V, Input Voltage: 7-12V, Digital I/O Pins: 14, Flash Memory: 32KB',
-        '10',
-        'ARD001',
-        'Electrical',
-        'Lab A',
-        'arduino-front.jpg',
-        'arduino-back.jpg',
-        'INV001',
-        '750.00',
-        'Electronics Store',
-        'INR',
-        '2024-01-15'
-      ],
-      [
-        'NodeMCU ESP8266',
-        'Wi-Fi enabled microcontroller development board',
-        'Processor: ESP8266, Flash: 4MB, GPIO: 10, Wi-Fi: 802.11 b/g/n',
-        '8',
-        'ESP001',
-        'Electrical',
-        'Lab A',
-        'nodemcu-front.jpg',
-        'nodemcu-back.jpg',
-        'INV002',
-        '450.00',
-        'Tech Components Ltd',
-        'INR',
-        '2024-01-20'
-      ],
-      [
-        'Breadboard 830 Point',
-        'Solderless breadboard for prototyping electronic circuits',
-        'Tie Points: 830, Size: 165mm x 55mm, ABS Plastic Base',
-        '15',
-        'BB001',
-        'Electrical',
-        'Lab B',
-        'breadboard-front.jpg',
-        'breadboard-back.jpg',
-        'INV003',
-        '120.00',
-        'Circuit World',
-        'INR',
-        '2024-01-25'
-      ],
-      [
-        'Multimeter Digital',
-        'Digital multimeter for measuring voltage, current, and resistance',
-        'Range: DC 0-600V, AC 0-600V, Current: 0-10A, Resistance: 0-20MΩ',
-        '5',
-        'MM001',
-        'Measurement',
-        'Equipment Room',
-        'multimeter-front.jpg',
-        'multimeter-back.jpg',
-        'INV004',
-        '1200.00',
-        'Instrument Supply Co',
-        'INR',
-        '2024-02-01'
-      ],
-      [
-        'Resistor Kit 1/4W',
-        'Assorted carbon film resistors kit',
-        'Values: 10Ω to 1MΩ, Tolerance: ±5%, Power: 1/4W, Quantity: 600 pieces',
-        '3',
-        'RES001',
-        'Electrical',
-        'Storage Room',
-        'resistor-kit-front.jpg',
-        'resistor-kit-back.jpg',
-        'INV005',
-        '350.00',
-        'Electronic Components Hub',
-        'INR',
-        '2024-02-05'
-      ]
-    ]
-    
-    const csvContent = [headers.join(','), ...sampleData.map(row => row.map(field => `"${field}"`).join(','))].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.setAttribute('hidden', '')
-    a.setAttribute('href', url)
-    a.setAttribute('download', 'lab-components-sample.csv')
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
+    try {
+      // Fetch the actual sample CSV from the API
+      const response = await fetch('/api/lab-components/sample-csv')
+      
+      if (!response.ok) {
+        throw new Error('Failed to download sample CSV')
+      }
+      
+      // Get the CSV content as blob
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.setAttribute('hidden', '')
+      a.setAttribute('href', url)
+      a.setAttribute('download', 'sample-lab-components.csv')
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      
+      toast({
+        title: "Success",
+        description: "Sample CSV downloaded successfully",
+      })
+    } catch (error) {
+      console.error('Error downloading sample CSV:', error)
+      toast({
+        title: "Error",
+        description: "Failed to download sample CSV",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleBulkUpload = async () => {
@@ -1494,8 +1479,20 @@ export function ManageLabComponents() {
                   <div className="space-y-3">
                   <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Component Images</h3>
-                      <Button variant="outline" size="sm" type="button" className="h-8">
-                        <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        type="button" 
+                        className="h-8"
+                        onClick={handleAIAnalysis}
+                        disabled={!frontImageFile || !backImageFile || isAnalyzing}
+                        title={!frontImageFile || !backImageFile ? "Upload both front and back images first" : "Analyze images with AI"}
+                      >
+                        {isAnalyzing ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <img src="/genAI_icon.png" alt="GenAI" className="h-7 w-7" />
+                        )}
                     </Button>
                   </div>
                     <div className="grid grid-cols-2 gap-4">

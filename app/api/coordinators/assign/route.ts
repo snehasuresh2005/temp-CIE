@@ -4,45 +4,40 @@ import { prisma } from "@/lib/prisma"
 export async function POST(request: NextRequest) {
   try {
     const userId = request.headers.get("x-user-id")
-    const { domain_name, faculty_id } = await request.json()
+    const { domain_id, domain_name, faculty_id } = await request.json()
     
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (!domain_name || !faculty_id) {
+    if ((!domain_id && !domain_name) || !faculty_id) {
       return NextResponse.json({ error: "Domain and faculty are required" }, { status: 400 })
     }
 
-    // First, find or create the domain
-    let domain = await prisma.domain.findFirst({
-      where: {
-        name: {
-          contains: domain_name,
-          mode: 'insensitive'
-        }
+    let domain = null
+    if (domain_id) {
+      domain = await prisma.domain.findUnique({ where: { id: domain_id } })
+      if (!domain) {
+        return NextResponse.json({ error: "Domain not found" }, { status: 404 })
       }
-    })
-
-    if (!domain) {
-      // Create the domain if it doesn't exist
-      const domainNames = {
-        library: "Library",
-        electronics: "Electronics Lab", 
-        mechanical: "Mechanical Lab",
-        computer: "Computer Lab",
-        physics: "Physics Lab",
-        chemistry: "Chemistry Lab",
-        civil: "Civil Lab",
-        biotech: "Biotechnology Lab"
-      }
-
-      domain = await prisma.domain.create({
-        data: {
-          name: domainNames[domain_name as keyof typeof domainNames] || domain_name,
-          description: `${domainNames[domain_name as keyof typeof domainNames] || domain_name} domain for CIE management`
+    } else if (domain_name) {
+      domain = await prisma.domain.findFirst({
+        where: {
+          name: {
+            contains: domain_name,
+            mode: 'insensitive'
+          }
         }
       })
+      if (!domain) {
+        // Create the domain if it doesn't exist
+        domain = await prisma.domain.create({
+          data: {
+            name: domain_name,
+            description: `${domain_name} domain for CIE management`
+          }
+        })
+      }
     }
 
     // Check if this faculty is already assigned to this domain
@@ -80,7 +75,7 @@ export async function POST(request: NextRequest) {
       message: "Coordinator assigned successfully",
       assignment: {
         id: assignment.id,
-        domain_name: domain_name,
+        domain_name: assignment.domain.name,
         faculty: {
           id: assignment.faculty.id,
           user: {

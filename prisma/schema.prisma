@@ -59,6 +59,8 @@ model Faculty {
   library_items       LibraryItem[]
   domain_assignments  DomainCoordinator[] @relation("DomainAssignments")
   opportunities       Opportunity[]
+  platform_manager_assignments PlatformManagerAssignment[]
+  developer_assignments DeveloperAssignment[]
 
   @@map("faculty")
 }
@@ -553,4 +555,49 @@ enum ApplicationStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum InsightStatus {
+  PENDING        // Submitted by faculty, awaiting Platform Manager approval
+  APPROVED       // Approved by Platform Manager, assigned to Developer
+  IN_PROGRESS    // Developer is working on it
+  DONE           // Developer marked as done, awaiting Platform Manager final approval
+  REJECTED       // Rejected by Platform Manager
+  COMPLETED      // Final approval by Platform Manager
+}
+
+model Insight {
+  id            String        @id @default(cuid())
+  title         String
+  description   String
+  status        InsightStatus @default(PENDING)
+  created_by    String        // Faculty user id
+  approved_by   String?       // Platform Manager user id
+  approved_at   DateTime?
+  completed_at  DateTime?
+  rejection_reason String?    // Reason for rejection by Platform Manager
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+}
+
+model PlatformManagerAssignment {
+  id          String   @id @default(cuid())
+  faculty_id  String
+  assigned_at DateTime @default(now())
+  assigned_by String
+  faculty     Faculty  @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
+
+  @@unique([faculty_id])
+  @@map("platform_manager_assignments")
+}
+
+model DeveloperAssignment {
+  id          String   @id @default(cuid())
+  faculty_id  String
+  assigned_at DateTime @default(now())
+  assigned_by String
+  faculty     Faculty  @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
+
+  @@unique([faculty_id])
+  @@map("developer_assignments")
 }

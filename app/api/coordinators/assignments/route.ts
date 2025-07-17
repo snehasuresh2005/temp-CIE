@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
 
     const formattedAssignments = assignments.map(assignment => ({
       id: assignment.id,
-      domain_name: assignment.domain.name.toLowerCase().replace(/\s+/g, ''),
+      domain_id: assignment.domain.id,
+      domain_name: assignment.domain.name,
       faculty: {
         id: assignment.faculty.id,
         user: {

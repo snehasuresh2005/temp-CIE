@@ -105,3 +105,4 @@ next-env.d.ts
 *.swo
 *.bak
 *.tmp
+CLAUDE.md
