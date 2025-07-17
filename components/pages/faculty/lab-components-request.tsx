@@ -45,6 +45,8 @@ interface LabComponent {
   component_specification: string
   image_url: string | null
   back_image_url?: string | null
+  front_image_id?: string | null
+  back_image_id?: string | null
   projects: { id: string; name: string }[]
   domain?: {
     id: string
@@ -536,7 +538,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
             <CardContent>
               <div className="space-y-4">
                 <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
-                  <div className="relative w-56">
+                  <div className="relative w-full md:w-1/2 lg:w-1/3">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
                       <Search className="h-4 w-4" />
                     </span>
@@ -563,7 +565,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredComponents.map((component) => (
                     <Card key={component.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
                       <CardHeader className="p-3">
@@ -593,8 +595,8 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                       <CardContent className="flex-grow flex flex-col p-3 pt-0">
                         <div className="space-y-3 flex-grow">
                           {/* Image Display */}
-                          {(component.image_url || component.back_image_url) && (
-                            <div className="relative w-full h-32">
+                          {(component.front_image_id || component.back_image_id) && (
+                            <div className="relative w-full h-48">
                               {/* Front Image */}
                               <div 
                                 className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
@@ -612,14 +614,14 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                               </div>
                               
                               {/* Back Image */}
-                              {component.back_image_url && (
+                              {component.back_image_id && (
                                 <div 
                                   className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
                                     imageStates[component.id] ? 'opacity-100' : 'opacity-0'
                                   }`}
                                 >
                                   <img
-                                    src={component.back_image_url}
+                                    src={component.back_image_url || '/placeholder.jpg'}
                                     alt={`Back view of ${component.component_name}`}
                                     className="w-full h-full object-contain rounded-md bg-gray-50"
                                     onError={(e) => {
@@ -630,7 +632,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                               )}
                               
                               {/* Navigation Buttons */}
-                              {component.back_image_url && (
+                              {component.back_image_id && (
                                 <>
                                   {!imageStates[component.id] && (
                                     <Button
@@ -656,7 +658,7 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                               )}
                               
                               {/* Image Indicators */}
-                              {component.back_image_url && (
+                              {component.back_image_id && (
                                 <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
                                   <div 
                                     className={`w-1 h-1 rounded-full transition-colors duration-300 ${
@@ -675,8 +677,8 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                           
                           <div className="space-y-1">
                             <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
-                              <div><span className="font-medium">Available:</span> {component.available_quantity}</div>
                               <div><span className="font-medium">Total:</span> {component.component_quantity}</div>
+                              <div><span className="font-medium">Available:</span> {component.available_quantity}</div>
                             </div>
                             
                             <div className="text-xs text-gray-500">
@@ -1203,15 +1205,15 @@ export function LabComponentsRequest({ onBackToManagement }: LabComponentsReques
                 {/* Right: Image Preview */}
                 <div className="flex-1 flex flex-col items-center justify-center min-w-0">
                   <div className="relative w-full max-w-xs aspect-square bg-gray-50 rounded-lg border flex items-center justify-center overflow-hidden">
-                    {component.image_url || component.back_image_url ? (
+                    {component.front_image_id || component.back_image_id ? (
                       <>
                         <img
-                          src={(showBack && component.back_image_url ? component.back_image_url : component.image_url || component.back_image_url) || undefined}
+                          src={showBack && component.back_image_url ? component.back_image_url : component.image_url || '/placeholder.jpg'}
                           alt={showBack ? `Back view of ${component.component_name}` : `Front view of ${component.component_name}`}
                           className="object-contain w-full h-full"
                           onError={e => { e.currentTarget.src = '/placeholder.jpg'; }}
                         />
-                        {component.back_image_url && component.image_url && (
+                        {component.back_image_id && component.front_image_id && (
                           <>
                             {/* Left arrow (show only when on back) */}
                             {showBack && (

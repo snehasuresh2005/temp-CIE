@@ -45,6 +45,8 @@ interface LabComponent {
   component_specification: string
   image_url: string | null
   back_image_url?: string | null
+  front_image_id?: string | null
+  back_image_id?: string | null
   projects: { id: string; name: string }[]
 }
 
@@ -91,6 +93,7 @@ export function LabComponentsRequest() {
   })
 
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
+  const [showBack, setShowBack] = useState(false)
 
 
 
@@ -532,7 +535,7 @@ export function LabComponentsRequest() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
-                    <div className="relative w-56">
+                    <div className="relative w-full md:w-1/2 lg:w-1/3">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
                         <Search className="h-4 w-4" />
                       </span>
@@ -559,7 +562,7 @@ export function LabComponentsRequest() {
                     </div>
                   </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredComponents.map((component) => (
                 <Card key={component.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
                             <CardHeader className="p-3">
@@ -589,8 +592,8 @@ export function LabComponentsRequest() {
                             <CardContent className="flex-grow flex flex-col p-3 pt-0">
                               <div className="space-y-3 flex-grow">
                                 {/* Image Display */}
-                                {(component.image_url || component.back_image_url) && (
-                                  <div className="relative w-full h-32">
+                                {(component.front_image_id || component.back_image_id) && (
+                                  <div className="relative w-full h-48">
                                     {/* Front Image */}
                                     <div 
                                       className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
@@ -608,14 +611,14 @@ export function LabComponentsRequest() {
                                     </div>
                                     
                                     {/* Back Image */}
-                                    {component.back_image_url && (
+                                    {component.back_image_id && (
                                       <div 
                                         className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
                                           imageStates[component.id] ? 'opacity-100' : 'opacity-0'
                                         }`}
                                       >
                                         <img
-                                          src={component.back_image_url}
+                                          src={component.back_image_url || '/placeholder.jpg'}
                                           alt={`Back view of ${component.component_name}`}
                                           className="w-full h-full object-contain rounded-md bg-gray-50"
                                           onError={(e) => {
@@ -626,7 +629,7 @@ export function LabComponentsRequest() {
                                     )}
                                     
                                     {/* Navigation Buttons */}
-                                    {component.back_image_url && (
+                                    {component.back_image_id && (
                                       <>
                                         {!imageStates[component.id] && (
                                           <Button
@@ -652,7 +655,7 @@ export function LabComponentsRequest() {
                                     )}
 
                                     {/* Image Indicator */}
-                                    {component.back_image_url && (
+                                    {component.back_image_id && (
                                       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
                                         <div 
                                           className={`w-1 h-1 rounded-full transition-colors duration-300 ${
@@ -671,8 +674,8 @@ export function LabComponentsRequest() {
                                 
                                 <div className="space-y-1">
                                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
-                                    <div><span className="font-medium">Available:</span> {component.available_quantity}</div>
                                     <div><span className="font-medium">Total:</span> {component.component_quantity}</div>
+                                    <div><span className="font-medium">Available:</span> {component.available_quantity}</div>
                                   </div>
                                   
                                   <div className="text-xs text-gray-500">
@@ -1219,86 +1222,117 @@ export function LabComponentsRequest() {
 
                   {/* Component Info Dialog */}
                   <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
-                    <DialogContent className="sm:max-w-lg">
+                    <DialogContent className="sm:max-w-3xl">
                       <DialogHeader>
                         <DialogTitle>Component Details</DialogTitle>
                       </DialogHeader>
-                      {infoDialogOpen && (() => {
-                        const component = components.find(c => c.id === infoDialogOpen)
-                        if (!component) return null
-                        
+                      {(() => {
+                        if (!infoDialogOpen) return null;
+                        const component = components.find(c => c.id === infoDialogOpen);
+                        if (!component) return null;
+                        const isAvailable = component.available_quantity > 0;
                         return (
-                          <div className="space-y-4">
-                            {/* Component Name and Category */}
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <Package className="h-5 w-5 text-gray-500" />
-                                <h3 className="text-lg font-semibold">{component.component_name}</h3>
-                              </div>
-                              <Badge variant="outline" className="text-xs">
-                                {component.component_category}
-                              </Badge>
-                            </div>
-
-                            {/* Description */}
-                            {/* <div className="space-y-2">
-                              <h4 className="font-medium text-sm">Description</h4>
-                              <p className="text-sm text-gray-600">{component.component_description}</p>
-                            </div> */}
-
-                            {/* Specifications */}
-                            {/* <div className="space-y-2">
-                              <h4 className="font-medium text-sm">Specifications</h4>
-                              <p className="text-sm text-gray-600">{component.component_specification}</p>
-                            </div> */}
-
-                            {/* Availability */}
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1">
-                                <h4 className="font-medium text-sm">Total Quantity</h4>
-                                <p className="text-lg font-semibold text-gray-900">{component.component_quantity}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <h4 className="font-medium text-sm">Available</h4>
-                                <p className={`text-lg font-semibold ${component.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                  {component.available_quantity}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* On Loan */}
-                            <div className="space-y-1">
-                              <h4 className="font-medium text-sm">Currently On Loan</h4>
-                              <p className="text-lg font-semibold text-blue-600">
-                                {component.component_quantity - component.available_quantity}
-                              </p>
-                            </div>
-
-                            {/* Location */}
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-sm">Location</h4>
-                              <p className="text-sm text-gray-600">{component.component_location}</p>
-                            </div>
-
-                            {/* Associated Projects */}
-                            {component.projects && component.projects.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-sm">Associated Projects</h4>
-                                <div className="space-y-1">
-                                  {component.projects.map((project) => (
-                                    <Badge key={project.id} variant="outline" className="text-xs mr-1">
-                                      {project.name}
-                                    </Badge>
-                                  ))}
+                          <div className="flex flex-col md:flex-row gap-8">
+                            {/* Left: Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <Package className="h-5 w-5 text-gray-500" />
+                                    {component.component_name}
+                                  </h3>
+                                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{isAvailable ? 'Available' : 'Not Available'}</span>
                                 </div>
-                              </div>
-                            )}
+                                <div className="flex flex-row items-end justify-center pl-8">
+                                  <div>
+                                    <h4 className="font-medium text-sm">Total Quantity</h4>
+                                    <p className="text-lg font-semibold text-gray-900 text-center">{component?.component_quantity}</p>
+                                  </div>
+                                  <div className="ml-16 text-center">
+                                    <h4 className="font-medium text-sm">Available</h4>
+                                    <p className={`text-lg font-semibold ${isAvailable ? 'text-green-600' : 'text-red-600'} text-center`}>{component?.available_quantity}</p>
+                                  </div>
+                                </div>
 
-                            {/* Availability Status */}
-                            <div className="pt-2 border-t">
-                              <Badge className={`${getAvailabilityColor(component.available_quantity, component.component_quantity)}`}>
-                                {getAvailabilityText(component.available_quantity, component.component_quantity)}
-                              </Badge>
+                                {component?.component_specification && (
+                                  <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">Specifications</h4>
+                                    <p className="text-sm text-gray-700 whitespace-pre-line">{component?.component_specification}</p>
+                                  </div>
+                                )}
+                                {component?.component_description && (
+                                  <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">Description</h4>
+                                    <p className="text-sm text-gray-700 whitespace-pre-line">{component?.component_description}</p>
+                                  </div>
+                                )}
+
+                              </div>
+                            </div>
+                            {/* Right: Image Preview */}
+                            <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+                              <div className="relative w-full max-w-xs aspect-square bg-gray-50 rounded-lg border flex items-center justify-center overflow-hidden">
+                                {component.image_url || component.back_image_url ? (
+                                  <>
+                                    <img
+                                      src={showBack && component.back_image_url ? component.back_image_url : component.image_url || '/placeholder.jpg'}
+                                      alt={showBack ? `Back view of ${component.component_name}` : `Front view of ${component.component_name}`}
+                                      className="object-contain w-full h-full"
+                                      onError={e => { e.currentTarget.src = '/placeholder.jpg'; }}
+                                    />
+                                    {component.back_image_url && component.image_url && (
+                                      <>
+                                        {/* Left arrow (show only when on back) */}
+                                        {showBack && (
+                                          <button
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                            onClick={() => setShowBack(false)}
+                                            type="button"
+                                            aria-label="Show Front"
+                                          >
+                                            <ChevronLeft className="h-6 w-6" />
+                                          </button>
+                                        )}
+                                        {/* Right arrow (show only when on front) */}
+                                        {!showBack && (
+                                          <button
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                            onClick={() => setShowBack(true)}
+                                            type="button"
+                                            aria-label="Show Back"
+                                          >
+                                            <ChevronRight className="h-6 w-6" />
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="text-center text-gray-400">
+                                    <Package className="h-12 w-12 mx-auto mb-2" />
+                                    <p className="text-sm">No image available</p>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Image indicator */}
+                              {component.image_url && component.back_image_url && (
+                                <div className="flex justify-center mt-3 space-x-2">
+                                  <button
+                                    onClick={() => setShowBack(false)}
+                                    className={`w-2 h-2 rounded-full transition-colors ${
+                                      !showBack ? 'bg-gray-600' : 'bg-gray-300'
+                                    }`}
+                                    aria-label="Front view"
+                                  />
+                                  <button
+                                    onClick={() => setShowBack(true)}
+                                    className={`w-2 h-2 rounded-full transition-colors ${
+                                      showBack ? 'bg-gray-600' : 'bg-gray-300'
+                                    }`}
+                                    aria-label="Back view"
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                         )
