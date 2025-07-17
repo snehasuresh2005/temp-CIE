@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
       // Faculty can only see projects they created
       whereClause.created_by = userId
     } else if (user.role === "STUDENT") {
-      // Students can see projects they created or are enrolled in
+      // Students can only see projects they created OR
+      // projects with OPEN enrollment status that are ONGOING
       const student = await prisma.student.findUnique({
         where: { user_id: userId },
       })
@@ -35,7 +36,13 @@ export async function GET(request: NextRequest) {
         
         whereClause.OR = [
           { created_by: userId },
-          { course_id: { in: courseIds } }
+          { 
+            AND: [
+              { course_id: { in: courseIds } },
+              { enrolmentStatus: "OPEN" },
+              { status: "ONGOING" }
+            ] 
+          }
         ]
       }
     }

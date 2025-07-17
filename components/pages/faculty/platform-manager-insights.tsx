@@ -304,7 +304,6 @@ export default function PlatformManagerInsights() {
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Description</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Status</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Submitted</th>
-                        <th className="px-6 py-3 text-left font-bold text-gray-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -315,16 +314,7 @@ export default function PlatformManagerInsights() {
                           <td className="px-6 py-3 align-top"><Badge variant="outline">{STATUS_LABELS[insight.status]}</Badge></td>
                           <td className="px-6 py-3 align-top">{new Date(insight.created_at).toLocaleDateString()}</td>
                           <td className="px-6 py-3 align-top">
-                            <div className="flex flex-row items-center gap-2">
-                              <Button size="sm" className="px-3 py-1" disabled={actionLoading} onClick={() => handleAction(insight.id, "approve")}>Approve</Button>
-                              <Button size="sm" className="px-3 py-1" variant="destructive" disabled={actionLoading} onClick={() => handleAction(insight.id, "reject")}>Reject</Button>
-                              <Input
-                                placeholder="Rejection reason"
-                                value={rejectionReasons[insight.id] || ""}
-                                onChange={e => setRejectionReasons(prev => ({ ...prev, [insight.id]: e.target.value }))}
-                                className="w-48"
-                              />
-                            </div>
+                            
                           </td>
                         </tr>
                       ))}

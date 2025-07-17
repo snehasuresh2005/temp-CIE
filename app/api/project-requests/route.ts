@@ -113,6 +113,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    // Check if the project exists and enrollment is open
+    const project = await prisma.project.findUnique({
+      where: { id: project_id },
+    })
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 })
+    }
+
+    // For faculty-assigned projects, check enrollment status
+    if (project.type === "FACULTY_ASSIGNED") {
+      if (project.status !== "APPROVED") {
+        return NextResponse.json({ 
+          error: "Project must be approved before students can apply" 
+        }, { status: 400 })
+      }
+
+      if (project.enrollment_status !== "OPEN") {
+        return NextResponse.json({ 
+          error: "Enrollment is not open for this project" 
+        }, { status: 400 })
+      }
+    }
+
+    // Check if student has already applied
+    const existingRequest = await prisma.projectRequest.findUnique({
+      where: {
+        project_id_student_id: {
+          project_id: project_id,
+          student_id: student_id
+        }
+      }
+    })
+
+    if (existingRequest) {
+      return NextResponse.json({ 
+        error: "You have already applied for this project" 
+      }, { status: 400 })
+    }
+
     const projectRequest = await prisma.projectRequest.create({
       data: {
         project_id,

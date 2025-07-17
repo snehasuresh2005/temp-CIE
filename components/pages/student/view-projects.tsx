@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock, CheckCircle, Trash2, User, Mail } from "lucide-react"
+import { FolderOpen, Calendar, FileText, Upload, RefreshCw, Plus, Clock, CheckCircle, Trash2, User, Mail, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import {
@@ -43,6 +43,10 @@ interface Project {
   accepted_by?: string
   status: string
   type: string
+  enrollment_status?: string
+  enrollment_cap?: number
+  enrollment_start_date?: string
+  enrollment_end_date?: string
   submission?: ProjectSubmission
   project_requests?: ProjectRequest[]
   faculty_creator?: {
@@ -77,6 +81,8 @@ interface ProjectRequest {
   faculty_notes?: string
   accepted_date?: string
   rejected_date?: string
+  resume_id?: string
+  resume_path?: string
   faculty?: {
     user: {
       name: string
@@ -127,10 +133,14 @@ export function ViewProjects() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isGradeDialogOpen, setIsGradeDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [projectToApply, setProjectToApply] = useState<Project | null>(null)
   const [submissionContent, setSubmissionContent] = useState("")
   const [submissionFile, setSubmissionFile] = useState<File | null>(null)
+  const [applicationNotes, setApplicationNotes] = useState("")
+  const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [activeTab, setActiveTab] = useState<'my-projects' | 'available-projects'>('my-projects')
   const { toast } = useToast()
 
@@ -453,11 +463,30 @@ export function ViewProjects() {
   const enrolledCourses = courses.filter(course => course.course_enrollments.includes(user?.id ?? ''))
 
   // Filter projects based on active tab
-  const myProjects = projects.filter(project => project.created_by === user?.id)
+  const myProjects = projects.filter(project => {
+    // Only show projects where the student is directly involved:
+    // 1. Student-proposed projects created by the current student
+    // 2. Faculty-assigned projects where the student has an APPROVED application
+    if (project.type === "STUDENT_PROPOSED" && project.created_by === user?.id) {
+      return true
+    }
+    if (project.type === "FACULTY_ASSIGNED") {
+      // Check if student has an approved application for this project
+      const approvedApplication = project.project_requests?.find(req => 
+        req.student_id === student?.id && req.status === "APPROVED"
+      )
+      return !!approvedApplication
+    }
+    return false
+  })
+
   const availableProjects = projects.filter(project => 
     project.type === "FACULTY_ASSIGNED" && 
-    (project.status === "APPROVED" || project.status === "ONGOING") &&
-    project.created_by !== user?.id
+    (project.status === "APPROVED") &&
+    project.created_by !== user?.id &&
+    // Only show if enrollment is open or if student hasn't applied yet
+    (project.enrollment_status === "OPEN" || 
+     !project.project_requests?.some(req => req.student_id === student?.id))
   )
 
   // Filter projects based on search and status
@@ -475,39 +504,57 @@ export function ViewProjects() {
   })
 
   const handleApplyToProject = async (projectId: string) => {
+    // Find the project to apply for
+    const project = projects.find(p => p.id === projectId)
+    if (!project || !project.faculty_creator) {
+      toast({
+        title: "Error",
+        description: "Project or faculty information not found",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setProjectToApply(project)
+    setApplicationNotes("")
+    setResumeFile(null)
+    setIsApplyDialogOpen(true)
+  }
+
+  const handleSubmitApplication = async () => {
+    if (!projectToApply || !resumeFile || !student?.id) {
+      toast({
+        title: "Error",
+        description: "Please select a resume file to upload",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      // Find the project to get the faculty creator
-      const project = projects.find(p => p.id === projectId)
-      if (!project || !project.faculty_creator) {
-        throw new Error("Project or faculty information not found")
-      }
+      const formData = new FormData()
+      formData.append("project_id", projectToApply.id)
+      formData.append("faculty_id", projectToApply.faculty_creator?.id || "")
+      formData.append("student_notes", applicationNotes)
+      formData.append("resume", resumeFile)
 
-      // Get the faculty ID from the faculty creator
-      const facultyId = project.faculty_creator.id
-
-      if (!student?.id) {
-        throw new Error("Student profile not found")
-      }
-
-      const response = await fetch("/api/project-requests", {
+      const response = await fetch("/api/project-applications", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "x-user-id": user?.id || "",
         },
-        body: JSON.stringify({
-          project_id: projectId,
-          student_id: student.id,
-          faculty_id: facultyId,
-          student_notes: "I would like to apply for this project.",
-        }),
+        body: formData,
       })
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Application submitted successfully!",
+          description: "Application submitted successfully with resume!",
         })
+        setIsApplyDialogOpen(false)
+        setProjectToApply(null)
+        setApplicationNotes("")
+        setResumeFile(null)
         fetchData() // Refresh data
       } else {
         const errorData = await response.json()
@@ -891,9 +938,19 @@ export function ViewProjects() {
               const facultyName = project.faculty_creator?.user.name || "Unknown Faculty"
               const facultyEmail = project.faculty_creator?.user.email || "Unknown"
               const course = courses.find((c) => c.id === project.course_id)
-              const hasApplied = project.project_requests?.some(req => 
-                req.student_id === student?.id && req.status !== "REJECTED"
+              
+              // Check if current student has applied to this specific project
+              const studentApplication = project.project_requests?.find(req => 
+                req.student_id === student?.id
               )
+              
+              // Determine if enrollment is open
+              const isEnrollmentOpen = project.enrollment_status === "OPEN"
+              const isEnrollmentClosed = project.enrollment_status === "CLOSED"
+              
+              // Get application count for this project
+              const applicationCount = project.project_requests?.length || 0
+              const enrollmentCap = project.enrollment_cap || 0
 
               return (
                 <Card key={project.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
@@ -923,8 +980,40 @@ export function ViewProjects() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-grow flex flex-col">
-                    <div className="mb-4">
-                      <Badge className="bg-green-100 text-green-800">Available</Badge>
+                    <div className="mb-4 space-y-2">
+                      {/* Enrollment Status Badge */}
+                      <Badge 
+                        className={
+                          isEnrollmentOpen ? "bg-green-100 text-green-800" :
+                          isEnrollmentClosed ? "bg-red-100 text-red-800" :
+                          "bg-yellow-100 text-yellow-800"
+                        }
+                      >
+                        {isEnrollmentOpen ? "Enrollment Open" :
+                         isEnrollmentClosed ? "Enrollment Closed" :
+                         "Enrollment Not Started"}
+                      </Badge>
+
+                      {/* Application Status for Current Student */}
+                      {studentApplication && (
+                        <Badge 
+                          variant="outline"
+                          className={
+                            studentApplication.status === "APPROVED" ? "border-green-500 text-green-700" :
+                            studentApplication.status === "REJECTED" ? "border-red-500 text-red-700" :
+                            "border-blue-500 text-blue-700"
+                          }
+                        >
+                          Your Application: {studentApplication.status}
+                        </Badge>
+                      )}
+
+                      {/* Enrollment Statistics */}
+                      {enrollmentCap > 0 && (
+                        <div className="text-sm text-gray-600">
+                          Applications: {applicationCount} / {enrollmentCap}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-grow">
                       <div className="space-y-2">
@@ -967,18 +1056,29 @@ export function ViewProjects() {
                     </div>
                   </CardContent>
                   <div className="p-6 pt-0">
-                    {hasApplied ? (
-                      <Button className="w-full bg-gray-600 hover:bg-gray-700" disabled>
+                    {/* Application Button Logic */}
+                    {studentApplication ? (
+                      // Student has already applied
+                      <Button className="w-full" disabled>
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Applied
+                        {studentApplication.status === "APPROVED" ? "Application Approved" :
+                         studentApplication.status === "REJECTED" ? "Application Rejected" :
+                         "Application Pending"}
                       </Button>
-                    ) : (
+                    ) : isEnrollmentOpen ? (
+                      // Enrollment is open and student hasn't applied
                       <Button
                         className="w-full bg-blue-600 hover:bg-blue-700"
                         onClick={() => handleApplyToProject(project.id)}
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Apply for Project
+                      </Button>
+                    ) : (
+                      // Enrollment is not open
+                      <Button className="w-full" disabled>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        {isEnrollmentClosed ? "Enrollment Closed" : "Enrollment Not Started"}
                       </Button>
                     )}
                   </div>
@@ -1122,6 +1222,67 @@ export function ViewProjects() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Project Application Dialog */}
+      <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Apply for Project</DialogTitle>
+            <DialogDescription>
+              Apply for "{projectToApply?.name}" with your resume and cover letter
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="application-notes">Cover Letter / Notes</Label>
+              <Textarea
+                id="application-notes"
+                value={applicationNotes}
+                onChange={(e) => setApplicationNotes(e.target.value)}
+                placeholder="Explain why you're interested in this project and what makes you a good fit..."
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="resume-upload">Resume (PDF required) *</Label>
+              <Input
+                id="resume-upload"
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                required
+              />
+              <p className="text-sm text-gray-600">
+                Please upload your resume in PDF format. This will be shared with the faculty member.
+              </p>
+            </div>
+            {projectToApply && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <h4 className="font-semibold text-sm">Project Details:</h4>
+                <p className="text-sm text-gray-700 mt-1">{projectToApply.description}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  <strong>Faculty:</strong> {projectToApply.faculty_creator?.user.name}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Due Date:</strong> {new Date(projectToApply.expected_completion_date).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsApplyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitApplication}
+              disabled={!resumeFile}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Submit Application
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

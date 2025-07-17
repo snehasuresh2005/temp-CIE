@@ -131,6 +131,32 @@ async function main() {
     }
   }
 
+   const labDomain = await prisma.domain.create({
+    data: {
+      name: 'Lab Components',
+      description: 'Domain for managing laboratory components and equipment',
+    }
+  });
+
+  const libraryDomain = await prisma.domain.create({
+    data: {
+      name: 'Library',
+      description: 'Domain for managing library items and books',
+    }
+  });
+
+  const platformMain = await prisma.domain.create({
+    data: {
+      name: 'Platform Manager',
+      description: 'Domain for managing platform-wide insights and configurations',
+    }
+  });
+  const developer = await prisma.domain.create({
+    data: {
+      name: 'Developer',
+      description: 'Domain for managing development tasks and projects',
+    }
+  });
   // Count users to confirm creation
   const userCount = await prisma.user.count();
   const adminCount = await prisma.admin.count();

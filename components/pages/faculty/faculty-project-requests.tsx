@@ -85,7 +85,7 @@ export function FacultyProjectRequests({ onBack }: FacultyProjectRequestsProps) 
     }
   }
 
-  const handleApproveProject = async (projectId: string, status: "ONGOING" | "REJECTED", notes?: string) => {
+  const handleApproveProject = async (projectId: string, status: "APPROVED" | "REJECTED" , notes?: string) => {
     try {
       const response = await fetch("/api/projects/approve", {
         method: "PUT",
@@ -127,6 +127,8 @@ export function FacultyProjectRequests({ onBack }: FacultyProjectRequestsProps) 
     switch (status) {
       case "PENDING":
         return "bg-yellow-100 text-yellow-800"
+      case "APPROVED":
+        return "bg-green-100 text-green-800"
       case "ONGOING":
         return "bg-blue-100 text-blue-800"
       case "COMPLETED":
@@ -232,7 +234,6 @@ export function FacultyProjectRequests({ onBack }: FacultyProjectRequestsProps) 
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Approve Project</DialogTitle>
-                          <DialogDescription>Add any notes for the faculty (optional)</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
@@ -251,7 +252,7 @@ export function FacultyProjectRequests({ onBack }: FacultyProjectRequestsProps) 
                             </Button>
                             <Button
                               onClick={() => {
-                                handleApproveProject(project.id, "ONGOING", facultyNotes)
+                                handleApproveProject(project.id, "APPROVED", facultyNotes)
                                 setFacultyNotes("")
                               }}
                             >
