@@ -131,7 +131,7 @@ async function main() {
     }
   }
 
-   const labDomain = await prisma.domain.create({
+  const labDomain = await prisma.domain.create({
     data: {
       name: 'Lab Components',
       description: 'Domain for managing laboratory components and equipment',
@@ -157,6 +157,26 @@ async function main() {
       description: 'Domain for managing development tasks and projects',
     }
   });
+
+  // Assign domain coordinators
+  await prisma.domainCoordinator.create({
+    data: {
+      domain_id: labDomain.id,
+      faculty_id: createdUsers['cieoffice@pes.edu'].faculty?.id,
+      assigned_by: createdUsers['cie.admin@pes.edu'].id,
+      assigned_at: new Date(),
+    }
+  });
+
+  await prisma.domainCoordinator.create({
+    data: {
+      domain_id: libraryDomain.id,
+      faculty_id: createdUsers['sathya.prasad@pes.edu'].faculty?.id,
+      assigned_by: createdUsers['cie.admin@pes.edu'].id,
+      assigned_at: new Date(),
+    }
+  });
+
   // Count users to confirm creation
   const userCount = await prisma.user.count();
   const adminCount = await prisma.admin.count();
@@ -345,7 +365,7 @@ async function main() {
       purchase_date: new Date("2025-06-10T00:00:00.000Z"),
       created_by: createdUsers['cie.admin@pes.edu'].id,
       modified_by: createdUsers['cie.admin@pes.edu'].id,
-      domain_id: (await prisma.domain.findFirst({ where: { name: 'Lab Components' } }))?.id || null, // Assign to Lab Components domain
+      domain_id: labDomain.id,
     }
   });
 
@@ -368,7 +388,7 @@ async function main() {
       purchase_date: new Date("2025-06-06T00:00:00.000Z"),
       created_by: createdUsers['cie.admin@pes.edu'].id,
       modified_by: null,
-      domain_id: (await prisma.domain.findFirst({ where: { name: 'Lab Components' } }))?.id || null, // Assign to Lab Components domain
+      domain_id: labDomain.id,
     }
   });
 
@@ -391,7 +411,7 @@ async function main() {
       purchase_date: new Date("2025-06-19T00:00:00.000Z"),
       created_by: createdUsers['cie.admin@pes.edu'].id,
       modified_by: null,
-      domain_id: (await prisma.domain.findFirst({ where: { name: 'Lab Components' } }))?.id || null, // Assign to Lab Components domain
+      domain_id: labDomain.id,
     }
   });
 
@@ -415,7 +435,7 @@ async function main() {
       purchase_date: new Date("2025-06-20T00:00:00.000Z"),
       created_by: createdUsers['cie.admin@pes.edu'].id,
       modified_by: null,
-      domain_id: (await prisma.domain.findFirst({ where: { name: 'Lab Components' } }))?.id || null,
+      domain_id: labDomain.id,
     }
   });
 
@@ -438,7 +458,7 @@ async function main() {
       purchase_date: new Date("2025-06-21T00:00:00.000Z"),
       created_by: createdUsers['cie.admin@pes.edu'].id,
       modified_by: null,
-      domain_id: (await prisma.domain.findFirst({ where: { name: 'Lab Components' } }))?.id || null,
+      domain_id: labDomain.id,
     }
   });
 
@@ -464,8 +484,8 @@ async function main() {
       purchase_date: new Date("2025-06-15T00:00:00.000Z"),
       created_by: createdUsers['cie.admin@pes.edu'].id,
       modified_by: null,
-      domain_id: (await prisma.domain.findFirst({ where: { name: 'Library' } }))?.id || null,
-      faculty_id: createdUsers['sathya.prasad@pes.edu']?.id || null,
+      domain_id: libraryDomain.id,
+      faculty_id: createdUsers['sathya.prasad@pes.edu'].faculty?.id, // Changed to use faculty.id
     }
   });
 
@@ -478,7 +498,7 @@ async function main() {
       components_needed: [arduinoComponent.id, displayComponent.id],
       course_id: course_CS101.id,
       created_by: createdUsers['preetham@pes.edu'].id,
-      accepted_by: createdUsers['madhukar@pes.edu']?.id || null,
+      accepted_by: createdUsers['cieoffice@pes.edu'].id,
       expected_completion_date: new Date("2025-07-03T08:54:00.000Z"),
       modified_by: null,
       status: "ONGOING", // Approved student project
@@ -492,8 +512,8 @@ async function main() {
       description: "Development of a comprehensive IoT system for monitoring environmental parameters like temperature, humidity, air quality, and noise levels in real-time with cloud-based data analytics.",
       components_needed: [nodeMcuComponent.id, breadboardComponent.id, servoComponent.id],
       course_id: course_CS102.id,
-      created_by: createdUsers['tarunrama@pes.edu']?.id || createdUsers['cie.admin@pes.edu'].id,
-      accepted_by: createdUsers['madhukar@pes.edu']?.id || null,
+      created_by: createdUsers['tarunrama@pes.edu'].id,
+      accepted_by: createdUsers['cieoffice@pes.edu'].id,
       expected_completion_date: new Date("2025-08-15T00:00:00.000Z"),
       modified_by: null,
       status: "ONGOING", // Approved faculty project
@@ -514,7 +534,7 @@ async function main() {
       request_date: new Date("2025-07-01T10:00:00.000Z"),
       required_date: new Date("2025-07-15T17:00:00.000Z"),
       status: "COLLECTED",
-      approved_by: createdUsers['madhukar@pes.edu']?.id,
+      approved_by: createdUsers['cieoffice@pes.edu'].faculty.id, // This is a Faculty.id
       approved_date: new Date("2025-07-01T14:00:00.000Z"),
       collection_date: new Date("2025-07-02T09:00:00.000Z"),
       project_id: studentProject.id,
@@ -532,7 +552,7 @@ async function main() {
       request_date: new Date("2025-07-02T11:00:00.000Z"),
       required_date: new Date("2025-07-16T17:00:00.000Z"),
       status: "USER_RETURNED",
-      approved_by: createdUsers['madhukar@pes.edu']?.id,
+      approved_by: createdUsers['cieoffice@pes.edu'].faculty.id, // This is a Faculty.id
       approved_date: new Date("2025-07-02T15:00:00.000Z"),
       collection_date: new Date("2025-07-03T10:00:00.000Z"),
       return_date: new Date("2025-07-10T14:00:00.000Z"),
@@ -551,7 +571,7 @@ async function main() {
       request_date: new Date("2025-07-03T09:00:00.000Z"),
       required_date: new Date("2025-07-17T17:00:00.000Z"),
       status: "USER_RETURNED",
-      approved_by: createdUsers['madhukar@pes.edu']?.id,
+      approved_by: createdUsers['cieoffice@pes.edu'].faculty.id, // This is a Faculty.id
       approved_date: new Date("2025-07-03T13:00:00.000Z"),
       collection_date: new Date("2025-07-04T11:00:00.000Z"),
       return_date: new Date("2025-07-11T16:00:00.000Z"),
@@ -563,14 +583,14 @@ async function main() {
   // Faculty request - COLLECTED status
   const facultyRequest1 = await prisma.componentRequest.create({
     data: {
-      faculty_id: createdUsers['tarunrama@pes.edu']?.id,
+      faculty_id: createdUsers['tarunrama@pes.edu'].faculty.id, // Use Faculty.id, not User.id
       component_id: nodeMcuComponent.id,
       quantity: 3,
       purpose: "IoT sensor nodes for environmental monitoring research",
       request_date: new Date("2025-07-05T08:00:00.000Z"),
       required_date: new Date("2025-08-05T17:00:00.000Z"),
       status: "COLLECTED",
-      approved_by: createdUsers['madhukar@pes.edu']?.id,
+      approved_by: createdUsers['cieoffice@pes.edu'].faculty.id, // This is a Faculty.id
       approved_date: new Date("2025-07-05T12:00:00.000Z"),
       collection_date: new Date("2025-07-06T10:00:00.000Z"),
       project_id: facultyProject.id,
@@ -581,14 +601,14 @@ async function main() {
   // Faculty request - USER_RETURNED status
   const facultyRequest2 = await prisma.componentRequest.create({
     data: {
-      faculty_id: createdUsers['sathya.prasad@pes.edu']?.id,
+      faculty_id: createdUsers['sathya.prasad@pes.edu'].faculty.id, // Use Faculty.id, not User.id
       component_id: servoComponent.id,
       quantity: 2,
       purpose: "Actuator testing for automation prototype",
       request_date: new Date("2025-07-06T09:30:00.000Z"),
       required_date: new Date("2025-07-20T17:00:00.000Z"),
       status: "USER_RETURNED",
-      approved_by: createdUsers['madhukar@pes.edu']?.id,
+      approved_by: createdUsers['cieoffice@pes.edu'].faculty.id, // This is a Faculty.id
       approved_date: new Date("2025-07-06T14:00:00.000Z"),
       collection_date: new Date("2025-07-07T09:00:00.000Z"),
       return_date: new Date("2025-07-12T15:30:00.000Z"),
@@ -607,7 +627,7 @@ async function main() {
       request_date: new Date("2025-06-28T10:00:00.000Z"),
       required_date: new Date("2025-07-05T17:00:00.000Z"),
       status: "RETURNED",
-      approved_by: createdUsers['madhukar@pes.edu']?.id,
+      approved_by: createdUsers['cieoffice@pes.edu'].faculty.id, // This is a Faculty.id
       approved_date: new Date("2025-06-28T14:00:00.000Z"),
       collection_date: new Date("2025-06-29T11:00:00.000Z"),
       return_date: new Date("2025-07-05T16:30:00.000Z"),
@@ -619,7 +639,7 @@ async function main() {
   // Summary
   console.log('\n🎉 Seed completed successfully!');
   console.log('\n📊 Summary of created data:');
-  console.log(`   - Domains: 2 (Lab Components, Library)`);
+  console.log(`   - Domains: 4 (Lab Components, Library, Platform Manager, Developer)`);
   console.log(`   - Domain Coordinators: 2`);
   console.log(`   - Courses: 2`);
   console.log(`   - Course Units: 2`);
@@ -633,8 +653,8 @@ async function main() {
   console.log('   - USER_RETURNED: User confirmed return, waiting for coordinator verification');
   console.log('   - RETURNED: Complete return cycle');
   console.log('\n👨‍💼 Coordinator Assignments:');
-  console.log('   - Madhukar N: Lab Components Domain');
-  console.log('   - Sathya Prasad: Library Domain');
+  console.log(`   - Madhukar N: Lab Components Domain (${labDomain.name})`);
+  console.log(`   - Sathya Prasad: Library Domain (${libraryDomain.name})`);
 }
 
 main()

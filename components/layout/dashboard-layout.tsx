@@ -289,7 +289,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           "fixed inset-y-0 left-0 z-40 transform transition-all duration-500 ease-in-out lg:translate-x-0 rounded-r-2xl overflow-hidden shadow-2xl",
           sidebarWidth,
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          "bg-sidebar text-sidebar-foreground"
+          "bg-[#e3f0ff] dark:bg-sidebar text-sidebar-foreground"
         )}
         style={{
           boxShadow: '4px 0 15px rgba(0, 0, 0, 0.1)'

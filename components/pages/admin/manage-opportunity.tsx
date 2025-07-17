@@ -18,6 +18,8 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const initialForm = {
   title: '',
@@ -66,6 +68,9 @@ export default function ManageOpportunity() {
   const [facultyOptions, setFacultyOptions] = useState<Faculty[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [tab, setTab] = useState<'all' | 'TA' | 'INTERN' | 'RA'>('all');
+  const [remunerationFilter, setRemunerationFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
 
   useEffect(() => {
     fetch('/api/opportunities')
@@ -129,6 +134,7 @@ export default function ManageOpportunity() {
   const handleEdit = (opp: Opportunity) => {
     setForm({
       ...opp,
+      filePath: opp.filePath || '',
       startDate: opp.startDate?.slice(0, 10) || '',
       endDate: opp.endDate?.slice(0, 10) || '',
       applicationStartDate: opp.applicationStartDate?.slice(0, 10) || '',
@@ -165,15 +171,34 @@ export default function ManageOpportunity() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Opportunities</h2>
-        <Button onClick={() => setShowForm(f => !f)} variant="default">
-          {showForm ? 'Cancel' : 'Add New Opportunity'}
+    <div className="p-4">
+      <Tabs value={tab} onValueChange={v => setTab(v as 'all' | 'TA' | 'INTERN' | 'RA')} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="all">All Opportunities</TabsTrigger>
+          <TabsTrigger value="TA">TA</TabsTrigger>
+          <TabsTrigger value="INTERN">Intern</TabsTrigger>
+          <TabsTrigger value="RA">RA</TabsTrigger>
+        </TabsList>
+        <div className="flex items-center mb-4">
+          <label className="mr-2 font-medium">Filter by Remuneration:</label>
+          <select
+            className="input w-32"
+            value={remunerationFilter}
+            onChange={e => setRemunerationFilter(e.target.value as 'ALL' | 'PAID' | 'UNPAID')}
+          >
+            <option value="ALL">All</option>
+            <option value="PAID">Paid</option>
+            <option value="UNPAID">Unpaid</option>
+          </select>
+        </div>
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogTrigger asChild>
+          <Button variant="default">
+            Add New Opportunity
         </Button>
-      </div>
-      {showForm && (
-        <Card className="mb-8">
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <Card className="mb-0 shadow-none border-none">
           <CardHeader>
             <CardTitle>{editingId ? 'Edit Opportunity' : 'Add New Opportunity'}</CardTitle>
           </CardHeader>
@@ -183,45 +208,28 @@ export default function ManageOpportunity() {
                 <label className="block font-medium">Title</label>
                 <Input name="title" value={form.title} onChange={handleChange} required />
               </div>
+                <div>
+                  <label className="block font-medium">Description</label>
+                  <Textarea name="description" value={form.description} onChange={handleChange} required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block font-medium">Type</label>
-                <select name="type" value={form.type} onChange={handleChange} className="input">
+                    <select name="type" value={form.type} onChange={handleChange} className="input w-full">
                   <option value="INTERN">Intern</option>
                   <option value="TA">TA</option>
                   <option value="RA">RA</option>
                 </select>
               </div>
               <div>
-                <label className="block font-medium">Description</label>
-                <Textarea name="description" value={form.description} onChange={handleChange} required />
-              </div>
-              <div className="flex gap-4">
-                <div>
-                  <label className="block font-medium">Start Date</label>
-                  <Input type="date" name="startDate" value={form.startDate} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="block font-medium">End Date</label>
-                  <Input type="date" name="endDate" value={form.endDate} onChange={handleChange} required />
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div>
-                  <label className="block font-medium">Application Start</label>
-                  <Input type="date" name="applicationStartDate" value={form.applicationStartDate} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="block font-medium">Application End</label>
-                  <Input type="date" name="applicationEndDate" value={form.applicationEndDate} onChange={handleChange} required />
-                </div>
-              </div>
-              <div>
                 <label className="block font-medium">Remuneration</label>
-                <select name="remuneration" value={form.remuneration} onChange={handleChange} className="input">
+                    <select name="remuneration" value={form.remuneration} onChange={handleChange} className="input w-full">
                   <option value="PAID">Paid</option>
                   <option value="UNPAID">Unpaid</option>
                 </select>
               </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="facultyId">Faculty</Label>
                 <Select
@@ -243,40 +251,86 @@ export default function ManageOpportunity() {
               <div>
                 <label className="block font-medium">Capacity</label>
                 <Input type="number" name="capacity" value={form.capacity} onChange={handleChange} min={1} required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium">Start Date</label>
+                    <Input type="date" name="startDate" value={form.startDate} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <label className="block font-medium">End Date</label>
+                    <Input type="date" name="endDate" value={form.endDate} onChange={handleChange} required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium">Application Start Date</label>
+                    <Input type="date" name="applicationStartDate" value={form.applicationStartDate} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <label className="block font-medium">Application End Date</label>
+                    <Input type="date" name="applicationEndDate" value={form.applicationEndDate} onChange={handleChange} required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium">File Path</label>
+                    <Input name="filePath" value={form.filePath} onChange={handleChange} />
+                  </div>
               </div>
               {error && <div className="text-red-600">{error}</div>}
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                    Cancel
+                  </Button>
               <Button type="submit" variant="default" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Opportunity'}
+                    {editingId ? (loading ? 'Updating...' : 'Update Opportunity') : (loading ? 'Creating...' : 'Create Opportunity')}
               </Button>
+                </div>
             </form>
           </CardContent>
         </Card>
-      )}
-      <h3 className="text-xl font-semibold mb-2">All Opportunities</h3>
-      <div className="space-y-4">
-        {opportunities.length === 0 && <div>No opportunities found.</div>}
-        {opportunities.map((opp) => {
-          return (
-            <Card key={opp.id} className="border p-4 rounded">
-              <CardContent>
-                <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
-                <div className="text-gray-600 mb-2">{opp.description}</div>
-                <div className="flex items-center gap-2 text-sm mb-1">
-                  <UserIcon className="h-4 w-4 text-gray-500" />
-                  {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
-                    <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
-                  ) : (
-                    <span>{opp.facultyId}</span>
-                  )}
-                </div>
-                <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
-                <div className="text-sm">Capacity: {opp.capacity}</div>
-                <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
-                <div className="text-sm">Status: {opp.status}</div>
-                <div className="flex gap-2 mt-2">
+        </DialogContent>
+      </Dialog>
+      <Button
+        variant={editMode ? "default" : "outline"}
+        onClick={() => setEditMode((v) => !v)}
+      >
+        {editMode ? "Editing..." : "Edit Mode"}
+      </Button>
+      <TabsContent value="all">
+        <h3 className="text-xl font-semibold mb-2">All Opportunities</h3>
+        <div className="flex flex-col items-start gap-4">
+          {opportunities.filter(opp =>
+            (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).length === 0 && <div>No opportunities found.</div>}
+          {opportunities.filter(opp =>
+            (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).map((opp) => (
+            <div key={opp.id} className="admin-card">
+              <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
+              <div className="text-gray-600 mb-2">{opp.description}</div>
+              <div className="flex items-center gap-2 text-sm mb-1">
+                <UserIcon className="h-4 w-4 text-gray-500" />
+                {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
+                  <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
+                ) : (
+                  <span>{opp.facultyId}</span>
+                )}
+              </div>
+              <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
+              <div className="text-sm">Capacity: {opp.capacity}</div>
+              <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
+              <div className="text-sm">Status: {opp.status}</div>
+              {editMode && (
+                <div className="flex gap-2 mt-4">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" onClick={() => setDeleteId(opp.id)}>Delete</Button>
+                      <button className="btn-delete" onClick={() => setDeleteId(opp.id)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Delete
+                      </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
@@ -291,13 +345,185 @@ export default function ManageOpportunity() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  <Button variant="secondary" size="sm" onClick={() => handleEdit(opp)}>Edit</Button>
+                  <button className="btn-edit" onClick={() => handleEdit(opp)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                    Edit
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+              )}
+            </div>
+          ))}
+        </div>
+      </TabsContent>
+      <TabsContent value="TA">
+        <h3 className="text-xl font-semibold mb-2">TA Opportunities</h3>
+        <div className="flex flex-col items-start gap-4">
+          {opportunities.filter(opp =>
+            opp.type === 'TA' && (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).length === 0 && <div>No opportunities found.</div>}
+          {opportunities.filter(opp =>
+            opp.type === 'TA' && (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).map((opp) => (
+            <div key={opp.id} className="admin-card">
+              <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
+              <div className="text-gray-600 mb-2">{opp.description}</div>
+              <div className="flex items-center gap-2 text-sm mb-1">
+                <UserIcon className="h-4 w-4 text-gray-500" />
+                {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
+                  <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
+                ) : (
+                  <span>{opp.facultyId}</span>
+                )}
+              </div>
+              <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
+              <div className="text-sm">Capacity: {opp.capacity}</div>
+              <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
+              <div className="text-sm">Status: {opp.status}</div>
+              {editMode && (
+                <div className="flex gap-2 mt-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="btn-delete" onClick={() => setDeleteId(opp.id)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Delete
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this opportunity?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(deleteId!)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <button className="btn-edit" onClick={() => handleEdit(opp)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </TabsContent>
+      <TabsContent value="INTERN">
+        <h3 className="text-xl font-semibold mb-2">Intern Opportunities</h3>
+        <div className="flex flex-col items-start gap-4">
+          {opportunities.filter(opp =>
+            opp.type === 'INTERN' && (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).length === 0 && <div>No opportunities found.</div>}
+          {opportunities.filter(opp =>
+            opp.type === 'INTERN' && (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).map((opp) => (
+            <div key={opp.id} className="admin-card">
+              <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
+              <div className="text-gray-600 mb-2">{opp.description}</div>
+              <div className="flex items-center gap-2 text-sm mb-1">
+                <UserIcon className="h-4 w-4 text-gray-500" />
+                {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
+                  <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
+                ) : (
+                  <span>{opp.facultyId}</span>
+                )}
+              </div>
+              <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
+              <div className="text-sm">Capacity: {opp.capacity}</div>
+              <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
+              <div className="text-sm">Status: {opp.status}</div>
+              {editMode && (
+                <div className="flex gap-2 mt-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="btn-delete" onClick={() => setDeleteId(opp.id)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Delete
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this opportunity?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(deleteId!)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <button className="btn-edit" onClick={() => handleEdit(opp)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </TabsContent>
+      <TabsContent value="RA">
+        <h3 className="text-xl font-semibold mb-2">RA Opportunities</h3>
+        <div className="flex flex-col items-start gap-4">
+          {opportunities.filter(opp =>
+            opp.type === 'RA' && (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).length === 0 && <div>No opportunities found.</div>}
+          {opportunities.filter(opp =>
+            opp.type === 'RA' && (remunerationFilter === 'ALL' || opp.remuneration === remunerationFilter)
+          ).map((opp) => (
+            <div key={opp.id} className="admin-card">
+                <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
+                <div className="text-gray-600 mb-2">{opp.description}</div>
+                <div className="flex items-center gap-2 text-sm mb-1">
+                  <UserIcon className="h-4 w-4 text-gray-500" />
+                  {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
+                    <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
+                  ) : (
+                    <span>{opp.facultyId}</span>
+                  )}
+                </div>
+                <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
+                <div className="text-sm">Capacity: {opp.capacity}</div>
+                <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
+                <div className="text-sm">Status: {opp.status}</div>
+              {editMode && (
+                <div className="flex gap-2 mt-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="btn-delete" onClick={() => setDeleteId(opp.id)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Delete
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this opportunity?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(deleteId!)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <button className="btn-edit" onClick={() => handleEdit(opp)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
       </div>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 } 
