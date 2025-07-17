@@ -7,7 +7,14 @@ import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import StatusBarChart from "@/components/StatusBarChart";
-import { BarChart3, ClipboardCheck, List, XCircle, Clock } from "lucide-react";
+import { BarChart3, ClipboardCheck, List, XCircle, Clock, Info, Search, Filter } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const STATUS_LABELS: Record<string, string> = {
   APPROVED: "Assigned",
@@ -27,9 +34,11 @@ export default function DeveloperFeedbacks() {
   const [historySearchTerm, setHistorySearchTerm] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
   const [historyPage, setHistoryPage] = useState(1);
-  const historyRowsPerPage = 8;
+  const historyRowsPerPage = 4;
   const [resubmittingId, setResubmittingId] = useState<string | null>(null);
   const [resubmittedIds, setResubmittedIds] = useState<string[]>([]);
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null);
+  const [infoDialogImage, setInfoDialogImage] = useState<string | null>(null);
 
   // Tab filters
   const awaiting = feedbacks.filter(i => i.status === "APPROVED");
@@ -40,13 +49,13 @@ export default function DeveloperFeedbacks() {
   // Combine rejected and in-progress/approved tasks for unified pagination
   const combinedTasks = [...rejected, ...inProgress];
   const [tasksPage, setTasksPage] = useState(1);
-  const cardsPerPage = 5;
+  const cardsPerPage = 4;
   const tasksTotalPages = Math.max(1, Math.ceil(combinedTasks.length / cardsPerPage));
   const paginatedTasks = combinedTasks.slice((tasksPage - 1) * cardsPerPage, tasksPage * cardsPerPage);
 
   // Pagination for rejected tasks
   const [rejectedPage, setRejectedPage] = useState(1);
-  const rejectedCardsPerPage = 5;
+  const rejectedCardsPerPage = 4;
   const rejectedTotalPages = Math.max(1, Math.ceil(rejected.length / rejectedCardsPerPage));
   const paginatedRejected = rejected.slice((rejectedPage - 1) * rejectedCardsPerPage, rejectedPage * rejectedCardsPerPage);
 
@@ -183,6 +192,23 @@ export default function DeveloperFeedbacks() {
   // Reset page if filter/search changes
   useEffect(() => { setHistoryPage(1); }, [historySearchTerm, historyStatusFilter]);
 
+  function getStatusBadge(status: string) {
+    switch (status) {
+      case "APPROVED":
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Assigned</Badge>;
+      case "IN_PROGRESS":
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">In Progress</Badge>;
+      case "DONE":
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-200">Awaiting Approval</Badge>;
+      case "COMPLETED":
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Completed</Badge>;
+      case "REJECTED":
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Card-style navigation */}
@@ -256,61 +282,87 @@ export default function DeveloperFeedbacks() {
             <CardContent>
               {loading ? <div>Loading...</div> : combinedTasks.length === 0 ? <div className="text-gray-500">No available tasks.</div> : (
                 <>
-                  <div className="space-y-3">
-                    {paginatedTasks.map(feedback => (
-                      feedback.status === 'REJECTED' ? (
-                        <div key={feedback.id} className="border-2 border-red-400 rounded p-3 bg-red-50">
-                          <div className="flex items-center justify-between">
-                            <div className="font-medium">{feedback.title}</div>
-                            <div className="flex gap-2 items-center">
-                              <Badge variant="destructive">Rejected</Badge>
-                              {resubmittedIds.includes(feedback.id) && <Badge className="bg-yellow-400 text-black">Resubmitted</Badge>}
-                            </div>
-                          </div>
-                          <div className="text-xs text-gray-600 mt-1">{feedback.description}</div>
-                          <div className="mt-2"><ImagePreview src={feedback.image} /></div>
-                          {feedback.rejection_reason && (
-                            <div className="text-xs text-red-600 mt-1 font-semibold">Reason: {feedback.rejection_reason}</div>
-                          )}
-                          <div className="flex gap-2 mt-2 items-center">
-                            {!(resubmittedIds.includes(feedback.id)) && (
-                              <>
-                                <input type="file" accept="image/*" onChange={e => handleRectifiedImageChange(e, feedback.id)} />
-                                {rectifiedImagePreview && rectifiedForId === feedback.id && (
-                                  <img src={rectifiedImagePreview} alt="Rectified Preview" className="h-12 w-12 object-cover rounded border" />
-                                )}
-                                <Button size="sm" disabled={actionLoading || resubmittingId === feedback.id} onClick={() => handleMarkDoneWithImage(feedback.id)}>Resubmit as Done</Button>
-                              </>
-                            )}
-                            {resubmittingId === feedback.id && <span className="text-xs text-red-500 ml-2 animate-pulse">Resubmitting...</span>}
-                          </div>
-                        </div>
-                      ) : (
-                        <div key={feedback.id} className="border rounded p-3 bg-gray-50">
-                          <div className="flex items-center justify-between">
-                            <div className="font-medium">{feedback.title}</div>
-                            <Badge variant="outline">{STATUS_LABELS[feedback.status]}</Badge>
-                          </div>
-                          <div className="text-xs text-gray-600 mt-1">{feedback.description}</div>
-                          <div className="mt-2"><ImagePreview src={feedback.image} /></div>
-                          {feedback.status !== "DONE" && feedback.status !== "COMPLETED" && (
-                            <div className="flex gap-2 mt-2 items-center">
-                              <input type="file" accept="image/*" onChange={e => handleRectifiedImageChange(e, feedback.id)} />
-                              {rectifiedImagePreview && rectifiedForId === feedback.id && (
-                                <img src={rectifiedImagePreview} alt="Rectified Preview" className="h-12 w-12 object-cover rounded border" />
+                  <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr>
+                          <th className="text-left font-bold text-gray-700 px-4 py-3 w-1/12 min-w-[60px] text-base">Title</th>
+                          <th className="text-left font-bold text-gray-700 px-4 py-3 w-1/8 min-w-[60px] text-base">Category</th>
+                          <th className="text-left font-bold text-gray-700 px-4 py-3 w-1/3 min-w-[160px] pl-4 text-base">Description</th>
+                          <th className="text-left font-bold text-gray-700 px-4 py-3 w-1/12 min-w-[40px] text-base">Image</th>
+                          <th className="text-left font-bold text-gray-700 px-8 py-3 text-base">Status</th>
+                          <th className="text-left font-bold text-gray-700 px-8 py-3 text-base">Date</th>
+                          <th className="text-left font-bold text-gray-700 px-8 py-3 text-base">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedTasks.map(feedback => (
+                          <tr key={feedback.id} className="border-t">
+                            <td className="px-4 py-3 align-top w-1/12 min-w-[60px] font-medium text-base">{feedback.title}</td>
+                            <td className="px-4 py-3 align-top w-1/8 min-w-[60px] text-base">{feedback.category}</td>
+                            <td className="px-4 py-3 align-top w-1/3 min-w-[160px] pl-4 text-base whitespace-normal break-words">{feedback.description}</td>
+                            <td className="px-4 py-3 align-top w-1/12 min-w-[40px]">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-gray-400 hover:text-gray-600"
+                                onClick={() => {
+                                  setInfoDialogOpen(feedback.id);
+                                  setInfoDialogImage(feedback.image || null);
+                                }}
+                                aria-label="View Screenshot"
+                              >
+                                <Info className="h-5 w-5" />
+                              </Button>
+                            </td>
+                            <td className="px-8 py-3 align-top">
+                              {getStatusBadge(feedback.status)}
+                            </td>
+                            <td className="px-8 py-3 align-top text-base whitespace-nowrap">{new Date(feedback.updated_at || feedback.created_at).toLocaleDateString()}</td>
+                            <td className="px-8 py-3 align-top">
+                              {feedback.status === "DONE" ? (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled
+                                  className="opacity-60 cursor-not-allowed"
+                                >
+                                  Awaiting Approval
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleMarkDoneWithImage(feedback.id)}
+                                  disabled={actionLoading || resubmittingId === feedback.id}
+                                >
+                                  {resubmittingId === feedback.id ? "Marking..." : "Mark as Done"}
+                                </Button>
                               )}
-                              <Button size="sm" disabled={actionLoading} onClick={() => handleMarkDoneWithImage(feedback.id)}>Mark as Done</Button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    ))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                   <div className="flex justify-between items-center mt-4">
                     <Button size="sm" variant="outline" onClick={() => setTasksPage(p => Math.max(1, p - 1))} disabled={tasksPage === 1}>Previous</Button>
                     <span className="text-xs text-gray-600">Page {tasksPage} of {tasksTotalPages}</span>
                     <Button size="sm" variant="outline" onClick={() => setTasksPage(p => Math.min(tasksTotalPages, p + 1))} disabled={tasksPage === tasksTotalPages}>Next</Button>
                   </div>
+                  <Dialog open={!!infoDialogOpen} onOpenChange={open => { if (!open) { setInfoDialogOpen(null); setInfoDialogImage(null); } }}>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Screenshot</DialogTitle>
+                        <DialogDescription>Submitted screenshot for this feedback (if any)</DialogDescription>
+                      </DialogHeader>
+                      {infoDialogImage ? (
+                        <img src={infoDialogImage} alt="Screenshot" className="w-full max-h-[400px] object-contain rounded border" />
+                      ) : (
+                        <div className="flex items-center justify-center h-40 text-gray-400">No screenshot available</div>
+                      )}
+                    </DialogContent>
+                  </Dialog>
                 </>
               )}
             </CardContent>
@@ -326,15 +378,19 @@ export default function DeveloperFeedbacks() {
                 <>
                   <div className="space-y-3">
                     {paginatedRejected.map(feedback => (
-                      <div key={feedback.id} className="border rounded p-3 bg-gray-50">
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium">{feedback.title}</div>
-                          <Badge variant="outline">{STATUS_LABELS[feedback.status]}</Badge>
+                      <div key={feedback.id} className="border-2 border-red-400 rounded p-3 bg-gray-50">
+                        <div className="flex flex-row items-center justify-between">
+                          <div className="flex flex-row items-center gap-8 text-base font-medium text-gray-900">
+                            <span className="font-bold">{feedback.title}</span>
+                            <span className="text-xs bg-gray-200 rounded px-2 py-0.5 font-medium">{feedback.category}</span>
+                            <span className="text-sm text-gray-700">{feedback.description}</span>
+                          </div>
+                          <div className="ml-4">{getStatusBadge(feedback.status)}</div>
                         </div>
-                        <div className="text-xs text-gray-600 mt-1">{feedback.description}</div>
                         {feedback.rejection_reason && (
                           <div className="text-xs text-red-600 mt-1 font-semibold">Reason: {feedback.rejection_reason}</div>
                         )}
+                        {/* No resubmit button here. Task stays until backend status changes. */}
                       </div>
                     ))}
                   </div>
@@ -356,34 +412,41 @@ export default function DeveloperFeedbacks() {
             <CardContent>
               {/* Search and filter controls */}
               <div className="flex items-center space-x-4 mb-4">
-                <Input
-                  placeholder="Search by title or description..."
-                  value={historySearchTerm || ''}
-                  onChange={e => setHistorySearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
-                <select
-                  className="border rounded px-2 py-1 text-sm"
-                  value={historyStatusFilter || 'all'}
-                  onChange={e => setHistoryStatusFilter(e.target.value)}
-                >
-                  <option value="all">All</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
+                <div className="relative flex items-center">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search by title or description..."
+                    value={historySearchTerm || ''}
+                    onChange={e => setHistorySearchTerm(e.target.value)}
+                    className="max-w-sm pl-8"
+                  />
+                </div>
+                <div className="relative flex items-center">
+                  <Filter className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    className="border rounded px-8 py-1 text-sm appearance-none"
+                    value={historyStatusFilter || 'all'}
+                    onChange={e => setHistoryStatusFilter(e.target.value)}
+                    style={{ paddingLeft: '2.5rem' }}
+                  >
+                    <option value="all">All</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                </div>
               </div>
               {/* Table */}
               <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-base">
                   <thead>
                     <tr>
-                      <th className="text-left font-bold text-gray-700 px-4 py-3">Title</th>
-                      <th className="text-left font-bold text-gray-700 px-4 py-3">Description</th>
-                      <th className="text-left font-bold text-gray-700 px-4 py-3">Screenshot</th>
-                      <th className="text-left font-bold text-gray-700 px-4 py-3">Rectified Screenshot</th>
-                      <th className="text-left font-bold text-gray-700 px-4 py-3">Status</th>
-                      <th className="text-left font-bold text-gray-700 px-4 py-3">Date</th>
-                      <th className="text-left font-bold text-gray-700 px-4 py-3">Rejection Reason</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Title</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Category</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Description</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Image</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Status</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Date</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Rejection Reason</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -393,16 +456,29 @@ export default function DeveloperFeedbacks() {
                       </tr>
                     ) : (
                       paginatedHistory.map((feedback) => (
-                        <tr key={feedback.id} className="border-t">
-                          <td className="px-4 py-3 align-top font-medium text-sm truncate">{feedback.title}</td>
-                          <td className="px-4 py-3 align-top text-sm truncate">{feedback.description}</td>
-                          <td className="px-4 py-3 align-top"><ImagePreview src={feedback.image} /></td>
-                          <td className="px-4 py-3 align-top"><ImagePreview src={feedback.rectifiedImage} /></td>
-                          <td className="px-4 py-3 align-top text-sm">
-                            <Badge variant={feedback.status === 'REJECTED' ? 'destructive' : 'outline'}>{STATUS_LABELS[feedback.status]}</Badge>
+                        <tr key={feedback.id} className="border-t text-base">
+                          <td className="px-6 py-3 align-top font-medium text-sm truncate">{feedback.title}</td>
+                          <td className="px-6 py-3 align-top text-sm truncate">{feedback.category}</td>
+                          <td className="px-6 py-3 align-top text-sm whitespace-normal break-words max-w-xs">{feedback.description}</td>
+                          <td className="px-6 py-3 align-top">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-gray-400 hover:text-gray-600"
+                              onClick={() => {
+                                setInfoDialogOpen(feedback.id + "-image");
+                                setInfoDialogImage(feedback.image || null);
+                              }}
+                              aria-label="View Screenshot"
+                            >
+                              <Info className="h-5 w-5" />
+                            </Button>
                           </td>
-                          <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{new Date(feedback.updated_at || feedback.created_at).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 align-top text-sm text-red-600">{feedback.status === 'REJECTED' && feedback.rejection_reason ? feedback.rejection_reason : '-'}</td>
+                          <td className="px-6 py-3 align-top text-sm">
+                            {getStatusBadge(feedback.status)}
+                          </td>
+                          <td className="px-6 py-3 align-top text-sm whitespace-nowrap">{new Date(feedback.updated_at || feedback.created_at).toLocaleDateString()}</td>
+                          <td className="px-6 py-3 align-top text-sm text-red-600">{feedback.status === 'REJECTED' && feedback.rejection_reason ? feedback.rejection_reason : '-'}</td>
                         </tr>
                       ))
                     )}

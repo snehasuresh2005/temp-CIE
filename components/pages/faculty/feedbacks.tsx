@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
+import { Upload } from "lucide-react";
 
 export default function FacultyFeedbacks() {
   const { user } = useAuth();
@@ -104,7 +105,7 @@ export default function FacultyFeedbacks() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="pt-12 max-w-2xl w-full mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Submit an Feedback</CardTitle>
@@ -112,13 +113,31 @@ export default function FacultyFeedbacks() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              placeholder="Title"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              disabled={submitting}
-              maxLength={100}
-            />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Title"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  disabled={submitting}
+                  maxLength={100}
+                />
+              </div>
+              <div className="flex-1">
+                <select
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  disabled={submitting}
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {sidebarSections.map(section => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <Textarea
               placeholder="Describe your feedback or issue..."
               value={description}
@@ -127,28 +146,37 @@ export default function FacultyFeedbacks() {
               disabled={submitting}
               maxLength={1000}
             />
-            <select
-              className="w-full border rounded px-3 py-2 text-sm"
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              disabled={submitting}
-              required
-            >
-              <option value="">Select Category</option>
-              {sidebarSections.map(section => (
-                <option key={section} value={section}>{section}</option>
-              ))}
-            </select>
             <div>
               <label className="block text-sm font-medium mb-1">Upload Screenshot (optional)</label>
-              <Input type="file" accept="image/*" onChange={handleImageChange} disabled={submitting} />
+              <div className="flex items-center gap-2">
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={submitting}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  disabled={submitting}
+                >
+                  <Upload className="h-4 w-4" /> Upload
+                </Button>
+                <span className="text-xs text-gray-500">{image ? image.name : "No file chosen"}</span>
+              </div>
               {imagePreview && (
                 <img src={imagePreview} alt="Preview" className="mt-2 max-h-40 rounded border" />
               )}
             </div>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit Feedback"}
-            </Button>
+            <div className="flex justify-end">
+              <Button type="submit" variant="primary" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={submitting}>
+                {submitting ? "Submitting..." : "Submit Feedback"}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
