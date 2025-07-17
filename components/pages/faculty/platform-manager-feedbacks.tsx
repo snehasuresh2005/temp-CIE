@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import StatusBarChart from "@/components/StatusBarChart";
-import { BarChart3, CheckCircle, List, ShieldCheck, Clock } from "lucide-react";
+import { BarChart3, CheckCircle, List, ShieldCheck, Clock, Info } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Pending Approval",
@@ -17,11 +24,56 @@ const STATUS_LABELS: Record<string, string> = {
   REJECTED: "Rejected"
 };
 
-export default function PlatformManagerInsights() {
+// Add a helper for image preview
+function ImagePreview({ src }: { src?: string }) {
+  if (!src) {
+    return (
+      <div className="flex items-center justify-center w-24 h-24 bg-gray-100 border rounded text-gray-400 text-xs">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a4 4 0 004 4h10a4 4 0 004-4V7a4 4 0 00-4-4H7a4 4 0 00-4 4z" /></svg>
+        No Screenshot
+      </div>
+    );
+  }
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer">
+      <img src={src} alt="Screenshot" className="h-24 w-24 object-cover rounded border" />
+    </a>
+  );
+}
+
+function ImageCollapse({ src }: { src?: string }) {
+  const [open, setOpen] = useState(false);
+  if (!src) return null;
+  return (
+    <div className="w-full flex flex-col items-center">
+      <button
+        type="button"
+        className="text-xs text-blue-600 underline mb-1 focus:outline-none"
+        onClick={() => setOpen(o => !o)}
+      >
+        {open ? "Hide Screenshot" : "Show Screenshot"}
+      </button>
+      {open && (
+        <a href={src} target="_blank" rel="noopener noreferrer">
+          <img src={src} alt="Screenshot" className="h-24 w-24 object-cover rounded border" />
+        </a>
+      )}
+    </div>
+  );
+}
+
+function ScreenshotLink({ src }: { src?: string }) {
+  if (!src) return <span className="text-gray-400 text-xs">No Screenshot</span>;
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">View Screenshot</a>
+  );
+}
+
+export default function PlatformManagerFeedbacks() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState("analytics");
-  const [insights, setInsights] = useState<any[]>([]);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectionReasons, setRejectionReasons] = useState<{ [id: string]: string }>({});
@@ -29,21 +81,23 @@ export default function PlatformManagerInsights() {
   const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
   const [historyPage, setHistoryPage] = useState(1);
   const historyRowsPerPage = 8;
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null);
+  const [infoDialogImage, setInfoDialogImage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchInsights();
+    fetchFeedbacks();
   }, []);
 
-  const fetchInsights = async () => {
+  const fetchFeedbacks = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/insights", {
+      const res = await fetch("/api/feedbacks", {
         headers: { "x-user-id": user?.id || "" },
       });
       const data = await res.json();
-      setInsights(data.insights || []);
+      setFeedbacks(data.feedbacks || []);
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load insights", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to load feedbacks", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -56,31 +110,31 @@ export default function PlatformManagerInsights() {
       if (action === "reject" && rejectionReasons[id]) {
         body.rejection_reason = rejectionReasons[id];
       }
-      const res = await fetch(`/api/insights/${id}`, {
+      const res = await fetch(`/api/feedbacks/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-user-id": user?.id || "" },
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        fetchInsights();
-        toast({ title: "Success", description: `Insight ${action}d` });
+        fetchFeedbacks();
+        toast({ title: "Success", description: `Feedback ${action}d` });
         setRejectionReasons(prev => ({ ...prev, [id]: "" }));
       } else {
         const err = await res.json();
         throw new Error(err.error);
       }
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update insight", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update feedback", variant: "destructive" });
     } finally {
       setActionLoading(false);
     }
   };
 
   // Tab filters
-  const pending = insights.filter(i => i.status === "PENDING");
-  const awaitingFinal = insights.filter(i => i.status === "DONE");
-  const developerTasks = insights.filter(i => ["APPROVED", "IN_PROGRESS", "DONE"].includes(i.status));
-  const history = insights.filter(i => ["COMPLETED", "REJECTED"].includes(i.status));
+  const pending = feedbacks.filter(i => i.status === "PENDING");
+  const awaitingFinal = feedbacks.filter(i => i.status === "DONE");
+  const developerTasks = feedbacks.filter(i => ["APPROVED", "IN_PROGRESS", "DONE"].includes(i.status));
+  const history = feedbacks.filter(i => ["COMPLETED", "REJECTED"].includes(i.status));
 
   // Pagination state for each tab (move below array definitions)
   const [pendingPage, setPendingPage] = useState(1);
@@ -96,13 +150,13 @@ export default function PlatformManagerInsights() {
   const finalTotalPages = Math.max(1, Math.ceil(awaitingFinal.length / cardsPerPage));
 
   // Filter and paginate history
-  const filteredHistory = history.filter(insight => {
+  const filteredHistory = history.filter(feedback => {
     const matchesSearch =
       historySearchTerm.trim() === "" ||
-      insight.title.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
-      insight.description.toLowerCase().includes(historySearchTerm.toLowerCase());
+      feedback.title.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
+      feedback.description.toLowerCase().includes(historySearchTerm.toLowerCase());
     const matchesStatus =
-      historyStatusFilter === "all" || insight.status === historyStatusFilter;
+      historyStatusFilter === "all" || feedback.status === historyStatusFilter;
     return matchesSearch && matchesStatus;
   });
   const historyTotalPages = Math.max(1, Math.ceil(filteredHistory.length / historyRowsPerPage));
@@ -115,19 +169,19 @@ export default function PlatformManagerInsights() {
 
   // Analytics
   const analytics = {
-    total: insights.length,
+    total: feedbacks.length,
     pending: pending.length,
     completed: history.filter(i => i.status === "COMPLETED").length,
     rejected: history.filter(i => i.status === "REJECTED").length,
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Card-style navigation */}
       <div className="flex flex-row gap-6 justify-center items-center my-6">
         {[ 
           { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'purple' },
-          { id: 'pending', label: 'Awaiting Insights', icon: CheckCircle, color: 'blue' },
+          { id: 'pending', label: 'Awaiting Feedback', icon: CheckCircle, color: 'blue' },
           { id: 'tasks', label: 'Tasks Assigned', icon: List, color: 'green' },
           { id: 'final-approval', label: 'Final Approval', icon: ShieldCheck, color: 'indigo' },
           { id: 'history', label: 'History', icon: Clock, color: 'orange' },
@@ -149,11 +203,11 @@ export default function PlatformManagerInsights() {
         })}
       </div>
       {/* Tab content with consistent top margin */}
-      <div className="mt-2">
+      <div className="mt-2 ">
         {tab === "analytics" && (
           <Card>
             <CardHeader>
-              <CardTitle>Insights Analytics</CardTitle>
+              <CardTitle>Feedback Analytics</CardTitle>
             </CardHeader>
             <CardContent>
               {/* Stat Cards Row - like lab/library coordinator */}
@@ -163,7 +217,7 @@ export default function PlatformManagerInsights() {
                   <div className="text-lg font-bold leading-tight">{analytics.total}</div>
                 </div>
                 <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
-                  <div className="text-xs text-gray-500 font-medium mb-0.5">Awaiting Insights</div>
+                  <div className="text-xs text-gray-500 font-medium mb-0.5">Awaiting Feedback</div>
                   <div className="text-lg font-bold leading-tight">{pending.length}</div>
                 </div>
                 <div className="flex-1 min-w-[100px] max-w-[140px] bg-white rounded shadow-sm px-2 py-1 flex flex-col items-center justify-center text-center border border-gray-200">
@@ -190,50 +244,78 @@ export default function PlatformManagerInsights() {
         {tab === "pending" && (
           <Card>
             <CardHeader>
-              <CardTitle>Awaiting Insights</CardTitle>
+              <CardTitle>Awaiting Feedback</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <div>Loading...</div> : pending.length === 0 ? <div className="text-gray-500">No pending insights.</div> : (
-                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                  <table className="min-w-full text-base">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 text-left font-bold text-gray-700">Title</th>
-                        <th className="px-6 py-3 text-left font-bold text-gray-700">Description</th>
-                        <th className="px-6 py-3 text-left font-bold text-gray-700">Status</th>
-                        <th className="px-6 py-3 text-left font-bold text-gray-700">Submitted</th>
-                        <th className="px-6 py-3 text-left font-bold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedPending.map(insight => (
-                        <tr key={insight.id} className="border-t text-base">
-                          <td className="px-6 py-3 align-top font-medium">{insight.title}</td>
-                          <td className="px-6 py-3 align-top">{insight.description}</td>
-                          <td className="px-6 py-3 align-top"><Badge variant="outline">{STATUS_LABELS[insight.status]}</Badge></td>
-                          <td className="px-6 py-3 align-top">{new Date(insight.created_at).toLocaleDateString()}</td>
-                          <td className="px-6 py-3 align-top">
-                            <div className="flex flex-row items-center gap-2">
-                              <Button size="sm" className="px-3 py-1" disabled={actionLoading} onClick={() => handleAction(insight.id, "approve")}>Approve</Button>
-                              <Button size="sm" className="px-3 py-1" variant="destructive" disabled={actionLoading} onClick={() => handleAction(insight.id, "reject")}>Reject</Button>
-                              <Input
-                                placeholder="Rejection reason"
-                                value={rejectionReasons[insight.id] || ""}
-                                onChange={e => setRejectionReasons(prev => ({ ...prev, [insight.id]: e.target.value }))}
-                                className="w-48"
-                              />
-                            </div>
-                          </td>
+              {loading ? (
+                <div>Loading...</div>
+              ) : pending.length === 0 ? (
+                <div className="text-gray-500">No pending feedbacks.</div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                    <table className="min-w-full text-base">
+                      <thead>
+                        <tr>
+                          <th className="px-6 py-3 text-left font-bold text-gray-700">Title</th>
+                          <th className="px-6 py-3 text-left font-bold text-gray-700">Description</th>
+                          <th className="px-6 py-3 text-left font-bold text-gray-700">Screenshot</th>
+                          <th className="px-6 py-3 text-left font-bold text-gray-700">Status</th>
+                          <th className="px-6 py-3 text-left font-bold text-gray-700">Submitted</th>
+                          <th className="px-6 py-3 text-left font-bold text-gray-700">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="flex justify-between items-center mt-4">
-                    <Button size="sm" variant="outline" onClick={() => setPendingPage(p => Math.max(1, p - 1))} disabled={pendingPage === 1}>Previous</Button>
-                    <span className="text-xs text-gray-600">Page {pendingPage} of {pendingTotalPages}</span>
-                    <Button size="sm" variant="outline" onClick={() => setPendingPage(p => Math.min(pendingTotalPages, p + 1))} disabled={pendingPage === pendingTotalPages}>Next</Button>
+                      </thead>
+                      <tbody>
+                        {paginatedPending.map(feedback => (
+                          <tr key={feedback.id} className="border-t text-base">
+                            <td className="px-6 py-3 align-top font-medium">{feedback.title}</td>
+                            <td className="px-6 py-3 align-top">{feedback.description}</td>
+                            <td className="px-6 py-3 align-top">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-gray-400 hover:text-gray-600"
+                                onClick={() => {
+                                  setInfoDialogOpen(feedback.id);
+                                  setInfoDialogImage(feedback.image || null);
+                                }}
+                                aria-label="View Screenshot"
+                              >
+                                <Info className="h-5 w-5" />
+                              </Button>
+                            </td>
+                            <td className="px-6 py-3 align-top"><Badge variant="outline">{STATUS_LABELS[feedback.status]}</Badge></td>
+                            <td className="px-6 py-3 align-top">{new Date(feedback.created_at).toLocaleDateString()}</td>
+                            <td className="px-6 py-3 align-top">
+                              <div className="flex flex-row items-center gap-2">
+                                <Button size="sm" className="px-3 py-1" disabled={actionLoading} onClick={() => handleAction(feedback.id, "approve")}>Approve</Button>
+                                <Button size="sm" className="px-3 py-1" variant="destructive" disabled={actionLoading} onClick={() => handleAction(feedback.id, "reject")}>Reject</Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="flex justify-between items-center mt-4">
+                      <Button size="sm" variant="outline" onClick={() => setPendingPage(p => Math.max(1, p - 1))} disabled={pendingPage === 1}>Previous</Button>
+                      <span className="text-xs text-gray-600">Page {pendingPage} of {pendingTotalPages}</span>
+                      <Button size="sm" variant="outline" onClick={() => setPendingPage(p => Math.min(pendingTotalPages, p + 1))} disabled={pendingPage === pendingTotalPages}>Next</Button>
+                    </div>
                   </div>
-                </div>
+                  <Dialog open={!!infoDialogOpen} onOpenChange={open => { if (!open) { setInfoDialogOpen(null); setInfoDialogImage(null); } }}>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Screenshot</DialogTitle>
+                        <DialogDescription>Submitted screenshot for this feedback (if any)</DialogDescription>
+                      </DialogHeader>
+                      {infoDialogImage ? (
+                        <img src={infoDialogImage} alt="Screenshot" className="w-full max-h-[400px] object-contain rounded border" />
+                      ) : (
+                        <div className="flex items-center justify-center h-40 text-gray-400">No screenshot available</div>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </>
               )}
             </CardContent>
           </Card>
@@ -251,26 +333,30 @@ export default function PlatformManagerInsights() {
                       <tr>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Title</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Description</th>
+                        <th className="px-6 py-3 text-left font-bold text-gray-700">Screenshot</th>
+                        <th className="px-6 py-3 text-left font-bold text-gray-700">Rectified Screenshot</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Status</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Submitted</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedFinal.map(insight => (
-                        <tr key={insight.id} className="border-t text-base">
-                          <td className="px-6 py-3 align-top font-medium">{insight.title}</td>
-                          <td className="px-6 py-3 align-top">{insight.description}</td>
-                          <td className="px-6 py-3 align-top"><Badge variant="outline">{STATUS_LABELS[insight.status]}</Badge></td>
-                          <td className="px-6 py-3 align-top">{new Date(insight.created_at).toLocaleDateString()}</td>
+                      {paginatedFinal.map(feedback => (
+                        <tr key={feedback.id} className="border-t text-base">
+                          <td className="px-6 py-3 align-top font-medium">{feedback.title}</td>
+                          <td className="px-6 py-3 align-top">{feedback.description}</td>
+                          <td className="px-6 py-3 align-top"><ImagePreview src={feedback.image} /></td>
+                          <td className="px-6 py-3 align-top"><ImagePreview src={feedback.rectifiedImage} /></td>
+                          <td className="px-6 py-3 align-top"><Badge variant="outline">{STATUS_LABELS[feedback.status]}</Badge></td>
+                          <td className="px-6 py-3 align-top">{new Date(feedback.created_at).toLocaleDateString()}</td>
                           <td className="px-6 py-3 align-top">
                             <div className="flex flex-row items-center gap-2">
-                              <Button size="sm" className="px-3 py-1" disabled={actionLoading} onClick={() => handleAction(insight.id, "complete")}>Approve</Button>
-                              <Button size="sm" className="px-3 py-1" variant="destructive" disabled={actionLoading} onClick={() => handleAction(insight.id, "reject")}>Reject</Button>
+                              <Button size="sm" className="px-3 py-1" disabled={actionLoading} onClick={() => handleAction(feedback.id, "complete")}>Approve</Button>
+                              <Button size="sm" className="px-3 py-1" variant="destructive" disabled={actionLoading} onClick={() => handleAction(feedback.id, "reject")}>Reject</Button>
                               <Input
                                 placeholder="Rejection reason"
-                                value={rejectionReasons[insight.id] || ""}
-                                onChange={e => setRejectionReasons(prev => ({ ...prev, [insight.id]: e.target.value }))}
+                                value={rejectionReasons[feedback.id] || ""}
+                                onChange={e => setRejectionReasons(prev => ({ ...prev, [feedback.id]: e.target.value }))}
                                 className="w-48"
                               />
                             </div>
@@ -295,27 +381,26 @@ export default function PlatformManagerInsights() {
               <CardTitle>Tasks Assigned</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <div>Loading...</div> : developerTasks.length === 0 ? <div className="text-gray-500">No tasks available for developers.</div> : (
-                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+              {loading ? <div>Loading...</div> : developerTasks.length === 0 ? <div className="text-gray-500 ">No tasks available for developers.</div> : (
+                <div className="overflow-x-auto rounded-lg  ">
                   <table className="min-w-full text-base">
                     <thead>
                       <tr>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Title</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Description</th>
+                        <th className="px-6 py-3 text-left font-bold text-gray-700">Screenshot</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Status</th>
                         <th className="px-6 py-3 text-left font-bold text-gray-700">Submitted</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedTasks.map(insight => (
-                        <tr key={insight.id} className="border-t text-base">
-                          <td className="px-6 py-3 align-top font-medium">{insight.title}</td>
-                          <td className="px-6 py-3 align-top">{insight.description}</td>
-                          <td className="px-6 py-3 align-top"><Badge variant="outline">{STATUS_LABELS[insight.status]}</Badge></td>
-                          <td className="px-6 py-3 align-top">{new Date(insight.created_at).toLocaleDateString()}</td>
-                          <td className="px-6 py-3 align-top">
-                            
-                          </td>
+                      {paginatedTasks.map(feedback => (
+                        <tr key={feedback.id} className="border-t text-base">
+                          <td className="px-6 py-3 align-top font-medium">{feedback.title}</td>
+                          <td className="px-6 py-3 align-top">{feedback.description}</td>
+                          <td className="px-6 py-3 align-top"><ImagePreview src={feedback.image} /></td>
+                          <td className="px-6 py-3 align-top"><Badge variant="outline">{STATUS_LABELS[feedback.status]}</Badge></td>
+                          <td className="px-6 py-3 align-top">{new Date(feedback.created_at).toLocaleDateString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -361,6 +446,8 @@ export default function PlatformManagerInsights() {
                     <tr>
                       <th className="text-left font-bold text-gray-700 px-6 py-3">Title</th>
                       <th className="text-left font-bold text-gray-700 px-6 py-3">Description</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Screenshot</th>
+                      <th className="text-left font-bold text-gray-700 px-6 py-3">Rectified Screenshot</th>
                       <th className="text-left font-bold text-gray-700 px-6 py-3">Status</th>
                       <th className="text-left font-bold text-gray-700 px-6 py-3">Date</th>
                       <th className="text-left font-bold text-gray-700 px-6 py-3">Rejection Reason</th>
@@ -369,18 +456,20 @@ export default function PlatformManagerInsights() {
                   <tbody>
                     {paginatedHistory.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-8 text-gray-400">No history found.</td>
+                        <td colSpan={7} className="text-center py-8 text-gray-400">No history found.</td>
                       </tr>
                     ) : (
-                      paginatedHistory.map((insight) => (
-                        <tr key={insight.id} className="border-t text-base">
-                          <td className="px-6 py-3 align-top font-medium text-sm truncate">{insight.title}</td>
-                          <td className="px-6 py-3 align-top text-sm truncate">{insight.description}</td>
+                      paginatedHistory.map((feedback) => (
+                        <tr key={feedback.id} className="border-t text-base">
+                          <td className="px-6 py-3 align-top font-medium text-sm truncate">{feedback.title}</td>
+                          <td className="px-6 py-3 align-top text-sm truncate">{feedback.description}</td>
+                          <td className="px-6 py-3 align-top"><ImagePreview src={feedback.image} /></td>
+                          <td className="px-6 py-3 align-top"><ImagePreview src={feedback.rectifiedImage} /></td>
                           <td className="px-6 py-3 align-top text-sm">
-                            <Badge variant={insight.status === 'REJECTED' ? 'destructive' : 'outline'}>{STATUS_LABELS[insight.status]}</Badge>
+                            <Badge variant={feedback.status === 'REJECTED' ? 'destructive' : 'outline'}>{STATUS_LABELS[feedback.status]}</Badge>
                           </td>
-                          <td className="px-6 py-3 align-top text-sm whitespace-nowrap">{new Date(insight.updated_at || insight.created_at).toLocaleDateString()}</td>
-                          <td className="px-6 py-3 align-top text-sm text-red-600">{insight.status === 'REJECTED' && insight.rejection_reason ? insight.rejection_reason : '-'}</td>
+                          <td className="px-6 py-3 align-top text-sm whitespace-nowrap">{new Date(feedback.updated_at || feedback.created_at).toLocaleDateString()}</td>
+                          <td className="px-6 py-3 align-top text-sm text-red-600">{feedback.status === 'REJECTED' && feedback.rejection_reason ? feedback.rejection_reason : '-'}</td>
                         </tr>
                       ))
                     )}

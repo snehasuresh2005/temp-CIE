@@ -17,11 +17,11 @@ const STATUS_LABELS: Record<string, string> = {
   REJECTED: "Rejected"
 };
 
-export default function DeveloperInsights() {
+export default function DeveloperFeedbacks() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState("analytics");
-  const [insights, setInsights] = useState<any[]>([]);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [historySearchTerm, setHistorySearchTerm] = useState("");
@@ -32,10 +32,10 @@ export default function DeveloperInsights() {
   const [resubmittedIds, setResubmittedIds] = useState<string[]>([]);
 
   // Tab filters
-  const awaiting = insights.filter(i => i.status === "APPROVED");
-  const inProgress = insights.filter(i => i.status === "IN_PROGRESS" || i.status === "APPROVED" || i.status === "DONE");
-  const rejected = insights.filter(i => i.status === "REJECTED");
-  const history = insights.filter(i => ["COMPLETED"].includes(i.status));
+  const awaiting = feedbacks.filter(i => i.status === "APPROVED");
+  const inProgress = feedbacks.filter(i => i.status === "IN_PROGRESS" || i.status === "APPROVED" || i.status === "DONE");
+  const rejected = feedbacks.filter(i => i.status === "REJECTED");
+  const history = feedbacks.filter(i => ["COMPLETED"].includes(i.status));
 
   // Combine rejected and in-progress/approved tasks for unified pagination
   const combinedTasks = [...rejected, ...inProgress];
@@ -50,20 +50,78 @@ export default function DeveloperInsights() {
   const rejectedTotalPages = Math.max(1, Math.ceil(rejected.length / rejectedCardsPerPage));
   const paginatedRejected = rejected.slice((rejectedPage - 1) * rejectedCardsPerPage, rejectedPage * rejectedCardsPerPage);
 
+  // Add a helper for image preview
+  function ImagePreview({ src }: { src?: string }) {
+    if (!src) return null;
+    return (
+      <a href={src} target="_blank" rel="noopener noreferrer">
+        <img src={src} alt="Screenshot" className="h-12 w-12 object-cover rounded border hover:scale-150 transition-transform duration-200" />
+      </a>
+    );
+  }
+
+  // Add state for rectified image upload
+  const [rectifiedImage, setRectifiedImage] = useState<File | null>(null);
+  const [rectifiedImagePreview, setRectifiedImagePreview] = useState<string | null>(null);
+  const [rectifiedForId, setRectifiedForId] = useState<string | null>(null);
+
+  const handleRectifiedImageChange = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
+    const file = e.target.files?.[0] || null;
+    setRectifiedImage(file);
+    setRectifiedForId(id);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setRectifiedImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setRectifiedImagePreview(null);
+    }
+  };
+
+  const handleMarkDoneWithImage = async (id: string) => {
+    setActionLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("action", "done");
+      if (rectifiedImage && rectifiedForId === id) {
+        formData.append("rectifiedImage", rectifiedImage);
+      }
+      const res = await fetch(`/api/feedbacks/${id}`, {
+        method: "PATCH",
+        headers: { "x-user-id": user?.id || "" },
+        body: formData,
+      });
+      if (res.ok) {
+        fetchFeedbacks();
+        toast({ title: "Success", description: `Feedback marked as done` });
+        setRectifiedImage(null);
+        setRectifiedImagePreview(null);
+        setRectifiedForId(null);
+      } else {
+        const err = await res.json();
+        throw new Error(err.error);
+      }
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update feedback", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchInsights();
+    fetchFeedbacks();
   }, []);
 
-  const fetchInsights = async () => {
+  const fetchFeedbacks = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/insights?developer_id=me", {
+      const res = await fetch("/api/feedbacks?developer_id=me", {
         headers: { "x-user-id": user?.id || "" },
       });
       const data = await res.json();
-      setInsights(data.insights || []);
+      setFeedbacks(data.feedbacks || []);
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load insights", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to load feedbacks", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -78,20 +136,20 @@ export default function DeveloperInsights() {
     }
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/insights/${id}`, {
+      const res = await fetch(`/api/feedbacks/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-user-id": user?.id || "" },
         body: JSON.stringify({ action }),
       });
       if (res.ok) {
-        fetchInsights();
-        toast({ title: "Success", description: `Insight marked as ${action}` });
+        fetchFeedbacks();
+        toast({ title: "Success", description: `Feedback marked as ${action}` });
       } else {
         const err = await res.json();
         throw new Error(err.error);
       }
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update insight", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update feedback", variant: "destructive" });
     } finally {
       setActionLoading(false);
       setResubmittingId(null);
@@ -100,7 +158,7 @@ export default function DeveloperInsights() {
 
   // Analytics
   const analytics = {
-    total: insights.length,
+    total: feedbacks.length,
     awaiting: awaiting.length,
     inProgress: inProgress.length,
     rejected: rejected.length,
@@ -108,13 +166,13 @@ export default function DeveloperInsights() {
   };
 
   // Filter and paginate history
-  const filteredHistory = history.filter(insight => {
+  const filteredHistory = history.filter(feedback => {
     const matchesSearch =
       historySearchTerm.trim() === "" ||
-      insight.title.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
-      insight.description.toLowerCase().includes(historySearchTerm.toLowerCase());
+      feedback.title.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
+      feedback.description.toLowerCase().includes(historySearchTerm.toLowerCase());
     const matchesStatus =
-      historyStatusFilter === "all" || insight.status === historyStatusFilter;
+      historyStatusFilter === "all" || feedback.status === historyStatusFilter;
     return matchesSearch && matchesStatus;
   });
   const historyTotalPages = Math.max(1, Math.ceil(filteredHistory.length / historyRowsPerPage));
@@ -126,7 +184,7 @@ export default function DeveloperInsights() {
   useEffect(() => { setHistoryPage(1); }, [historySearchTerm, historyStatusFilter]);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Card-style navigation */}
       <div className="flex flex-row gap-6 justify-center items-center my-6">
         {[ 
@@ -156,7 +214,7 @@ export default function DeveloperInsights() {
         {tab === 'analytics' && (
           <Card>
             <CardHeader>
-              <CardTitle>Insights Analytics</CardTitle>
+              <CardTitle>Feedbacks Analytics</CardTitle>
             </CardHeader>
             <CardContent>
               {/* Stat Cards Row - match PM dashboard style */}
@@ -199,37 +257,49 @@ export default function DeveloperInsights() {
               {loading ? <div>Loading...</div> : combinedTasks.length === 0 ? <div className="text-gray-500">No available tasks.</div> : (
                 <>
                   <div className="space-y-3">
-                    {paginatedTasks.map(insight => (
-                      insight.status === 'REJECTED' ? (
-                        <div key={insight.id} className="border-2 border-red-400 rounded p-3 bg-red-50">
+                    {paginatedTasks.map(feedback => (
+                      feedback.status === 'REJECTED' ? (
+                        <div key={feedback.id} className="border-2 border-red-400 rounded p-3 bg-red-50">
                           <div className="flex items-center justify-between">
-                            <div className="font-medium">{insight.title}</div>
+                            <div className="font-medium">{feedback.title}</div>
                             <div className="flex gap-2 items-center">
                               <Badge variant="destructive">Rejected</Badge>
-                              {resubmittedIds.includes(insight.id) && <Badge className="bg-yellow-400 text-black">Resubmitted</Badge>}
+                              {resubmittedIds.includes(feedback.id) && <Badge className="bg-yellow-400 text-black">Resubmitted</Badge>}
                             </div>
                           </div>
-                          <div className="text-xs text-gray-600 mt-1">{insight.description}</div>
-                          {insight.rejection_reason && (
-                            <div className="text-xs text-red-600 mt-1 font-semibold">Reason: {insight.rejection_reason}</div>
+                          <div className="text-xs text-gray-600 mt-1">{feedback.description}</div>
+                          <div className="mt-2"><ImagePreview src={feedback.image} /></div>
+                          {feedback.rejection_reason && (
+                            <div className="text-xs text-red-600 mt-1 font-semibold">Reason: {feedback.rejection_reason}</div>
                           )}
                           <div className="flex gap-2 mt-2 items-center">
-                            {!(resubmittedIds.includes(insight.id)) && (
-                              <Button size="sm" disabled={actionLoading || resubmittingId === insight.id} onClick={() => handleAction(insight.id, "done")}>Resubmit as Done</Button>
+                            {!(resubmittedIds.includes(feedback.id)) && (
+                              <>
+                                <input type="file" accept="image/*" onChange={e => handleRectifiedImageChange(e, feedback.id)} />
+                                {rectifiedImagePreview && rectifiedForId === feedback.id && (
+                                  <img src={rectifiedImagePreview} alt="Rectified Preview" className="h-12 w-12 object-cover rounded border" />
+                                )}
+                                <Button size="sm" disabled={actionLoading || resubmittingId === feedback.id} onClick={() => handleMarkDoneWithImage(feedback.id)}>Resubmit as Done</Button>
+                              </>
                             )}
-                            {resubmittingId === insight.id && <span className="text-xs text-red-500 ml-2 animate-pulse">Resubmitting...</span>}
+                            {resubmittingId === feedback.id && <span className="text-xs text-red-500 ml-2 animate-pulse">Resubmitting...</span>}
                           </div>
                         </div>
                       ) : (
-                        <div key={insight.id} className="border rounded p-3 bg-gray-50">
+                        <div key={feedback.id} className="border rounded p-3 bg-gray-50">
                           <div className="flex items-center justify-between">
-                            <div className="font-medium">{insight.title}</div>
-                            <Badge variant="outline">{STATUS_LABELS[insight.status]}</Badge>
+                            <div className="font-medium">{feedback.title}</div>
+                            <Badge variant="outline">{STATUS_LABELS[feedback.status]}</Badge>
                           </div>
-                          <div className="text-xs text-gray-600 mt-1">{insight.description}</div>
-                          {insight.status !== "DONE" && insight.status !== "COMPLETED" && (
-                            <div className="flex gap-2 mt-2">
-                              <Button size="sm" disabled={actionLoading} onClick={() => handleAction(insight.id, "done")}>Mark as Done</Button>
+                          <div className="text-xs text-gray-600 mt-1">{feedback.description}</div>
+                          <div className="mt-2"><ImagePreview src={feedback.image} /></div>
+                          {feedback.status !== "DONE" && feedback.status !== "COMPLETED" && (
+                            <div className="flex gap-2 mt-2 items-center">
+                              <input type="file" accept="image/*" onChange={e => handleRectifiedImageChange(e, feedback.id)} />
+                              {rectifiedImagePreview && rectifiedForId === feedback.id && (
+                                <img src={rectifiedImagePreview} alt="Rectified Preview" className="h-12 w-12 object-cover rounded border" />
+                              )}
+                              <Button size="sm" disabled={actionLoading} onClick={() => handleMarkDoneWithImage(feedback.id)}>Mark as Done</Button>
                             </div>
                           )}
                         </div>
@@ -255,15 +325,15 @@ export default function DeveloperInsights() {
               {loading ? <div>Loading...</div> : rejected.length === 0 ? <div className="text-gray-500">No rejected tasks.</div> : (
                 <>
                   <div className="space-y-3">
-                    {paginatedRejected.map(insight => (
-                      <div key={insight.id} className="border rounded p-3 bg-gray-50">
+                    {paginatedRejected.map(feedback => (
+                      <div key={feedback.id} className="border rounded p-3 bg-gray-50">
                         <div className="flex items-center justify-between">
-                          <div className="font-medium">{insight.title}</div>
-                          <Badge variant="outline">{STATUS_LABELS[insight.status]}</Badge>
+                          <div className="font-medium">{feedback.title}</div>
+                          <Badge variant="outline">{STATUS_LABELS[feedback.status]}</Badge>
                         </div>
-                        <div className="text-xs text-gray-600 mt-1">{insight.description}</div>
-                        {insight.rejection_reason && (
-                          <div className="text-xs text-red-600 mt-1 font-semibold">Reason: {insight.rejection_reason}</div>
+                        <div className="text-xs text-gray-600 mt-1">{feedback.description}</div>
+                        {feedback.rejection_reason && (
+                          <div className="text-xs text-red-600 mt-1 font-semibold">Reason: {feedback.rejection_reason}</div>
                         )}
                       </div>
                     ))}
@@ -309,6 +379,8 @@ export default function DeveloperInsights() {
                     <tr>
                       <th className="text-left font-bold text-gray-700 px-4 py-3">Title</th>
                       <th className="text-left font-bold text-gray-700 px-4 py-3">Description</th>
+                      <th className="text-left font-bold text-gray-700 px-4 py-3">Screenshot</th>
+                      <th className="text-left font-bold text-gray-700 px-4 py-3">Rectified Screenshot</th>
                       <th className="text-left font-bold text-gray-700 px-4 py-3">Status</th>
                       <th className="text-left font-bold text-gray-700 px-4 py-3">Date</th>
                       <th className="text-left font-bold text-gray-700 px-4 py-3">Rejection Reason</th>
@@ -317,18 +389,20 @@ export default function DeveloperInsights() {
                   <tbody>
                     {paginatedHistory.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-8 text-gray-400">No history found.</td>
+                        <td colSpan={7} className="text-center py-8 text-gray-400">No history found.</td>
                       </tr>
                     ) : (
-                      paginatedHistory.map((insight) => (
-                        <tr key={insight.id} className="border-t">
-                          <td className="px-4 py-3 align-top font-medium text-sm truncate">{insight.title}</td>
-                          <td className="px-4 py-3 align-top text-sm truncate">{insight.description}</td>
+                      paginatedHistory.map((feedback) => (
+                        <tr key={feedback.id} className="border-t">
+                          <td className="px-4 py-3 align-top font-medium text-sm truncate">{feedback.title}</td>
+                          <td className="px-4 py-3 align-top text-sm truncate">{feedback.description}</td>
+                          <td className="px-4 py-3 align-top"><ImagePreview src={feedback.image} /></td>
+                          <td className="px-4 py-3 align-top"><ImagePreview src={feedback.rectifiedImage} /></td>
                           <td className="px-4 py-3 align-top text-sm">
-                            <Badge variant={insight.status === 'REJECTED' ? 'destructive' : 'outline'}>{STATUS_LABELS[insight.status]}</Badge>
+                            <Badge variant={feedback.status === 'REJECTED' ? 'destructive' : 'outline'}>{STATUS_LABELS[feedback.status]}</Badge>
                           </td>
-                          <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{new Date(insight.updated_at || insight.created_at).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 align-top text-sm text-red-600">{insight.status === 'REJECTED' && insight.rejection_reason ? insight.rejection_reason : '-'}</td>
+                          <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{new Date(feedback.updated_at || feedback.created_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 align-top text-sm text-red-600">{feedback.status === 'REJECTED' && feedback.rejection_reason ? feedback.rejection_reason : '-'}</td>
                         </tr>
                       ))
                     )}

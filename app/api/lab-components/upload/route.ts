@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
+import { existsSync } from 'fs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,10 +17,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
     
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 })
+    }
+    
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     const fileName = `${Date.now()}_${file.name}`
-    const filePath = path.join(process.cwd(), 'public', 'lab-images', fileName)
+    
+    // Ensure the lab-images directory exists
+    const labImagesDir = path.join(process.cwd(), 'public', 'lab-images')
+    if (!existsSync(labImagesDir)) {
+      await mkdir(labImagesDir, { recursive: true })
+    }
+    
+    const filePath = path.join(labImagesDir, fileName)
     
     await writeFile(filePath, buffer)
     const imageUrl = `/lab-images/${fileName}`
@@ -27,6 +40,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ imageUrl })
   } catch (error) {
     console.error("Upload error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ 
+      error: "Internal server error", 
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 })
   }
 } 

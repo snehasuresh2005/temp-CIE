@@ -45,8 +45,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       update.approved_at = new Date();
     } else if (action === "reject") {
       // Only require rejection reason if status is DONE (final approval), not for pending
-      const insight = await prisma.insight.findUnique({ where: { id: params.id } });
-      const isFinalApproval = insight?.status === "DONE";
+      const feedback = await prisma.feedback.findUnique({ where: { id: params.id } });
+      const isFinalApproval = feedback?.status === "DONE";
       if (isFinalApproval && (!rejection_reason || rejection_reason.trim() === "")) {
         return NextResponse.json({ error: "Rejection reason is required." }, { status: 400 });
       }
@@ -67,27 +67,27 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
-    const insight = await prisma.insight.update({
+    const feedback = await prisma.feedback.update({
       where: { id },
       data: update,
     });
-    return NextResponse.json({ insight });
+    return NextResponse.json({ feedback });
   } catch (error) {
-    console.error("Error updating insight:", error);
-    return NextResponse.json({ error: "Failed to update insight" }, { status: 500 });
+    console.error("Error updating feedback:", error);
+    return NextResponse.json({ error: "Failed to update feedback" }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
-    const insight = await prisma.insight.findUnique({ where: { id } });
-    if (!insight) {
-      return NextResponse.json({ error: "Insight not found" }, { status: 404 });
+    const feedback = await prisma.feedback.findUnique({ where: { id } });
+    if (!feedback) {
+      return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
     }
-    return NextResponse.json({ insight });
+    return NextResponse.json({ feedback });
   } catch (error) {
-    console.error("Error fetching insight:", error);
-    return NextResponse.json({ error: "Failed to fetch insight" }, { status: 500 });
+    console.error("Error fetching feedback:", error);
+    return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
   }
 } 
