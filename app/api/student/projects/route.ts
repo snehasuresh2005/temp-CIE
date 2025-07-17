@@ -74,6 +74,7 @@ export async function GET(request: Request) {
           take: 1,
         },
         project_requests: {
+          where: { student_id: student.id },
           include: {
             faculty: {
               include: {

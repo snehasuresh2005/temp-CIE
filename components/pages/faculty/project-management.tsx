@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText, Trash2, Settings, User, Mail } from "lucide-react"
+import { Plus, FolderOpen, Calendar, Users, RefreshCw, CheckCircle, XCircle, FileText, Trash2, Settings, User, Mail, Info, Brain, Clipboard } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import {
@@ -82,6 +82,8 @@ interface ProjectRequest {
   faculty_notes?: string
   accepted_date?: string
   rejected_date?: string
+  resume_id?: string
+  resume_path?: string
   student: {
     user: {
       name: string
@@ -139,6 +141,16 @@ export function ProjectManagement() {
   const [enrollmentCap, setEnrollmentCap] = useState<number>(1)
   const [isApplicationsDialogOpen, setIsApplicationsDialogOpen] = useState(false)
   const [selectedProjectApplications, setSelectedProjectApplications] = useState<ProjectRequest[]>([])
+  const [isShortlistDialogOpen, setIsShortlistDialogOpen] = useState(false)
+  const [shortlistResults, setShortlistResults] = useState<any>(null)
+  const [isShortlisting, setIsShortlisting] = useState(false)
+  const [showAIRanking, setShowAIRanking] = useState(false)
+  const [selectedCandidateDetails, setSelectedCandidateDetails] = useState<any>(null)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [selectedApplicationDetails, setSelectedApplicationDetails] = useState<any>(null)
+  const [isApplicationDetailsDialogOpen, setIsApplicationDetailsDialogOpen] = useState(false)
+  const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false)
+  const [editingProject, setEditingProject] = useState<any>(null)
   const { toast } = useToast()
 
   const [newProject, setNewProject] = useState({
@@ -534,6 +546,45 @@ export function ProjectManagement() {
     }
   }
 
+  const handleReopenEnrollment = async (projectId: string) => {
+    try {
+      const response = await fetch(`/api/projects/enrolment`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "reopen",
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProjects((prev) => 
+          prev.map((project) => 
+            project.id === projectId ? { ...project, ...data.project } : project
+          )
+        )
+        toast({
+          title: "Success",
+          description: "Enrollment reopened successfully",
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to reopen enrollment")
+      }
+    } catch (error) {
+      console.error("Error reopening enrollment:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to reopen enrollment",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleApplicationAction = async (applicationId: string, action: "APPROVED" | "REJECTED") => {
     try {
       const response = await fetch(`/api/project-requests/${applicationId}`, {
@@ -574,6 +625,170 @@ export function ProjectManagement() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : `Failed to ${action.toLowerCase()} application`,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleShortlistCandidates = async (project: Project) => {
+    if (!project.project_requests || project.project_requests.length === 0) {
+      toast({
+        title: "No Applications",
+        description: "This project has no applications to shortlist",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSelectedProject(project)
+    setIsShortlisting(true)
+    
+    // Show initial toast with loading indicator
+    toast({
+      title: "AI Analysis Started",
+      description: "Analyzing resumes with AI... This may take 1-2 minutes",
+    })
+    
+    try {
+      const response = await fetch("/api/projects/shortlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+        },
+        body: JSON.stringify({
+          project_id: project.id,
+          top_k: Math.min(5, project.project_requests.length)
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log("Shortlist response received:", {
+          success: data.success,
+          candidateCount: data.shortlisted_candidates?.length,
+          totalApplications: data.total_applications,
+          projectName: data.project?.name
+        })
+        
+        // Ensure we have clean data without circular references
+        const cleanData = {
+          success: data.success,
+          project: data.project,
+          total_applications: data.total_applications,
+          shortlisted_candidates: data.shortlisted_candidates?.map((candidate: any) => ({
+            request_id: candidate.request_id,
+            student_id: candidate.student_id,
+            student_name: candidate.student_name,
+            student_email: candidate.student_email,
+            file_name: candidate.file_name,
+            file_path: candidate.file_path,
+            score: candidate.score,
+            ai_analysis: {
+              name: candidate.ai_analysis?.name,
+              skills: candidate.ai_analysis?.skills || [],
+              reasons: candidate.ai_analysis?.reasons || [],
+              metadata: candidate.ai_analysis?.metadata || {}
+            }
+          })) || []
+        }
+        
+        setShortlistResults(cleanData)
+        setShowAIRanking(true) // Show AI ranking in the applications dialog
+        
+        toast({
+          title: "AI Analysis Complete!",
+          description: `Found ${cleanData.shortlisted_candidates?.length || 0} top candidates with detailed analysis`,
+        })
+      } else {
+        const errorData = await response.json()
+        console.error("API Error:", errorData) // Debug log
+        throw new Error(errorData.error || "Failed to shortlist candidates")
+      }
+    } catch (error) {
+      console.error("Error shortlisting candidates:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to shortlist candidates. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsShortlisting(false)
+    }
+  }
+
+  // Helper function for AI shortlisting within applications dialog
+  const handleAIShortlistInDialog = async () => {
+    if (!selectedProject) return
+    await handleShortlistCandidates(selectedProject)
+  }
+
+  // Function to show candidate details
+  const showCandidateDetails = (candidate: any) => {
+    setSelectedCandidateDetails(candidate)
+    setIsDetailsDialogOpen(true)
+  }
+
+  // Function to show application details (notes)
+  const showApplicationDetails = (application: any) => {
+    setSelectedApplicationDetails(application)
+    setIsApplicationDetailsDialogOpen(true)
+  }
+
+  // Function to edit project
+  const handleEditProject = (project: any) => {
+    setEditingProject({
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      expected_completion_date: new Date(project.expected_completion_date).toISOString().slice(0, 16),
+      components_needed: project.components_needed || []
+    })
+    setIsEditProjectDialogOpen(true)
+  }
+
+  // Function to save edited project
+  const handleSaveEditedProject = async () => {
+    if (!editingProject?.name || !editingProject?.expected_completion_date) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${editingProject.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+        },
+        body: JSON.stringify({
+          name: editingProject.name,
+          description: editingProject.description,
+          expected_completion_date: editingProject.expected_completion_date,
+          components_needed: editingProject.components_needed,
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Project updated successfully",
+        })
+        fetchData()
+        setIsEditProjectDialogOpen(false)
+        setEditingProject(null)
+      } else {
+        throw new Error("Failed to update project")
+      }
+    } catch (error) {
+      console.error("Error updating project:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update project. Please try again.",
         variant: "destructive",
       })
     }
@@ -847,6 +1062,17 @@ export function ProjectManagement() {
                         </Button>
                       )}
 
+                      {project.enrollment_status === "CLOSED" && (
+                        <Button
+                          variant="outline"
+                          className="w-full border-green-500 text-green-700 hover:bg-green-50"
+                          onClick={() => handleReopenEnrollment(project.id)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Reopen Enrollment
+                        </Button>
+                      )}
+
                       {/* View Applications Button */}
                       {(project.enrollment_status === "OPEN" || project.enrollment_status === "CLOSED") && 
                        project.project_requests && project.project_requests.length > 0 && (
@@ -863,6 +1089,15 @@ export function ProjectManagement() {
                           View Applications ({project.project_requests.length})
                         </Button>
                       )}
+
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => handleEditProject(project)}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Edit Project
+                      </Button>
 
                       <Button
                         variant="destructive"
@@ -1170,86 +1405,781 @@ export function ProjectManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* View Applications Dialog */}
-      <Dialog open={isApplicationsDialogOpen} onOpenChange={setIsApplicationsDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+      {/* Enhanced View Applications Dialog */}
+      <Dialog open={isApplicationsDialogOpen} onOpenChange={(open) => {
+        setIsApplicationsDialogOpen(open)
+        if (!open) {
+          // Reset AI state when dialog closes
+          setShowAIRanking(false)
+          setShortlistResults(null)
+        }
+      }}>
+        <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Project Applications</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Project Applications - {selectedProject?.name}</span>
+              <div className="flex gap-2">
+                {!showAIRanking && selectedProjectApplications.length > 0 && (
+                  <Button
+                    onClick={handleAIShortlistInDialog}
+                    disabled={isShortlisting}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {isShortlisting ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        AI Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        AI Shortlist Candidates
+                      </>
+                    )}
+                  </Button>
+                )}
+                {showAIRanking && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAIRanking(false)}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Show All Applications
+                  </Button>
+                )}
+              </div>
+            </DialogTitle>
             <DialogDescription>
-              Students who have applied for: {selectedProject?.name}
+              {showAIRanking 
+                ? `AI has ranked the top candidates for: ${selectedProject?.name}` 
+                : ``
+              }
             </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4">
             {selectedProjectApplications.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No applications yet.</p>
+            ) : showAIRanking && shortlistResults ? (
+              // AI Ranking View - Beautiful Table
+              <div className="space-y-4">
+                <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                  <h3 className="font-semibold text-purple-900 mb-2">🤖 AI Candidate Ranking</h3>
+                  <p className="text-purple-800 text-sm">
+                    Analyzed {shortlistResults.total_applications} applications and ranked top {shortlistResults.shortlisted_candidates?.length || 0} candidates based on resume content, skills match, and experience relevance.
+                  </p>
+                </div>
+
+                {/* Candidates Table */}
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Rank</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Candidate</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Match Score</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Top Skills</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Resume</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">AI Details</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {shortlistResults.shortlisted_candidates?.map((candidate: any, index: number) => {
+                        const matchingApplication = selectedProjectApplications.find(
+                          app => app.student.user.email === candidate.student_email
+                        )
+                        return (
+                          <tr key={candidate.request_id || index} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center">
+                                <div className={`rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm ${
+                                  index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                                  index === 1 ? 'bg-gray-100 text-gray-800' :
+                                  index === 2 ? 'bg-orange-100 text-orange-800' :
+                                  'bg-blue-100 text-blue-800'
+                                }`}>
+                                  #{index + 1}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>
+                                <div className="font-medium text-gray-900">{candidate.student_name}</div>
+                                <div className="text-sm text-gray-500">{candidate.student_email}</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                candidate.score > 0.8 ? 'bg-green-100 text-green-800' :
+                                candidate.score > 0.6 ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {(candidate.score * 100).toFixed(1)}%
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {(candidate.ai_analysis?.skills || []).slice(0, 3).map((skill: string, skillIndex: number) => (
+                                  <Badge key={skillIndex} variant="secondary" className="text-xs">
+                                    {typeof skill === 'object' ? JSON.stringify(skill) : String(skill)}
+                                  </Badge>
+                                ))}
+                                {(candidate.ai_analysis?.skills || []).length > 3 && (
+                                  <span className="text-xs text-gray-500">+{(candidate.ai_analysis?.skills || []).length - 3}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {candidate.file_path && (
+                                <a 
+                                  href={`/${candidate.file_path.replace(/^.*[\\\/]public[\\\/]/, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center"
+                                >
+                                  <FileText className="h-4 w-4 mr-1" />
+                                  View PDF
+                                </a>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => showCandidateDetails(candidate)}
+                                className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                              >
+                                <Info className="h-4 w-4 mr-1" />
+                                Details
+                              </Button>
+                            </td>
+                            <td className="px-4 py-3">
+                              {matchingApplication && (
+                                <div className="flex space-x-2">
+                                  {matchingApplication.status === "PENDING" ? (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        className="w-8 h-8 p-0 bg-green-600 hover:bg-green-700"
+                                        onClick={() => handleApplicationAction(matchingApplication.id, "APPROVED")}
+                                        title="Accept Application"
+                                      >
+                                        <CheckCircle className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        className="w-8 h-8 p-0"
+                                        onClick={() => handleApplicationAction(matchingApplication.id, "REJECTED")}
+                                        title="Reject Application"
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Badge 
+                                      variant="outline"
+                                      className={
+                                        matchingApplication.status === "APPROVED" ? "border-green-500 text-green-700 bg-green-50" :
+                                        "border-red-500 text-red-700 bg-red-50"
+                                      }
+                                    >
+                                      {matchingApplication.status}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : (
-              selectedProjectApplications.map((application) => (
-                <Card key={application.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <User className="h-4 w-4 text-gray-500" />
-                        <span className="font-semibold">{application.student.user.name}</span>
-                        <Badge 
-                          variant="outline"
-                          className={
-                            application.status === "APPROVED" ? "border-green-500 text-green-700" :
-                            application.status === "REJECTED" ? "border-red-500 text-red-700" :
-                            "border-blue-500 text-blue-700"
+              // Regular Applications View - Beautiful Table
+              <div className="space-y-4">
+                {/* Applications Table */}
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Student</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Applied Date</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Resume</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Notes</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedProjectApplications.map((application) => (
+                        <tr key={application.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center space-x-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <div>
+                                <div className="font-medium text-gray-900">{application.student.user.name}</div>
+                                <div className="text-sm text-gray-500">{application.student.user.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge 
+                              variant="outline"
+                              className={
+                                application.status === "APPROVED" ? "border-green-500 text-green-700 bg-green-50" :
+                                application.status === "REJECTED" ? "border-red-500 text-red-700 bg-red-50" :
+                                "border-blue-500 text-blue-700 bg-blue-50"
+                              }
+                            >
+                              {application.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm text-gray-600">
+                                {new Date(application.request_date).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {application.resume_path ? (
+                              <a 
+                                href={`/${application.resume_path}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center"
+                              >
+                                <FileText className="h-4 w-4 mr-1" />
+                                View PDF
+                              </a>
+                            ) : (
+                              <span className="text-gray-400 text-sm">No resume</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {(application.student_notes || application.faculty_notes) ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => showApplicationDetails(application)}
+                                className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                              >
+                                <Info className="h-4 w-4 mr-1" />
+                                View Notes
+                              </Button>
+                            ) : (
+                              <span className="text-gray-400 text-sm">No notes</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {application.status === "PENDING" ? (
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  className="w-8 h-8 p-0 bg-green-600 hover:bg-green-700"
+                                  onClick={() => handleApplicationAction(application.id, "APPROVED")}
+                                  title="Accept Application"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="w-8 h-8 p-0"
+                                  onClick={() => handleApplicationAction(application.id, "REJECTED")}
+                                  title="Reject Application"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 text-sm">Decision made</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Shortlist Results Dialog */}
+      <Dialog open={isShortlistDialogOpen} onOpenChange={setIsShortlistDialogOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>AI Shortlisted Candidates</DialogTitle>
+            <DialogDescription>
+              Top candidates selected by AI for: {shortlistResults?.project?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {shortlistResults?.shortlisted_candidates?.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No suitable candidates found by AI analysis.</p>
+            ) : (
+              <>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 mb-2">AI Analysis Summary</h3>
+                  <p className="text-blue-800 text-sm">
+                    Analyzed {shortlistResults?.total_applications || 0} applications and selected top {shortlistResults?.shortlisted_candidates?.length || 0} candidates based on:
+                  </p>
+                  <ul className="text-blue-800 text-sm mt-2 ml-4 list-disc">
+                    <li>Skills matching project requirements</li>
+                    <li>Experience level and background</li>
+                    <li>Resume semantic similarity to project description</li>
+                    <li>Education and previous work experience</li>
+                  </ul>
+                </div>
+
+                {shortlistResults?.shortlisted_candidates?.map((candidate: any, index: number) => {
+                  // Ensure all required properties exist to prevent runtime errors
+                  const safeCandidate = {
+                    request_id: candidate?.request_id || `temp-${index}`,
+                    student_name: candidate?.student_name || 'Unknown Student',
+                    student_email: candidate?.student_email || 'No email',
+                    score: candidate?.score || 0,
+                    file_path: candidate?.file_path || '',
+                    ai_analysis: {
+                      skills: candidate?.ai_analysis?.skills || [],
+                      reasons: candidate?.ai_analysis?.reasons || [],
+                      metadata: candidate?.ai_analysis?.metadata || {}
+                    }
+                  }
+
+                  return (
+                  <Card key={safeCandidate.request_id} className="p-6 border-l-4 border-l-purple-500">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-purple-100 text-purple-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                          #{index + 1}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg text-gray-900">
+                            {safeCandidate.student_name}
+                          </h3>
+                          <p className="text-gray-600 text-sm">{safeCandidate.student_email}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                          Match Score: {(safeCandidate.score * 100).toFixed(1)}%
+                        </div>
+                        {safeCandidate.file_path && (
+                          <div className="flex items-center space-x-2 mt-2">
+                            <FileText className="h-4 w-4 text-gray-500" />
+                            <a 
+                              href={`/${safeCandidate.file_path.replace(/^.*[\\\/]public[\\\/]/, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 underline text-sm"
+                            >
+                              View Resume
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Key Skills</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {Array.isArray(safeCandidate.ai_analysis.skills) && safeCandidate.ai_analysis.skills.slice(0, 8).map((skill: any, skillIndex: number) => (
+                            <Badge key={skillIndex} variant="secondary" className="text-xs">
+                              {typeof skill === 'object' ? JSON.stringify(skill) : String(skill)}
+                            </Badge>
+                          ))}
+                          {(!Array.isArray(safeCandidate.ai_analysis.skills) || safeCandidate.ai_analysis.skills.length === 0) && (
+                            <span className="text-gray-500 text-sm">No skills extracted</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Why Selected by AI</h4>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                          {Array.isArray(safeCandidate.ai_analysis.reasons) && safeCandidate.ai_analysis.reasons.slice(0, 3).map((reason: any, reasonIndex: number) => (
+                            <li key={reasonIndex} className="flex items-start">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                              {typeof reason === 'object' ? JSON.stringify(reason) : String(reason)}
+                            </li>
+                          ))}
+                          {(!Array.isArray(safeCandidate.ai_analysis.reasons) || safeCandidate.ai_analysis.reasons.length === 0) && (
+                            <li className="text-gray-500">No specific reasons available</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {safeCandidate.ai_analysis.metadata && Object.keys(safeCandidate.ai_analysis.metadata).length > 0 && (
+                      <div className="mt-4 p-3 bg-gray-50 rounded">
+                        <h4 className="font-semibold text-gray-700 mb-2">Additional Details</h4>
+                        <div className="grid md:grid-cols-3 gap-4 text-sm">
+                          {safeCandidate.ai_analysis.metadata.experience_years && (
+                            <div>
+                              <span className="font-medium text-gray-600">Experience:</span>
+                              <p className="text-gray-800">{String(safeCandidate.ai_analysis.metadata.experience_years)} years</p>
+                            </div>
+                          )}
+                          {safeCandidate.ai_analysis.metadata.education && (
+                            <div>
+                              <span className="font-medium text-gray-600">Education:</span>
+                              <p className="text-gray-800">
+                                {Array.isArray(safeCandidate.ai_analysis.metadata.education) 
+                                  ? safeCandidate.ai_analysis.metadata.education.map((edu: any) => 
+                                      typeof edu === 'object' ? JSON.stringify(edu) : String(edu)
+                                    ).join(', ')
+                                  : typeof safeCandidate.ai_analysis.metadata.education === 'object'
+                                    ? JSON.stringify(safeCandidate.ai_analysis.metadata.education)
+                                    : String(safeCandidate.ai_analysis.metadata.education)
+                                }
+                              </p>
+                            </div>
+                          )}
+                          {safeCandidate.ai_analysis.metadata.job_titles && (
+                            <div>
+                              <span className="font-medium text-gray-600">Recent Role:</span>
+                              <p className="text-gray-800">
+                                {Array.isArray(safeCandidate.ai_analysis.metadata.job_titles) 
+                                  ? safeCandidate.ai_analysis.metadata.job_titles.map((job: any) => 
+                                      typeof job === 'object' ? JSON.stringify(job) : String(job)
+                                    ).join(', ')
+                                  : typeof safeCandidate.ai_analysis.metadata.job_titles === 'object'
+                                    ? JSON.stringify(safeCandidate.ai_analysis.metadata.job_titles)
+                                    : String(safeCandidate.ai_analysis.metadata.job_titles)
+                                }
+                              </p>
+                            </div>
+                          )}
+                          {/* Handle any other metadata fields safely */}
+                          {Object.entries(safeCandidate.ai_analysis.metadata)
+                            .filter(([key]) => !['experience_years', 'education', 'job_titles'].includes(key))
+                            .slice(0, 3)
+                            .map(([key, value]) => (
+                              <div key={key}>
+                                <span className="font-medium text-gray-600 capitalize">{key.replace(/_/g, ' ')}:</span>
+                                <p className="text-gray-800">
+                                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                </p>
+                              </div>
+                            ))
                           }
-                        >
-                          {application.status}
-                        </Badge>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">{application.student.user.email}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Calendar className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">
-                          Applied: {new Date(application.request_date).toLocaleDateString()}
+                    )}
+                  </Card>
+                  )
+                })}
+
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-amber-900 mb-2">📋 Next Steps</h3>
+                  <p className="text-amber-800 text-sm">
+                    Review the AI recommendations above and use the "View Applications" button to approve or reject individual candidates. 
+                    The AI analysis is a recommendation - final decisions are yours!
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={() => {
+                setIsShortlistDialogOpen(false)
+                setShortlistResults(null)
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Candidate Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[1000px] max-h-[85vh] overflow-y-auto">{/* Made wider to fit content better */}
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-purple-600" />
+              AI Analysis Details
+            </DialogTitle>
+            <DialogDescription>
+              Detailed AI analysis for {selectedCandidateDetails?.student_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedCandidateDetails && (
+            <div className="space-y-6">
+              {/* Candidate Header */}
+              <div className="flex items-start justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">{selectedCandidateDetails.student_name}</h3>
+                  <p className="text-gray-600">{selectedCandidateDetails.student_email}</p>
+                  <div className="mt-2">
+                    <Badge className="bg-green-100 text-green-800">
+                      Match Score: {(selectedCandidateDetails.score * 100).toFixed(1)}%
+                    </Badge>
+                  </div>
+                </div>
+                {selectedCandidateDetails.file_path && (
+                  <a 
+                    href={`/${selectedCandidateDetails.file_path.replace(/^.*[\\\/]public[\\\/]/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-blue-600 hover:text-blue-800 underline"
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    View Resume
+                  </a>
+                )}
+              </div>
+
+              {/* Skills Section */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                  Extracted Skills
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {(selectedCandidateDetails.ai_analysis?.skills || []).map((skill: any, index: number) => (
+                    <Badge key={index} variant="secondary" className="px-3 py-1">
+                      {typeof skill === 'object' ? JSON.stringify(skill) : String(skill)}
+                    </Badge>
+                  ))}
+                  {(!selectedCandidateDetails.ai_analysis?.skills || selectedCandidateDetails.ai_analysis.skills.length === 0) && (
+                    <p className="text-gray-500 italic">No skills extracted</p>
+                  )}
+                </div>
+              </div>
+
+              {/* AI Reasoning */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <Brain className="h-4 w-4 mr-2 text-purple-600" />
+                  Why AI Selected This Candidate
+                </h4>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {(selectedCandidateDetails.ai_analysis?.reasons || []).map((reason: any, index: number) => (
+                    <div key={index} className="flex items-start p-3 bg-blue-50 rounded-lg">
+                      <CheckCircle className="h-4 w-4 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-blue-900">
+                        {typeof reason === 'object' ? JSON.stringify(reason) : String(reason)}
+                      </span>
+                    </div>
+                  ))}
+                  {(!selectedCandidateDetails.ai_analysis?.reasons || selectedCandidateDetails.ai_analysis.reasons.length === 0) && (
+                    <p className="text-gray-500 italic col-span-2">No specific reasons available</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Additional Metadata */}
+              {selectedCandidateDetails.ai_analysis?.metadata && Object.keys(selectedCandidateDetails.ai_analysis.metadata).length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Clipboard className="h-4 w-4 mr-2 text-gray-600" />
+                    Additional Details
+                  </h4>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(selectedCandidateDetails.ai_analysis.metadata).map(([key, value]) => (
+                      <div key={key} className="p-3 bg-gray-50 rounded-lg">
+                        <span className="font-medium text-gray-700 capitalize block mb-1">
+                          {key.replace(/_/g, ' ')}:
+                        </span>
+                        <span className="text-gray-900 text-sm">
+                          {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
                         </span>
                       </div>
-                      {application.student_notes && (
-                        <div className="mt-2 p-2 bg-gray-50 rounded">
-                          <p className="text-sm text-gray-700">
-                            <strong>Student Notes:</strong> {application.student_notes}
-                          </p>
-                        </div>
-                      )}
-                      {application.faculty_notes && (
-                        <div className="mt-2 p-2 bg-blue-50 rounded">
-                          <p className="text-sm text-blue-700">
-                            <strong>Your Notes:</strong> {application.faculty_notes}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col space-y-2 ml-4">
-                      {application.status === "PENDING" && (
-                        <>
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleApplicationAction(application.id, "APPROVED")}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleApplicationAction(application.id, "REJECTED")}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                </Card>
-              ))
-            )}
+                </div>
+              )}
+
+              {/* Action Footer */}
+              <div className="bg-amber-50 p-4 rounded-lg">
+                <p className="text-amber-800 text-sm">
+                  <strong>Note:</strong> This AI analysis is a recommendation to help you make informed decisions. 
+                  Always review the actual resume and use your professional judgment for final candidate selection.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end mt-6">
+            <Button onClick={() => setIsDetailsDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Application Details Dialog (for notes) */}
+      <Dialog open={isApplicationDetailsDialogOpen} onOpenChange={setIsApplicationDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-blue-600" />
+              Application Notes
+            </DialogTitle>
+            <DialogDescription>
+              Notes for {selectedApplicationDetails?.student.user.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedApplicationDetails && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="font-semibold">{selectedApplicationDetails.student.user.name}</span>
+                </div>
+                <div className="flex items-center space-x-2 mb-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">{selectedApplicationDetails.student.user.email}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">
+                    Applied: {new Date(selectedApplicationDetails.request_date).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              {selectedApplicationDetails.student_notes && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900">Student Notes</h4>
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-900">{selectedApplicationDetails.student_notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedApplicationDetails.faculty_notes && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900">Your Notes</h4>
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <p className="text-sm text-purple-900">{selectedApplicationDetails.faculty_notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {!selectedApplicationDetails.student_notes && !selectedApplicationDetails.faculty_notes && (
+                <p className="text-gray-500 italic text-center py-4">No notes available</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end mt-6">
+            <Button onClick={() => setIsApplicationDetailsDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={isEditProjectDialogOpen} onOpenChange={setIsEditProjectDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>
+              Update project information and requirements
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingProject && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Project Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingProject.name}
+                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
+                  placeholder="Enter project name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingProject.description}
+                  onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                  placeholder="Enter project description"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-components">Required Components</Label>
+                <Select onValueChange={(value) => {
+                  if (!editingProject.components_needed.includes(value)) {
+                    setEditingProject({
+                      ...editingProject,
+                      components_needed: [...editingProject.components_needed, value]
+                    })
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select components" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {labComponents.map((component) => (
+                      <SelectItem key={component.id} value={component.id}>
+                        {component.component_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {editingProject.components_needed.map((componentId: string) => {
+                    const component = labComponents.find(c => c.id === componentId)
+                    return (
+                      <Badge key={componentId} variant="secondary">
+                        {component?.component_name}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-1 h-auto p-0"
+                          onClick={() => setEditingProject({
+                            ...editingProject,
+                            components_needed: editingProject.components_needed.filter((id: string) => id !== componentId)
+                          })}
+                        >
+                          ×
+                        </Button>
+                      </Badge>
+                    )
+                  })}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-dueDate">Expected Completion Date</Label>
+                <Input
+                  id="edit-dueDate"
+                  type="datetime-local"
+                  value={editingProject.expected_completion_date}
+                  onChange={(e) => setEditingProject({ ...editingProject, expected_completion_date: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsEditProjectDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEditedProject}>
+              Save Changes
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

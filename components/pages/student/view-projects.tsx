@@ -81,6 +81,8 @@ interface ProjectRequest {
   faculty_notes?: string
   accepted_date?: string
   rejected_date?: string
+  resume_id?: string
+  resume_path?: string
   faculty?: {
     user: {
       name: string
@@ -131,10 +133,14 @@ export function ViewProjects() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isGradeDialogOpen, setIsGradeDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [projectToApply, setProjectToApply] = useState<Project | null>(null)
   const [submissionContent, setSubmissionContent] = useState("")
   const [submissionFile, setSubmissionFile] = useState<File | null>(null)
+  const [applicationNotes, setApplicationNotes] = useState("")
+  const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [activeTab, setActiveTab] = useState<'my-projects' | 'available-projects'>('my-projects')
   const { toast } = useToast()
 
@@ -498,39 +504,57 @@ export function ViewProjects() {
   })
 
   const handleApplyToProject = async (projectId: string) => {
+    // Find the project to apply for
+    const project = projects.find(p => p.id === projectId)
+    if (!project || !project.faculty_creator) {
+      toast({
+        title: "Error",
+        description: "Project or faculty information not found",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setProjectToApply(project)
+    setApplicationNotes("")
+    setResumeFile(null)
+    setIsApplyDialogOpen(true)
+  }
+
+  const handleSubmitApplication = async () => {
+    if (!projectToApply || !resumeFile || !student?.id) {
+      toast({
+        title: "Error",
+        description: "Please select a resume file to upload",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      // Find the project to get the faculty creator
-      const project = projects.find(p => p.id === projectId)
-      if (!project || !project.faculty_creator) {
-        throw new Error("Project or faculty information not found")
-      }
+      const formData = new FormData()
+      formData.append("project_id", projectToApply.id)
+      formData.append("faculty_id", projectToApply.faculty_creator?.id || "")
+      formData.append("student_notes", applicationNotes)
+      formData.append("resume", resumeFile)
 
-      // Get the faculty ID from the faculty creator
-      const facultyId = project.faculty_creator.id
-
-      if (!student?.id) {
-        throw new Error("Student profile not found")
-      }
-
-      const response = await fetch("/api/project-requests", {
+      const response = await fetch("/api/project-applications", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "x-user-id": user?.id || "",
         },
-        body: JSON.stringify({
-          project_id: projectId,
-          student_id: student.id,
-          faculty_id: facultyId,
-          student_notes: "I would like to apply for this project.",
-        }),
+        body: formData,
       })
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Application submitted successfully!",
+          description: "Application submitted successfully with resume!",
         })
+        setIsApplyDialogOpen(false)
+        setProjectToApply(null)
+        setApplicationNotes("")
+        setResumeFile(null)
         fetchData() // Refresh data
       } else {
         const errorData = await response.json()
@@ -1198,6 +1222,67 @@ export function ViewProjects() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Project Application Dialog */}
+      <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Apply for Project</DialogTitle>
+            <DialogDescription>
+              Apply for "{projectToApply?.name}" with your resume and cover letter
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="application-notes">Cover Letter / Notes</Label>
+              <Textarea
+                id="application-notes"
+                value={applicationNotes}
+                onChange={(e) => setApplicationNotes(e.target.value)}
+                placeholder="Explain why you're interested in this project and what makes you a good fit..."
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="resume-upload">Resume (PDF required) *</Label>
+              <Input
+                id="resume-upload"
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                required
+              />
+              <p className="text-sm text-gray-600">
+                Please upload your resume in PDF format. This will be shared with the faculty member.
+              </p>
+            </div>
+            {projectToApply && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <h4 className="font-semibold text-sm">Project Details:</h4>
+                <p className="text-sm text-gray-700 mt-1">{projectToApply.description}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  <strong>Faculty:</strong> {projectToApply.faculty_creator?.user.name}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Due Date:</strong> {new Date(projectToApply.expected_completion_date).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsApplyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitApplication}
+              disabled={!resumeFile}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Submit Application
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -204,6 +204,8 @@ model ProjectRequest {
   faculty_notes String?
   accepted_date DateTime?
   rejected_date DateTime?
+  resume_id     String?
+  resume_path   String?
   faculty       Faculty              @relation(fields: [faculty_id], references: [id])
   project       Project              @relation(fields: [project_id], references: [id])
   student       Student              @relation(fields: [student_id], references: [id])

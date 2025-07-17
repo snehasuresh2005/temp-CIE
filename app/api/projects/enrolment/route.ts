@@ -31,9 +31,9 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 })
     }
 
-    if (!["start", "close"].includes(action)) {
+    if (!["start", "close", "reopen"].includes(action)) {
       return NextResponse.json({ 
-        error: "Invalid action. Must be 'start' or 'close'" 
+        error: "Invalid action. Must be 'start', 'close', or 'reopen'" 
       }, { status: 400 })
     }
 
@@ -93,6 +93,18 @@ export async function PUT(request: NextRequest) {
         ...updateData,
         enrollment_status: "CLOSED",
         enrollment_end_date: new Date(),
+      }
+    } else if (action === "reopen") {
+      if (project.enrollment_status !== "CLOSED") {
+        return NextResponse.json({ 
+          error: "Enrollment can only be reopened for projects with closed enrollment" 
+        }, { status: 400 })
+      }
+
+      updateData = {
+        ...updateData,
+        enrollment_status: "OPEN",
+        enrollment_end_date: null, // Clear the end date when reopening
       }
     }
 
