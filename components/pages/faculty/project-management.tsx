@@ -902,9 +902,11 @@ export function ProjectManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">
-          Project Management
-        </h2>
+
+        <h2 className="faculty-page-title">Project Management</h2>
+
+       
+
         <div className="flex items-center space-x-2">
           {isLabComponentsCoordinator && (
             <Button
