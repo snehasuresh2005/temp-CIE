@@ -793,7 +793,7 @@ export function CoordinatorDashboard() {
         Debug: selectedRole = {String(selectedRole)}
       </div>
       <div>
-        <h1 className="faculty-page-title">CIE Team Coordinator Dashboard</h1>
+        <h1 className="faculty-page-title-global">CIE Team Coordinator Dashboard</h1>
       </div>
 
       {/* Role Selection - Show when faculty has multiple roles and no role is selected */}

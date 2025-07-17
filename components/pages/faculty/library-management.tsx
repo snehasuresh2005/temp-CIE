@@ -572,7 +572,7 @@ export function LibraryManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="faculty-page-title">Library</h1>
+          <h1 className="faculty-page-title-global" style={{ color: 'var(--library-title-color, #1a202c)' }}>Library</h1>
         </div>
         <Button onClick={fetchData} variant="outline">
           <RotateCcw className="h-4 w-4 mr-2" />
@@ -580,8 +580,8 @@ export function LibraryManagement() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-yellow-600" />
@@ -592,7 +592,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Package className="h-5 w-5 text-blue-600" />
@@ -603,7 +603,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-orange-600" />
@@ -614,7 +614,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -625,7 +625,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />

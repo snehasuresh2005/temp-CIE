@@ -241,7 +241,7 @@ export function AttendanceManagement() {
               sections.map((section) => {
                 const stats = getAttendanceStats(course, section)
                 return (
-                  <Card key={`${course}-${section}`}>
+                  <Card key={`${course}-${section}`} className="faculty-card">
                     <CardHeader>
                       <CardTitle className="text-lg">{course} - Section {section}</CardTitle>
                       <CardDescription>
@@ -271,7 +271,7 @@ export function AttendanceManagement() {
 
         <TabsContent value="details" className="space-y-4">
           {attendance.map((record) => (
-            <Card key={record.id}>
+            <Card key={record.id} className="faculty-card">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>

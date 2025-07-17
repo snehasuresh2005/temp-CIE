@@ -59,8 +59,8 @@ export function LoginForm() {
         <div className="flex-1 flex flex-col items-center justify-center p-2">
           <Card className="bg-gray-50 shadow-none p-0 rounded-2xl w-full">
             <CardContent className="pt-8 pb-6 flex flex-col items-center">
-              <Icons.logo className="h-16 w-auto mb-6" />
-              <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome back</h1>
+              <Icons.logo className="h-28 w-auto" />
+              <h1 className="text-3xl tracking-tight mb-2 mt-0" style={{ fontFamily: 'Gotham, Helvetica, Arial, sans-serif', fontWeight: 'normal' }}>Welcome back</h1>
               <p className="text-base text-muted-foreground mb-6">
                 Enter your email to sign in to your account
               </p>

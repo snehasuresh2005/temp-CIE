@@ -773,7 +773,7 @@ export function ViewProjects() {
               const course = courses.find((c) => c.id === project.course_id)
 
               return (
-                <Card key={project.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <Card key={project.id} className="student-card flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
@@ -953,7 +953,7 @@ export function ViewProjects() {
               const enrollmentCap = project.enrollment_cap || 0
 
               return (
-                <Card key={project.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <Card key={project.id} className="student-card flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>

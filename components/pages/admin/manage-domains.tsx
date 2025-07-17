@@ -442,7 +442,7 @@ export function ManageDomains() {
           const hasCoordinator = domainAssignments.length > 0
           
           return (
-            <div key={domain.id} className={hasCoordinator ? 'border-green-200 bg-green-50 dark:bg-green-50 dark:text-gray-900' : 'admin-card'}>
+            <div key={domain.id} className={hasCoordinator ? 'rounded-xl border-green-200 bg-green-50 dark:bg-green-50 dark:text-gray-900' : 'admin-card'}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center text-base">
@@ -514,7 +514,7 @@ export function ManageDomains() {
       {/* Faculty List */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">All Faculty Members</CardTitle>
+          <CardTitle className="admin-page-title-2">All Faculty Members</CardTitle>
           <CardDescription className="text-xs">
             List of all faculty members and their current coordinator status
           </CardDescription>
@@ -526,7 +526,7 @@ export function ManageDomains() {
               const isCoordinator = facultyAssignments.length > 0
               
               return (
-                <div key={f.id} className={isCoordinator ? 'border-green-200 bg-green-50 dark:bg-green-50 dark:text-gray-900' : 'admin-card border-gray-200'}>
+                <div key={f.id} className="admin-card border-gray-200">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium text-sm">{f.user.name}</h4>
@@ -534,7 +534,7 @@ export function ManageDomains() {
                       <p className="text-xs text-gray-500">{f.user.email}</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {facultyAssignments.map((assignment) => (
-                          <Badge key={assignment.id} variant="outline" className="text-xs px-1 py-0 dark:text-gray-900">
+                          <Badge key={assignment.id} variant="outline" className="text-xs px-1 py-0">
                             {domains.find(d => d.id === assignment.domain_id)?.name || assignment.domain_name}
                           </Badge>
                         ))}

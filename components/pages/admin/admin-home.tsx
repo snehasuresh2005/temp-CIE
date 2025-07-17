@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, GraduationCap, BookOpen, MapPin, Wrench, TrendingUp } from "lucide-react"
 import { useRef, useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
+import { useTheme } from "next-themes"
 
 interface AdminHomeProps {
   onPageChange?: (page: string) => void
@@ -11,6 +12,7 @@ interface AdminHomeProps {
 
 export function AdminHome({ onPageChange }: AdminHomeProps) {
   const { user } = useAuth()
+  const { theme } = useTheme();
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -95,7 +97,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
   return (
     <div className="space-y-6">
       {/* Hero Section */}
-      <div className="rounded-lg shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-4 min-h-[100px] flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
+      <div className="rounded-lg shadow-2xl p-4 min-h-[100px] flex flex-col md:flex-row items-center justify-between relative overflow-hidden" style={{ background: "linear-gradient(120deg, #0056a6 0%, #2196f3 30%, #00b6e3 60%, #ffb347 85%, #ff7f32 100%)" }}>
         <div className="flex-1 z-6">
           <div className="flex items-center mb-2 justify-between">
             <span className="text-white text-2xl font-extrabold tracking-tight">CIE Admin Portal</span>
@@ -113,7 +115,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         {loading ? (
           Array.from({ length: 6 }).map((_, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
+            <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse" style={theme === 'light' ? { background: '#e3f0ff' } : {}}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="h-4 bg-gray-200 rounded w-20"></div>
                 <div className="h-4 w-4 bg-gray-200 rounded"></div>
@@ -126,7 +128,7 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
           ))
         ) : (
           stats.map((stat, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+            <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200" style={theme === 'light' ? { background: '#e3f0ff' } : {}}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
                 <stat.icon className={`h-4 w-4 ${stat.color}`} />
