@@ -26,11 +26,12 @@ export async function PUT(
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    // Get the project request first to verify faculty owns the project
+    // Get the project request first to verify faculty is assigned to this request
     const existingRequest = await prisma.projectRequest.findUnique({
       where: { id },
       include: {
         project: true,
+        faculty: true,
       },
     })
 
@@ -38,10 +39,19 @@ export async function PUT(
       return NextResponse.json({ error: "Project request not found" }, { status: 404 })
     }
 
-    // Verify faculty owns the project
-    if (existingRequest.project.created_by !== userId) {
+    // Get the faculty profile for the current user
+    const faculty = await prisma.faculty.findUnique({
+      where: { user_id: userId },
+    })
+
+    if (!faculty) {
+      return NextResponse.json({ error: "Faculty profile not found" }, { status: 404 })
+    }
+
+    // Verify faculty is assigned to this project request
+    if (existingRequest.faculty_id !== faculty.id) {
       return NextResponse.json({ 
-        error: "Access denied - You can only manage applications for your own projects" 
+        error: "Access denied - You can only manage applications assigned to you" 
       }, { status: 403 })
     }
 
