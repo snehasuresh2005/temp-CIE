@@ -81,6 +81,7 @@ export function LibraryRequest() {
   })
 
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({}) // false = front, true = back
+  const [showBack, setShowBack] = useState(false)
 
   const [returnDialogOpen, setReturnDialogOpen] = useState<string | null>(null)
   const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
@@ -140,6 +141,10 @@ export function LibraryRequest() {
   useEffect(() => {
     fetchData()
   }, [user])
+
+  useEffect(() => {
+    setShowBack(false);
+  }, [infoDialogOpen]);
 
   useEffect(() => {
     // load faculty list once
@@ -487,7 +492,7 @@ export function LibraryRequest() {
 
         <TabsContent value="available" className="space-y-3">
           <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
-            <div className="relative w-56">
+            <div className="relative w-[22rem]">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
                 <Search className="h-4 w-4" />
               </span>
@@ -513,36 +518,38 @@ export function LibraryRequest() {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredItems.map((item) => (
-              <Card key={item.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white">
-                <CardHeader className="p-3 pb-0">
+              <Card key={item.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+                <CardHeader className="p-3">
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="flex items-center space-x-2 text-base font-semibold">
-                        <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                      <CardTitle className="flex items-center space-x-2 text-sm">
+                        <Package className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate">{item.item_name}</span>
                       </CardTitle>
-                      <CardDescription className="text-xs text-gray-500">{item.item_category}</CardDescription>
+                      <CardDescription className="text-xs">{item.item_category}</CardDescription>
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
-                      <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-2 py-0.5 rounded-full font-medium`}>{getAvailabilityText(item.available_quantity, item.item_quantity)}</Badge>
+                      <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5`}>
+                        {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                      </Badge>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 text-gray-400 hover:text-gray-600"
                         onClick={() => setInfoDialogOpen(item.id)}
                       >
-                        <Info className="h-4 w-4" />
+                        <Info className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col p-3 pt-2">
+                <CardContent className="flex-grow flex flex-col p-3 pt-0">
                   <div className="space-y-3 flex-grow">
                     {/* Image Display */}
-                    {(item.image_url || item.back_image_url) && (
-                      <div className="relative w-full h-32 mb-2">
+                    {(item.front_image_id || item.back_image_id) && (
+                      <div className="relative w-full h-48">
                         {/* Front Image */}
                         <div 
                           className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}
@@ -557,12 +564,12 @@ export function LibraryRequest() {
                           />
                         </div>
                         {/* Back Image */}
-                        {item.back_image_url && (
+                        {item.back_image_id && (
                           <div 
                             className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-100' : 'opacity-0'}`}
                           >
                             <img
-                              src={item.back_image_url}
+                              src={item.back_image_url || '/placeholder.jpg'}
                               alt={`Back view of ${item.item_name}`}
                               className="w-full h-full object-contain rounded-md bg-gray-50"
                               onError={(e) => {
@@ -572,7 +579,7 @@ export function LibraryRequest() {
                           </div>
                         )}
                         {/* Navigation Buttons */}
-                        {item.back_image_url && (
+                        {item.back_image_id && (
                           <>
                             {!imageStates[item.id] && (
                               <Button
@@ -597,7 +604,7 @@ export function LibraryRequest() {
                           </>
                         )}
                         {/* Image Indicators */}
-                        {item.back_image_url && (
+                        {item.back_image_id && (
                           <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
                             <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${!imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
                             <div className={`w-1 h-1 rounded-full transition-colors duration-300 ${imageStates[item.id] ? 'bg-white' : 'bg-white/50'}`} />
@@ -607,8 +614,8 @@ export function LibraryRequest() {
                     )}
                     <div className="space-y-1">
                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
-                        <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
                         <div><span className="font-medium">Total:</span> {item.item_quantity}</div>
+                        <div><span className="font-medium">Available:</span> {item.available_quantity}</div>
                       </div>
                       <div className="text-xs text-gray-500">
                         <span className="font-medium">Location:</span> {item.item_location}
@@ -794,7 +801,7 @@ export function LibraryRequest() {
 
       {/* Library Item Info Dialog */}
       <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Library Item Details</DialogTitle>
             <DialogDescription>
@@ -806,63 +813,109 @@ export function LibraryRequest() {
             if (!item) return null
             
             return (
-              <div className="space-y-4">
-                {/* Item Name and Category */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-5 w-5 text-gray-500" />
-                    <h3 className="text-lg font-semibold">{item.item_name}</h3>
+              <div className="flex flex-col md:flex-row gap-8">
+                {/* Left: Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Package className="h-5 w-5 text-gray-500" />
+                        {item.item_name}
+                      </h3>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${item.available_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {item.available_quantity > 0 ? 'Available' : 'Not Available'}
+                      </span>
+                    </div>
+                    <div className="flex flex-row items-end justify-center pl-8">
+                      <div>
+                        <h4 className="font-medium text-sm">Total Quantity</h4>
+                        <p className="text-lg font-semibold text-gray-900 text-center">{item.item_quantity}</p>
+                      </div>
+                      <div className="ml-16 text-center">
+                        <h4 className="font-medium text-sm">Available</h4>
+                        <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'} text-center`}>
+                          {item.available_quantity}
+                        </p>
+                      </div>
+                    </div>
+                    {item.item_specification && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Specifications</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-line">{item.item_specification}</p>
+                      </div>
+                    )}
+                    {item.item_description && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Description</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-line">{item.item_description}</p>
+                      </div>
+                    )}
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {item.item_category}
-                  </Badge>
                 </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Description</h4>
-                  <p className="text-sm text-gray-600">{item.item_description}</p>
-                </div>
-
-                {/* Specifications */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Specifications</h4>
-                  <p className="text-sm text-gray-600">{item.item_specification}</p>
-                </div>
-
-                {/* Availability */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-sm">Total Quantity</h4>
-                    <p className="text-lg font-semibold text-gray-900">{item.item_quantity}</p>
+                {/* Right: Image Preview */}
+                <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+                  <div className="relative w-full max-w-xs aspect-square bg-gray-50 rounded-lg border flex items-center justify-center overflow-hidden">
+                    {item.image_url || item.back_image_url ? (
+                      <>
+                        <img
+                          src={showBack && item.back_image_url ? item.back_image_url : item.image_url || '/placeholder.jpg'}
+                          alt={showBack ? `Back view of ${item.item_name}` : `Front view of ${item.item_name}`}
+                          className="object-contain w-full h-full"
+                          onError={e => { e.currentTarget.src = '/placeholder.jpg'; }}
+                        />
+                        {item.back_image_url && item.image_url && (
+                          <>
+                            {/* Left arrow (show only when on back) */}
+                            {showBack && (
+                              <button
+                                className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                onClick={() => setShowBack(false)}
+                                type="button"
+                                aria-label="Show Front"
+                              >
+                                <ChevronLeft className="h-6 w-6" />
+                              </button>
+                            )}
+                            {/* Right arrow (show only when on front) */}
+                            {!showBack && (
+                              <button
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                onClick={() => setShowBack(true)}
+                                type="button"
+                                aria-label="Show Back"
+                              >
+                                <ChevronRight className="h-6 w-6" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center text-gray-400">
+                        <Package className="h-12 w-12 mx-auto mb-2" />
+                        <p className="text-sm">No image available</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-medium text-sm">Available</h4>
-                    <p className={`text-lg font-semibold ${item.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {item.available_quantity}
-                    </p>
-                  </div>
-                </div>
-
-                {/* On Loan */}
-                <div className="space-y-1">
-                  <h4 className="font-medium text-sm">Currently On Loan</h4>
-                  <p className="text-lg font-semibold text-blue-600">
-                    {item.item_quantity - item.available_quantity}
-                  </p>
-                </div>
-
-                {/* Location */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Location</h4>
-                  <p className="text-sm text-gray-600">{item.item_location}</p>
-                </div>
-
-                {/* Availability Status */}
-                <div className="pt-2 border-t">
-                  <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)}`}>
-                    {getAvailabilityText(item.available_quantity, item.item_quantity)}
-                  </Badge>
+                  {/* Image indicator */}
+                  {item.image_url && item.back_image_url && (
+                    <div className="flex justify-center mt-3 space-x-2">
+                      <button
+                        onClick={() => setShowBack(false)}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          !showBack ? 'bg-gray-600' : 'bg-gray-300'
+                        }`}
+                        aria-label="Front view"
+                      />
+                      <button
+                        onClick={() => setShowBack(true)}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          showBack ? 'bg-gray-600' : 'bg-gray-300'
+                        }`}
+                        aria-label="Back view"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )
