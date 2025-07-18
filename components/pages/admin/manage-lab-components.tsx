@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image } from "lucide-react"
+import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image ,Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -1864,26 +1864,35 @@ export function ManageLabComponents() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <Input
-          placeholder="Search components..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categoryOptions.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
+        <div className="relative w-full md:w-1/2 lg:w-1/3">
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+            <Search className="h-4 w-4" />
+          </span>
+          <Input
+            placeholder="Search components..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8 pr-2 h-9 w-full text-sm"
+          />
+        </div>
+        <span className="flex items-center ml-4 mr-1 text-gray-400"><Filter className="h-5 w-5" /></span>
+        <span className="text-sm text-gray-600 font-medium ml-1">Category</span>
+        <div className="w-40 flex flex-col">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Category">{selectedCategory !== "all" ? selectedCategory : undefined}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categoryOptions.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -2399,193 +2408,120 @@ export function ManageLabComponents() {
 
       {/* Info Dialog */}
       <Dialog open={isInfoDialogOpen} onOpenChange={setIsInfoDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-4xl">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Info className="h-5 w-5 text-blue-600" />
               Component Details
             </DialogTitle>
-            <DialogDescription>
-              Detailed information about the lab component including purchase details and audit trail.
-            </DialogDescription>
           </DialogHeader>
           {componentToView && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left Column: Basic Information */}
+              <div className="bg-blue-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-sm font-medium text-blue-700">Component Name:</span>
-                    <p className="text-blue-900 font-semibold">{componentToView.component_name}</p>
+                    <Label className="text-xs font-medium text-gray-500">Component Name</Label>
+                    <div className="text-sm font-medium text-gray-900">{componentToView.component_name}</div>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-blue-700">Category:</span>
-                    <p className="text-blue-900">{componentToView.component_category}</p>
+                    <Label className="text-xs font-medium text-gray-500">Category</Label>
+                    <div className="text-sm font-medium text-gray-900">{componentToView.component_category}</div>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-blue-700">Location:</span>
-                    <p className="text-blue-900">{componentToView.component_location}</p>
+                    <Label className="text-xs font-medium text-gray-500">Location</Label>
+                    <div className="text-sm font-medium text-gray-900">{componentToView.component_location}</div>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-blue-700">Tag ID:</span>
-                    <p className="text-blue-900">{componentToView.component_tag_id || "Not assigned"}</p>
+                    <Label className="text-xs font-medium text-gray-500">Tag ID</Label>
+                    <div className="text-sm font-medium text-gray-900">{componentToView.component_tag_id || '-'}</div>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-blue-700">Total Quantity:</span>
-                    <p className="text-blue-900 font-semibold">{componentToView.component_quantity}</p>
+                    <Label className="text-xs font-medium text-gray-500">Total Quantity</Label>
+                    <div className="text-sm font-medium text-gray-900">{componentToView.component_quantity}</div>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-blue-700">Available Quantity:</span>
-                    <p className="text-blue-900 font-semibold">{componentToView.availableQuantity || 0}</p>
+                    <Label className="text-xs font-medium text-gray-500">Available Quantity</Label>
+                    <div className="text-sm font-medium text-gray-900">{componentToView.availableQuantity || 0}</div>
                   </div>
                 </div>
-                {componentToView.component_description && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-blue-700">Description:</span>
-                    <p className="text-blue-900 mt-1">{componentToView.component_description}</p>
-                  </div>
-                )}
+                <div className="mt-3">
+                  <Label className="text-xs font-medium text-gray-500">Description</Label>
+                  <div className="text-xs text-gray-700 mt-1">{componentToView.component_description}</div>
+                </div>
                 {componentToView.component_specification && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-blue-700">Specifications:</span>
-                    <p className="text-blue-900 mt-1">{componentToView.component_specification}</p>
+                  <div className="mt-2">
+                    <Label className="text-xs font-medium text-gray-500">Specification</Label>
+                    <div className="text-xs text-gray-700 mt-1">{componentToView.component_specification}</div>
                   </div>
                 )}
               </div>
-
-              {/* Purchase Information */}
-              {(componentToView.invoice_number || componentToView.purchased_from || componentToView.purchase_value) && (
-                <div className="bg-green-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center gap-2">
-                    <Receipt className="h-5 w-5" />
-                    Purchase Information
+              
+              {/* Right Column: Purchase Details and Audit Trail */}
+              <div className="space-y-3">
+                {/* Purchase Details */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    Purchase Details
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {componentToView.invoice_number && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Invoice Number:</span>
-                        <p className="text-green-900 font-mono">{componentToView.invoice_number}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Invoice Number</Label>
+                      <div className="text-sm text-gray-900">{componentToView.invoice_number || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchased From</Label>
+                      <div className="text-sm text-gray-900">{componentToView.purchased_from || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Date</Label>
+                      <div className="text-sm text-gray-900">
+                        {componentToView.purchase_date ? new Date(componentToView.purchase_date).toLocaleDateString() : '-'}
                       </div>
-                    )}
-                    {componentToView.purchased_from && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Purchased From:</span>
-                        <p className="text-green-900">{componentToView.purchased_from}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
+                      <div className="text-sm text-gray-900">
+                        {componentToView.purchase_value ? `${componentToView.purchase_currency} ${typeof componentToView.purchase_value === 'number' ? componentToView.purchase_value.toLocaleString() : componentToView.purchase_value}` : '-'}
                       </div>
-                    )}
-                    {componentToView.purchase_date && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Purchase Date:</span>
-                        <p className="text-green-900">{new Date(componentToView.purchase_date).toLocaleDateString()}</p>
-                      </div>
-                    )}
-                    {componentToView.purchase_value && (
-                      <div>
-                        <span className="text-sm font-medium text-green-700">Purchase Value:</span>
-                        <p className="text-green-900 font-semibold">
-                          {componentToView.purchase_currency} {typeof componentToView.purchase_value === 'number' ? componentToView.purchase_value.toLocaleString() : componentToView.purchase_value}
-                        </p>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* Audit Information */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Audit Trail
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Created By:</span>
-                    <p className="text-gray-900">{componentToView.created_by || "Unknown"}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Created Date:</span>
-                    <p className="text-gray-900">
-                      {componentToView.created_at 
-                        ? new Date(componentToView.created_at).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                          })
-                        : "Unknown"
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Last Modified By:</span>
-                    <p className="text-gray-900">{componentToView.modified_by || "Not modified"}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Last Modified Date:</span>
-                    <p className="text-gray-900">
-                      {componentToView.modified_at 
-                        ? new Date(componentToView.modified_at).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                          })
-                        : "Not modified"
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Images */}
-              {(componentToView.imageUrl || componentToView.backImageUrl) && (
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                    <Image className="h-5 w-5" />
-                    Component Images
+                
+                {/* Audit Trail */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Audit Trail
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {componentToView.imageUrl && (
-                      <div>
-                        <span className="text-sm font-medium text-purple-700">Front Image:</span>
-                        <img
-                          src={componentToView.imageUrl}
-                          alt="Front view"
-                          className="mt-2 w-full h-48 object-contain rounded-lg bg-white"
-                        />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created By</Label>
+                      <div className="text-sm text-gray-900">{componentToView.created_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Created At</Label>
+                      <div className="text-sm text-gray-900">
+                        {componentToView.created_at ? new Date(componentToView.created_at).toLocaleDateString() : '-'}
                       </div>
-                    )}
-                    {componentToView.backImageUrl && (
-                      <div>
-                        <span className="text-sm font-medium text-purple-700">Back Image:</span>
-                        <img
-                          src={componentToView.backImageUrl}
-                          alt="Back view"
-                          className="mt-2 w-full h-48 object-contain rounded-lg bg-white"
-                        />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
+                      <div className="text-sm text-gray-900">{componentToView.modified_by || '-'}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
+                      <div className="text-sm text-gray-900">
+                        {componentToView.modified_at ? new Date(componentToView.modified_at).toLocaleDateString() : '-'}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
-              )}
-
-              <div className="flex justify-end pt-4">
-                <Button
-                  onClick={() => {
-                    setIsInfoDialogOpen(false)
-                    setComponentToView(null)
-                  }}
-                >
-                  Close
-                </Button>
               </div>
             </div>
           )}
