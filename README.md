@@ -38,7 +38,7 @@ NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-key-here"
 
 # Google Gemini AI (for image analysis feature)
-GOOGLE_GEMINI_API_KEY="your-gemini-api-key-here"
+GEMINI_API_KEY="your-gemini-api-key-here"
 
 # App
 NODE_ENV="development"
