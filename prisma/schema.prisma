@@ -557,7 +557,7 @@ enum ApplicationStatus {
   REJECTED
 }
 
-enum InsightStatus {
+enum FeedbackStatus {
   PENDING        // Submitted by faculty, awaiting Platform Manager approval
   APPROVED       // Approved by Platform Manager, assigned to Developer
   IN_PROGRESS    // Developer is working on it
@@ -566,18 +566,23 @@ enum InsightStatus {
   COMPLETED      // Final approval by Platform Manager
 }
 
-model Insight {
+model Feedback {
   id            String        @id @default(cuid())
   title         String
   description   String
-  status        InsightStatus @default(PENDING)
+  status        FeedbackStatus @default(PENDING)
   created_by    String        // Faculty user id
   approved_by   String?       // Platform Manager user id
   approved_at   DateTime?
   completed_at  DateTime?
-  rejection_reason String?    // Reason for rejection by Platform Manager
+  category      String?        // Sidebar section/category
+  image         String?       // Uploaded image path
+  rectifiedImage String?      // Developer's rectified screenshot
+  rejectionReason String?     // Reason for rejection by Platform Manager
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
+
+  @@map("feedbacks")
 }
 
 model PlatformManagerAssignment {

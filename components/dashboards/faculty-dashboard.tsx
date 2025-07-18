@@ -16,7 +16,7 @@ import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { CoordinatorDashboard } from "@/components/pages/faculty/coordinator-dashboard"
 import { useAuth } from "@/components/auth-provider"
 import FacultyOpportunity from '@/components/pages/faculty/faculty-opportunity';
-import FacultyInsights from '@/components/pages/faculty/insights';
+import FacultyFeedbacks from '@/components/pages/faculty/feedbacks';
 
 export function FacultyDashboard() {
   const { user } = useAuth()
@@ -57,7 +57,7 @@ export function FacultyDashboard() {
       { id: "lab-components", label: "Lab Components", icon: Wrench },
       { id: "library", label: "Library", icon: BookOpen },
       { id: "opportunities", label: "Opportunities", icon: Briefcase }, // Added
-      { id: "insights", label: "Insights", icon: BarChart3 }, // Add Insights
+      { id: "feedbacks", label: "Feedbacks", icon: BarChart3 }, // Add Feedbacks
     ]
 
     // Add CIE Coordinator section if user is a coordinator
@@ -95,8 +95,8 @@ export function FacultyDashboard() {
         return <LibraryDashboard />
       case "opportunities":
         return <FacultyOpportunity />
-      case "insights":
-        return <FacultyInsights />;
+      case "feedbacks":
+        return <FacultyFeedbacks />;
       default:
         return <FacultyHome onPageChange={setCurrentPage} />
     }
