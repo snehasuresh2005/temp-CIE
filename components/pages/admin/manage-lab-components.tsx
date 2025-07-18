@@ -56,6 +56,12 @@ interface IndividualItem {
   unique_id: string
 }
 
+interface SpecificationRow {
+  id: string
+  attribute: string
+  value: string
+}
+
 // Utility functions for formatting
 function toTitleCase(str: string) {
   return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase())
@@ -81,6 +87,7 @@ export function ManageLabComponents() {
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [componentToDelete, setComponentToDelete] = useState<LabComponent | null>(null)
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false)
@@ -107,6 +114,14 @@ export function ManageLabComponents() {
   const [trackIndividual, setTrackIndividual] = useState(false)
   const [individualItems, setIndividualItems] = useState<IndividualItem[]>([])
   const [individualItemErrors, setIndividualItemErrors] = useState<Record<string, string>>({})
+  
+  // Specification table state
+  const [specificationRows, setSpecificationRows] = useState<SpecificationRow[]>([
+    { id: '1', attribute: '', value: '' },
+    { id: '2', attribute: '', value: '' },
+    { id: '3', attribute: '', value: '' },
+    { id: '4', attribute: '', value: '' }
+  ])
 
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null)
   const [backImageFile, setBackImageFile] = useState<File | null>(null)
@@ -158,6 +173,28 @@ export function ManageLabComponents() {
     console.log("ManageLabComponents - User role:", user?.role)
   }, [user])
 
+  // Specification table management functions
+  const addSpecificationRow = () => {
+    const newRow: SpecificationRow = {
+      id: Date.now().toString(),
+      attribute: '',
+      value: ''
+    }
+    setSpecificationRows(prev => [...prev, newRow])
+  }
+  
+  const removeSpecificationRow = (id: string) => {
+    setSpecificationRows(prev => prev.filter(row => row.id !== id))
+  }
+  
+  const updateSpecificationRow = (id: string, field: 'attribute' | 'value', value: string) => {
+    setSpecificationRows(prev =>
+      prev.map(row =>
+        row.id === id ? { ...row, [field]: value } : row
+      )
+    )
+  }
+  
   // Individual item management functions
   const addIndividualItem = () => {
     const newItem: IndividualItem = {
@@ -263,7 +300,13 @@ export function ManageLabComponents() {
       setLoading(true)
       const response = await fetch("/api/lab-components")
       const data = await response.json()
-      setComponents(data.components || [])
+      setComponents(
+        (data.components || []).map((component: LabComponent) => ({
+          ...component,
+          imageUrl: component.front_image_id ? `/lab-images/${component.front_image_id}` : null,
+          backImageUrl: component.back_image_id ? `/lab-images/${component.back_image_id}` : null,
+        }))
+      )
     } catch (error) {
       console.error("Error fetching components:", error)
       toast({
@@ -312,10 +355,17 @@ export function ManageLabComponents() {
   };
 
   const filteredComponents = components.filter(
-    (component) =>
-      (component.component_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (component.component_category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (component.component_location?.toLowerCase() || '').includes(searchTerm.toLowerCase()),
+    (component) => {
+      const matchesSearch = 
+        (component.component_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (component.component_category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (component.component_location?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+      
+      const matchesCategory = selectedCategory === "all" || 
+        (component.component_category?.toLowerCase() || '') === selectedCategory.toLowerCase()
+      
+      return matchesSearch && matchesCategory
+    }
   )
 
   const handleAddComponent = async () => {
@@ -449,6 +499,7 @@ export function ManageLabComponents() {
           component_category: formattedCategory,
           component_location: formattedLocation,
           component_quantity: finalQuantity,
+          component_specification: convertSpecificationsToString(),
           front_image_id: frontImageUrl,
           back_image_id: backImageUrl,
           created_by: user?.name || "system-fallback",
@@ -926,6 +977,7 @@ export function ManageLabComponents() {
         },
         body: JSON.stringify({
           ...editingComponent,
+          component_specification: convertSpecificationsToString(),
           front_image_id: frontImageId,
           back_image_id: backImageId,
           modified_by: user?.name || "system-fallback",
@@ -987,6 +1039,7 @@ export function ManageLabComponents() {
       const formData = new FormData()
       formData.append('frontImage', frontImageFile)
       formData.append('backImage', backImageFile)
+      formData.append('itemType', 'lab') // Specify this is for lab components
 
       const response = await fetch('/api/ai-analyze-images', {
         method: 'POST',
@@ -999,6 +1052,16 @@ export function ManageLabComponents() {
 
       const data = await response.json()
       
+      if (data.status === 'error') {
+        // Handle validation errors (wrong item type)
+        toast({
+          title: "Invalid Item Type",
+          description: data.error || "Please upload images of lab components only, not library items.",
+          variant: "destructive",
+        })
+        return
+      }
+      
       if (data.status === 'success' && data.result) {
         setNewComponent(prev => ({
           ...prev,
@@ -1006,6 +1069,12 @@ export function ManageLabComponents() {
           component_description: data.result.description,
           component_specification: data.result.specifications
         }))
+        
+        // Parse AI specifications into table format if possible
+        if (data.result.specifications) {
+          const parsedSpecs = parseSpecificationsToTable(data.result.specifications)
+          setSpecificationRows(parsedSpecs)
+        }
         
         toast({
           title: "AI Analysis Complete",
@@ -1027,6 +1096,128 @@ export function ManageLabComponents() {
     }
   }
 
+  // Helper function to parse AI specifications into table format
+  const parseSpecificationsToTable = (specs: string): SpecificationRow[] => {
+    const rows: SpecificationRow[] = []
+    let idCounter = 1
+    
+    // Check if specs are in pipe-separated format (from new AI)
+    if (specs.includes('|')) {
+      const attributes = specs.split('|').map(attr => attr.trim()).filter(attr => attr)
+      attributes.forEach(attribute => {
+        // Check if the attribute already contains a value (has colon or equals)
+        const colonIndex = attribute.indexOf(':')
+        const equalsIndex = attribute.indexOf('=')
+        
+        if (colonIndex > 0) {
+          // Format: "Attribute: Value"
+          rows.push({
+            id: (idCounter++).toString(),
+            attribute: attribute.substring(0, colonIndex).trim(),
+            value: attribute.substring(colonIndex + 1).trim()
+          })
+        } else if (equalsIndex > 0) {
+          // Format: "Attribute = Value"
+          rows.push({
+            id: (idCounter++).toString(),
+            attribute: attribute.substring(0, equalsIndex).trim(),
+            value: attribute.substring(equalsIndex + 1).trim()
+          })
+        } else {
+          // Just attribute name, provide helpful placeholder value
+          const getPlaceholderValue = (attr: string) => {
+            const attrLower = attr.toLowerCase();
+            if (attrLower.includes('dimension')) return 'e.g., 34mm x 26mm';
+            if (attrLower.includes('voltage')) return 'e.g., 3.3V';
+            if (attrLower.includes('current')) return 'e.g., 500mA';
+            if (attrLower.includes('material')) return 'e.g., FR4 PCB';
+            if (attrLower.includes('interface')) return 'e.g., USB Type-B';
+            if (attrLower.includes('package')) return 'e.g., Through-hole';
+            if (attrLower.includes('temperature')) return 'e.g., -10°C to +70°C';
+            if (attrLower.includes('power')) return 'e.g., 20mA';
+            return 'Please specify';
+          };
+          
+          rows.push({
+            id: (idCounter++).toString(),
+            attribute: attribute,
+            value: getPlaceholderValue(attribute)
+          })
+        }
+      })
+    } else {
+      // Legacy format - split by common delimiters and parse
+      const lines = specs.split(/[.\n;]/).filter(line => line.trim())
+      
+      lines.forEach(line => {
+        const trimmedLine = line.trim()
+        if (trimmedLine) {
+          // Try to extract attribute-value pairs
+          const patterns = [
+            /([^:]+):\s*(.+)/,  // "Attribute: Value"
+            /([^=]+)=\s*(.+)/,  // "Attribute = Value"
+            /(\w+(?:\s+\w+)*)\s+(.+)/  // "Attribute Value"
+          ]
+          
+          for (const pattern of patterns) {
+            const match = trimmedLine.match(pattern)
+            if (match) {
+              rows.push({
+                id: (idCounter++).toString(),
+                attribute: match[1].trim(),
+                value: match[2].trim()
+              })
+              break
+            }
+          }
+        }
+      })
+      
+      // If no patterns matched, add the whole spec as a single row
+      if (rows.length === 0) {
+        rows.push({
+          id: '1',
+          attribute: 'Description',
+          value: specs
+        })
+      }
+    }
+    
+    // Ensure we have at least 4 rows with default lab specifications if needed
+    const defaultLabSpecs = [
+      'Dimensions', 'Operating Voltage', 'Current Rating', 'Material', 
+      'Interface', 'Package Type', 'Temperature Range', 'Power Consumption'
+    ]
+    
+    while (rows.length < 4) {
+      const defaultSpec = defaultLabSpecs[rows.length] || ''
+      rows.push({
+        id: (idCounter++).toString(),
+        attribute: defaultSpec,
+        value: ''
+      })
+    }
+    
+    // Add more empty rows if we have fewer than 6 total
+    while (rows.length < 6) {
+      rows.push({
+        id: (idCounter++).toString(),
+        attribute: '',
+        value: ''
+      })
+    }
+    
+    return rows
+  }
+  
+  // Convert specification rows to string format for API
+  const convertSpecificationsToString = (): string => {
+    return specificationRows
+      .filter(row => row.attribute.trim() || row.value.trim())
+      .map(row => `${row.attribute}: ${row.value}`)
+      .join('. ')
+  }
+  
   // Reset form and errors
   const resetForm = () => {
     setNewComponent({
@@ -1058,6 +1249,15 @@ export function ManageLabComponents() {
     setTrackIndividual(false)
     setIndividualItems([])
     setIndividualItemErrors({})
+    // Reset specification table with default lab specs
+    setSpecificationRows([
+      { id: '1', attribute: 'Dimensions', value: '' },
+      { id: '2', attribute: 'Operating Voltage', value: '' },
+      { id: '3', attribute: 'Current Rating', value: '' },
+      { id: '4', attribute: 'Material', value: '' },
+      { id: '5', attribute: 'Interface', value: '' },
+      { id: '6', attribute: 'Package Type', value: '' }
+    ])
   }
 
   // Bulk upload functions
@@ -1532,12 +1732,55 @@ export function ManageLabComponents() {
                   <div className="space-y-3">
                   <div>
                       <Label htmlFor="description">Description *</Label>
-                      <Textarea id="description" value={newComponent.component_description} onChange={e => setNewComponent(prev => ({ ...prev, component_description: e.target.value }))} rows={3} className={`mt-1 ${formErrors.component_description ? 'border-red-500' : ''}`} />
-                      {formErrors.component_description && <p className="text-red-500 text-xs mt-1">{formErrors.component_description}</p>}
+                      <Textarea id="description" value={newComponent.component_description} onChange={e => setNewComponent(prev => ({ ...prev, component_description: e.target.value }))} rows={4} className={`mt-1 resize-none leading-relaxed ${formErrors.component_description ? 'border-red-500' : ''}`} placeholder="Describe the component's purpose, key features, and functionality (max 250 characters)" maxLength={250} />
+                      <div className="flex justify-between items-center mt-1">
+                        {formErrors.component_description && <p className="text-red-500 text-xs">{formErrors.component_description}</p>}
+                        <p className="text-xs text-gray-500 ml-auto">{newComponent.component_description.length}/250 characters</p>
+                      </div>
                   </div>
                   <div>
-                      <Label htmlFor="specifications">Specifications</Label>
-                      <Textarea id="specifications" value={newComponent.component_specification} onChange={e => setNewComponent(prev => ({ ...prev, component_specification: e.target.value }))} rows={3} className="mt-1" />
+                    <div className="flex items-center justify-between">
+                      <Label>Specifications</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addSpecificationRow}
+                        className="h-6 w-6 p-0"
+                        title="Add specification row"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                      {specificationRows.map((row, index) => (
+                        <div key={row.id} className="flex items-center space-x-2">
+                          <Input
+                            placeholder="Attribute (e.g., Dimensions)"
+                            value={row.attribute}
+                            onChange={(e) => updateSpecificationRow(row.id, 'attribute', e.target.value)}
+                            className="flex-1 h-8 text-sm"
+                          />
+                          <Input
+                            placeholder="Value (e.g., 68.6 mm x 53.4 mm)"
+                            value={row.value}
+                            onChange={(e) => updateSpecificationRow(row.id, 'value', e.target.value)}
+                            className="flex-1 h-8 text-sm"
+                          />
+                          {specificationRows.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeSpecificationRow(row.id)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
                   <div className="space-y-3">
@@ -1628,6 +1871,19 @@ export function ManageLabComponents() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categoryOptions.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -1665,7 +1921,7 @@ export function ManageLabComponents() {
                 <div className="space-y-6">
                   {/* Image Display with Fade Animation */}
                   {(component.imageUrl || component.backImageUrl) && (
-                    <div className="relative w-full h-100">
+                    <div className="relative w-full h-64 shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden">
                       {/* Front Image */}
                       <div 
                         className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
@@ -1760,17 +2016,6 @@ export function ManageLabComponents() {
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-sm font-bold text-gray-700">Description :</p>
-                    <p className="text-sm text-gray-600 line-clamp-2">{component.component_description}</p>
-                  </div>
-
-                  {component.component_specification && (
-                    <div>
-                      <p className="text-sm font-bold text-gray-700">Specifications :</p>
-                      <p className="text-sm text-gray-600 line-clamp-2">{component.component_specification}</p>
-                    </div>
-                  )}
 
                   <div className="flex justify-end space-x-2">
                     <Button
@@ -1812,221 +2057,268 @@ export function ManageLabComponents() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-[90vw] w-[1100px] max-h-[90vh] h-[750px] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Edit Component</DialogTitle>
-            <DialogDescription>Update the details of the lab component.</DialogDescription>
+            <DialogTitle>Edit Lab Component</DialogTitle>
           </DialogHeader>
           {editingComponent && (
-            <div className="overflow-y-auto max-h-[calc(90vh-120px)] pr-2">
-              <div className="grid gap-8 py-4">
-                {/* Form Fields */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Left Column */}
-                  <div className="space-y-6">
-                    {/* General Info */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>General Information</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-name">Component Name *</Label>
-                          <Input
-                            id="edit-name"
-                            value={editingComponent.component_name}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, component_name: e.target.value })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-description">Description</Label>
-                          <Textarea
-                            id="edit-description"
-                            value={editingComponent.component_description}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, component_description: e.target.value })
-                            }
-                            rows={3}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-specifications">Specifications</Label>
-                          <Textarea
-                            id="edit-specifications"
-                            value={editingComponent.component_specification || ""}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, component_specification: e.target.value })
-                            }
-                            rows={3}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Stock & Location */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Stock & Location</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-quantity">Total Quantity *</Label>
-                            <Input
-                              id="edit-quantity"
-                              type="number"
-                              value={editingComponent.component_quantity}
-                              onChange={(e) =>
-                                setEditingComponent({
-                                  ...editingComponent,
-                                  component_quantity: Number.parseInt(e.target.value),
-                                })
-                              }
-                              min="0"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-tagId">Tag ID</Label>
-                            <Input
-                              id="edit-tagId"
-                              value={editingComponent.component_tag_id || ""}
-                              onChange={(e) =>
-                                setEditingComponent({ ...editingComponent, component_tag_id: e.target.value })
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-category">Category *</Label>
-                            <Input
-                              id="edit-category"
-                              value={editingComponent.component_category}
-                              onChange={(e) =>
-                                setEditingComponent({ ...editingComponent, component_category: e.target.value })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-location">Location *</Label>
-                            <Input
-                              id="edit-location"
-                              value={editingComponent.component_location}
-                              onChange={(e) =>
-                                setEditingComponent({ ...editingComponent, component_location: e.target.value })
-                              }
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 overflow-y-auto">
+              {/* Left Column: Basic Info & Images */}
+              <div className="space-y-6 pr-3 pl-3">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <Label htmlFor="edit-name">Component Name *</Label>
+                      <Input 
+                        id="edit-name" 
+                        value={editingComponent.component_name} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, component_name: e.target.value }))}
+                        className="mt-1" 
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Label htmlFor="edit-tagId">Tag ID (optional)</Label>
+                      <Input 
+                        id="edit-tagId" 
+                        value={editingComponent.component_tag_id || ""} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, component_tag_id: e.target.value }))}
+                        className="mt-1" 
+                      />
+                    </div>
                   </div>
-                  {/* Right Column */}
-                  <div className="space-y-6">
-                    {/* Purchase Information */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Purchase Information</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-invoice">Invoice Number</Label>
-                          <Input
-                            id="edit-invoice"
-                            value={editingComponent.invoice_number || ""}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, invoice_number: e.target.value })
-                            }
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-value">Purchase Value</Label>
-                            <Input
-                              id="edit-value"
-                              type="number"
-                              value={editingComponent.purchase_value || ""}
-                              onChange={(e) =>
-                                setEditingComponent({ ...editingComponent, purchase_value: e.target.value })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-currency">Currency</Label>
-                            <Input
-                              id="edit-currency"
-                              value={editingComponent.purchase_currency}
-                              onChange={(e) =>
-                                setEditingComponent({ ...editingComponent, purchase_currency: e.target.value })
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-purchasedFrom">Purchased From</Label>
-                          <Input
-                            id="edit-purchasedFrom"
-                            value={editingComponent.purchased_from || ""}
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, purchased_from: e.target.value })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-purchaseDate">Purchase Date</Label>
-                          <Input
-                            id="edit-purchaseDate"
-                            type="date"
-                            value={
-                              editingComponent.purchase_date
-                                ? new Date(editingComponent.purchase_date).toISOString().split("T")[0]
-                                : ""
-                            }
-                            onChange={(e) =>
-                              setEditingComponent({ ...editingComponent, purchase_date: e.target.value })
-                            }
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Images */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Images</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {/* Placeholder for image uploads */}
-                        <div className="text-sm text-gray-500">Image upload is not available during edit.</div>
-                      </CardContent>
-                    </Card>
+                  
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="edit-location">Location *</Label>
+                      <Input 
+                        id="edit-location" 
+                        value={editingComponent.component_location} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, component_location: e.target.value }))}
+                        className="mt-1" 
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Label htmlFor="edit-category">Category *</Label>
+                      <Input 
+                        id="edit-category" 
+                        value={editingComponent.component_category} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, component_category: e.target.value }))}
+                        className="mt-1" 
+                      />
+                    </div>
+                    <div className="w-20">
+                      <Label htmlFor="edit-quantity">Quantity *</Label>
+                      <Input 
+                        id="edit-quantity" 
+                        type="number" 
+                        value={editingComponent.component_quantity} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))}
+                        min="1" 
+                        className="mt-1" 
+                      />
+                    </div>
                   </div>
                 </div>
-
-                {/* Footer */}
-                <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t">
-                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span tabIndex={0}>
-                          <Button onClick={handleEditComponent} disabled={!isEditFormValid}>
-                            Save Changes
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {!isEditFormValid && (
-                        <TooltipContent>
-                          <p>Please fill in all required fields: Name, Category, and Location.</p>
-                        </TooltipContent>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Component Images</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-frontImage">Front Image</Label>
+                      <Input 
+                        id="edit-frontImage" 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={e => setFrontImageFile(e.target.files?.[0] || null)}
+                        className="mt-1" 
+                      />
+                      {(frontImagePreview || editingComponent.imageUrl) && (
+                        <div className="mt-2">
+                          <img
+                            src={frontImagePreview || editingComponent.imageUrl || ''}
+                            alt="Front Preview"
+                            className="w-full h-40 object-contain rounded-lg bg-gray-50"
+                          />
+                        </div>
                       )}
-                    </Tooltip>
-                  </TooltipProvider>
-                </DialogFooter>
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-backImage">Back Image</Label>
+                      <Input 
+                        id="edit-backImage" 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={e => setBackImageFile(e.target.files?.[0] || null)}
+                        className="mt-1" 
+                      />
+                      {(backImagePreview || editingComponent.backImageUrl) && (
+                        <div className="mt-2">
+                          <img
+                            src={backImagePreview || editingComponent.backImageUrl || ''}
+                            alt="Back Preview"
+                            className="w-full h-40 object-contain rounded-lg bg-gray-50"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right Column: Details & Purchase Info */}
+              <div className="space-y-6 pr-2">
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="edit-description">Description *</Label>
+                    <Textarea 
+                      id="edit-description" 
+                      value={editingComponent.component_description} 
+                      onChange={e => setEditingComponent(prev => ({ ...prev, component_description: e.target.value }))}
+                      rows={4} 
+                      className="mt-1 resize-none leading-relaxed" 
+                      placeholder="Describe the component's purpose, key features, and functionality (max 250 characters)"
+                      maxLength={250}
+                    />
+                    <p className="text-xs text-gray-500 mt-1 text-right">{editingComponent.component_description.length}/250 characters</p>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <Label>Specifications</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addSpecificationRow}
+                        className="h-6 w-6 p-0"
+                        title="Add specification row"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                      {specificationRows.map((row, index) => (
+                        <div key={row.id} className="flex items-center space-x-2">
+                          <Input
+                            placeholder="Attribute (e.g., Dimensions)"
+                            value={row.attribute}
+                            onChange={(e) => updateSpecificationRow(row.id, 'attribute', e.target.value)}
+                            className="flex-1 h-8 text-sm"
+                          />
+                          <Input
+                            placeholder="Value (e.g., 68.6 mm x 53.4 mm)"
+                            value={row.value}
+                            onChange={(e) => updateSpecificationRow(row.id, 'value', e.target.value)}
+                            className="flex-1 h-8 text-sm"
+                          />
+                          {specificationRows.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeSpecificationRow(row.id)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Purchase Details (Optional)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-invoiceNumber">Invoice Number</Label>
+                      <Input 
+                        id="edit-invoiceNumber" 
+                        value={editingComponent.invoice_number || ""} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, invoice_number: e.target.value }))}
+                        className="mt-1" 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-purchasedFrom">Purchased From</Label>
+                      <Input 
+                        id="edit-purchasedFrom" 
+                        value={editingComponent.purchased_from || ""} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, purchased_from: e.target.value }))}
+                        className="mt-1" 
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="edit-purchaseDate">Purchase Date</Label>
+                      <Input 
+                        id="edit-purchaseDate" 
+                        type="date" 
+                        value={editingComponent.purchase_date ? new Date(editingComponent.purchase_date).toISOString().split('T')[0] : ''} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, purchase_date: e.target.value }))}
+                        className="mt-1" 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-purchaseValue">Purchase Value</Label>
+                      <Input 
+                        id="edit-purchaseValue" 
+                        type="number" 
+                        min="0" 
+                        step="0.01" 
+                        value={editingComponent.purchase_value || ""} 
+                        onChange={e => setEditingComponent(prev => ({ ...prev, purchase_value: e.target.value }))}
+                        placeholder="0.00" 
+                        className="mt-1" 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-purchaseCurrency">Currency</Label>
+                      <Select 
+                        value={editingComponent.purchase_currency} 
+                        onValueChange={value => setEditingComponent(prev => ({ ...prev, purchase_currency: value }))}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                          <SelectItem value="USD">USD - US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR - Euro</SelectItem>
+                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Form Actions */}
+              <div className="col-span-1 md:col-span-2 flex justify-end space-x-3 pt-4 border-t mt-4">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="px-6">Cancel</Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button 
+                          type="button"
+                          onClick={handleEditComponent} 
+                          disabled={!isEditFormValid}
+                        >
+                          Save Changes
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!isEditFormValid && (
+                      <TooltipContent>
+                        <p>Please fill in all required fields: Name, Category, and Location.</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           )}

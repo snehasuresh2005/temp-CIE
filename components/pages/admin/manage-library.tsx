@@ -49,6 +49,12 @@ interface LibraryItem {
   availableQuantity?: number
 }
 
+interface SpecificationRow {
+  id: string
+  attribute: string
+  value: string
+}
+
 // Utility functions for formatting
 function toTitleCase(str: string) {
   return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase())
@@ -74,6 +80,15 @@ export function ManageLibrary() {
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
+  
+  // Specification table state
+  const [specificationRows, setSpecificationRows] = useState<SpecificationRow[]>([
+    { id: '1', attribute: '', value: '' },
+    { id: '2', attribute: '', value: '' },
+    { id: '3', attribute: '', value: '' },
+    { id: '4', attribute: '', value: '' }
+  ])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<LibraryItem | null>(null)
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false)
@@ -176,6 +191,152 @@ export function ManageLibrary() {
     }
   }, [showAddLocation])
 
+  // Specification table management functions
+  const addSpecificationRow = () => {
+    const newRow: SpecificationRow = {
+      id: Date.now().toString(),
+      attribute: '',
+      value: ''
+    }
+    setSpecificationRows(prev => [...prev, newRow])
+  }
+  
+  const removeSpecificationRow = (id: string) => {
+    setSpecificationRows(prev => prev.filter(row => row.id !== id))
+  }
+  
+  const updateSpecificationRow = (id: string, field: 'attribute' | 'value', value: string) => {
+    setSpecificationRows(prev =>
+      prev.map(row =>
+        row.id === id ? { ...row, [field]: value } : row
+      )
+    )
+  }
+  
+  // Helper function to parse AI specifications into table format
+  const parseSpecificationsToTable = (specs: string): SpecificationRow[] => {
+    const rows: SpecificationRow[] = []
+    let idCounter = 1
+    
+    // Check if specs are in pipe-separated format (from new AI)
+    if (specs.includes('|')) {
+      const attributes = specs.split('|').map(attr => attr.trim()).filter(attr => attr)
+      attributes.forEach(attribute => {
+        // Check if the attribute already contains a value (has colon or equals)
+        const colonIndex = attribute.indexOf(':')
+        const equalsIndex = attribute.indexOf('=')
+        
+        if (colonIndex > 0) {
+          // Format: "Attribute: Value"
+          rows.push({
+            id: (idCounter++).toString(),
+            attribute: attribute.substring(0, colonIndex).trim(),
+            value: attribute.substring(colonIndex + 1).trim()
+          })
+        } else if (equalsIndex > 0) {
+          // Format: "Attribute = Value"
+          rows.push({
+            id: (idCounter++).toString(),
+            attribute: attribute.substring(0, equalsIndex).trim(),
+            value: attribute.substring(equalsIndex + 1).trim()
+          })
+        } else {
+          // Just attribute name, provide helpful placeholder value
+          const getPlaceholderValue = (attr: string) => {
+            const attrLower = attr.toLowerCase();
+            if (attrLower.includes('author')) return 'e.g., John Smith';
+            if (attrLower.includes('publisher')) return 'e.g., Tech Books';
+            if (attrLower.includes('edition')) return 'e.g., 3rd Edition';
+            if (attrLower.includes('isbn')) return 'e.g., 978-1234567890';
+            if (attrLower.includes('pages')) return 'e.g., 450';
+            if (attrLower.includes('year')) return 'e.g., 2023';
+            if (attrLower.includes('language')) return 'e.g., English';
+            if (attrLower.includes('binding')) return 'e.g., Paperback';
+            if (attrLower.includes('subject')) return 'e.g., Computer Science';
+            if (attrLower.includes('level')) return 'e.g., Undergraduate';
+            return 'Please specify';
+          };
+          
+          rows.push({
+            id: (idCounter++).toString(),
+            attribute: attribute,
+            value: getPlaceholderValue(attribute)
+          })
+        }
+      })
+    } else {
+      // Legacy format - split by common delimiters and parse
+      const lines = specs.split(/[.\n;]/).filter(line => line.trim())
+      
+      lines.forEach(line => {
+        const trimmedLine = line.trim()
+        if (trimmedLine) {
+          // Try to extract attribute-value pairs
+          const patterns = [
+            /([^:]+):\s*(.+)/,  // "Attribute: Value"
+            /([^=]+)=\s*(.+)/,  // "Attribute = Value"
+            /(\w+(?:\s+\w+)*)\s+(.+)/  // "Attribute Value"
+          ]
+          
+          for (const pattern of patterns) {
+            const match = trimmedLine.match(pattern)
+            if (match) {
+              rows.push({
+                id: (idCounter++).toString(),
+                attribute: match[1].trim(),
+                value: match[2].trim()
+              })
+              break
+            }
+          }
+        }
+      })
+      
+      // If no patterns matched, add the whole spec as a single row
+      if (rows.length === 0) {
+        rows.push({
+          id: '1',
+          attribute: 'Description',
+          value: specs
+        })
+      }
+    }
+    
+    // Ensure we have at least 4 rows with default library specifications if needed
+    const defaultLibrarySpecs = [
+      'Author', 'Publisher', 'Edition', 'ISBN', 
+      'Pages', 'Publication Year', 'Language', 'Binding Type'
+    ]
+    
+    while (rows.length < 4) {
+      const defaultSpec = defaultLibrarySpecs[rows.length] || ''
+      rows.push({
+        id: (idCounter++).toString(),
+        attribute: defaultSpec,
+        value: ''
+      })
+    }
+    
+    // Add more empty rows if we have fewer than 6 total
+    while (rows.length < 6) {
+      rows.push({
+        id: (idCounter++).toString(),
+        attribute: '',
+        value: ''
+      })
+    }
+    
+    return rows
+  }
+  
+  // Convert specification rows to string format for API
+  const convertSpecificationsToString = (): string => {
+    return specificationRows
+      .filter(row => row.attribute.trim() || row.value.trim())
+      .map(row => `${row.attribute}: ${row.value}`)
+      .join('. ')
+  }
+  
   // Click-outside detection for category input
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -279,10 +440,17 @@ export function ManageLibrary() {
   };
 
   const filteredItems = items.filter(
-    (item) =>
-      (item.item_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (item.item_category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (item.item_location?.toLowerCase() || '').includes(searchTerm.toLowerCase()),
+    (item) => {
+      const matchesSearch = 
+        (item.item_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (item.item_category?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (item.item_location?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+      
+      const matchesCategory = selectedCategory === "all" || 
+        (item.item_category?.toLowerCase() || '') === selectedCategory.toLowerCase()
+      
+      return matchesSearch && matchesCategory
+    }
   )
 
   const handleAddItem = async () => {
@@ -448,6 +616,7 @@ export function ManageLibrary() {
       const formData = new FormData()
       formData.append('frontImage', frontImageFile)
       formData.append('backImage', backImageFile)
+      formData.append('itemType', 'library') // Specify this is for library items
 
       const response = await fetch('/api/ai-analyze-images', {
         method: 'POST',
@@ -460,6 +629,16 @@ export function ManageLibrary() {
 
       const data = await response.json()
       
+      if (data.status === 'error') {
+        // Handle validation errors (wrong item type)
+        toast({
+          title: "Invalid Item Type",
+          description: data.error || "Please upload images of library books only, not lab components.",
+          variant: "destructive",
+        })
+        return
+      }
+      
       if (data.status === 'success' && data.result) {
         setNewItem(prev => ({
           ...prev,
@@ -467,6 +646,12 @@ export function ManageLibrary() {
           item_description: data.result.description,
           item_specification: data.result.specifications
         }))
+        
+        // Parse AI specifications into table format if possible
+        if (data.result.specifications) {
+          const parsedSpecs = parseSpecificationsToTable(data.result.specifications)
+          setSpecificationRows(parsedSpecs)
+        }
         
         toast({
           title: "AI Analysis Complete",
@@ -839,6 +1024,7 @@ export function ManageLibrary() {
         },
         body: JSON.stringify({
           ...editingItem,
+          item_specification: convertSpecificationsToString(),
           front_image_id: frontImageId,
           back_image_id: backImageId,
           modified_by: user?.name || "system-fallback",
@@ -1165,8 +1351,8 @@ export function ManageLibrary() {
           }}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
+                <Plus className="h-4 w-2 mr-2" />
+                Add Books
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-7xl w-full max-h-[98vh] overflow-hidden">
@@ -1456,22 +1642,59 @@ export function ManageLibrary() {
                         onChange={e => editingItem
                           ? setEditingItem((prev) => prev && { ...prev, item_description: e.target.value })
                           : setNewItem((prev) => ({ ...prev, item_description: e.target.value }))}
-                        rows={3} 
-                        className={`mt-1 ${formErrors.item_description ? 'border-red-500' : ''}`} 
+                        rows={4} 
+                        className={`mt-1 resize-none leading-relaxed ${formErrors.item_description ? 'border-red-500' : ''}`} 
+                        placeholder="Describe the book's subject matter, target audience, and key topics (max 250 characters)"
+                        maxLength={250}
                       />
-                      {formErrors.item_description && <p className="text-red-500 text-xs mt-1">{formErrors.item_description}</p>}
+                      <div className="flex justify-between items-center mt-1">
+                        {formErrors.item_description && <p className="text-red-500 text-xs">{formErrors.item_description}</p>}
+                        <p className="text-xs text-gray-500 ml-auto">{(editingItem ? editingItem.item_description : newItem.item_description).length}/250 characters</p>
+                      </div>
                     </div>
                     <div>
-                      <Label htmlFor="specifications">Specifications</Label>
-                      <Textarea 
-                        id="specifications" 
-                        value={editingItem ? editingItem.item_specification : newItem.item_specification} 
-                        onChange={e => editingItem
-                          ? setEditingItem((prev) => prev && { ...prev, item_specification: e.target.value })
-                          : setNewItem((prev) => ({ ...prev, item_specification: e.target.value }))}
-                        rows={3} 
-                        className="mt-1" 
-                      />
+                      <div className="flex items-center justify-between">
+                        <Label>Specifications</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addSpecificationRow}
+                          className="h-6 w-6 p-0"
+                          title="Add specification row"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                        {specificationRows.map((row, index) => (
+                          <div key={row.id} className="flex items-center space-x-2">
+                            <Input
+                              placeholder="Attribute (e.g., Pages)"
+                              value={row.attribute}
+                              onChange={(e) => updateSpecificationRow(row.id, 'attribute', e.target.value)}
+                              className="flex-1 h-8 text-sm"
+                            />
+                            <Input
+                              placeholder="Value (e.g., 500)"
+                              value={row.value}
+                              onChange={(e) => updateSpecificationRow(row.id, 'value', e.target.value)}
+                              className="flex-1 h-8 text-sm"
+                            />
+                            {specificationRows.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeSpecificationRow(row.id)}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -1591,7 +1814,28 @@ export function ManageLibrary() {
           </Dialog>
         </div>
       </div>
-      {/* Inventory Tab */}
+
+      <div className="flex items-center space-x-4">
+        <Input
+          placeholder="Search library items..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categoryOptions.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredItems.length === 0 ? (
           <Card className="col-span-full">
@@ -1627,7 +1871,7 @@ export function ManageLibrary() {
                 <div className="space-y-4">
                   {/* Image Display with Fade Animation */}
                   {(item.imageUrl || item.backImageUrl) && (
-                    <div className="relative w-full h-64">
+                    <div className="relative w-full h-48 shadow-lg hover:shadow-lg transition-shadow duration-100 rounded-lg overflow-hidden">
                       {/* Front Image */}
                       <div 
                         className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
@@ -1699,30 +1943,66 @@ export function ManageLibrary() {
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-4 items-center text-sm text-gray-700 mb-2">
-                    <div><span className="font-semibold">Total:</span> {item.item_quantity}</div>
-                     <div><span className="font-semibold">Location:</span> {item.item_location}</div>
+                  {/* Item Details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-gray-700">Total Quantity</p>
+                      <p>{item.item_quantity}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-700">Available</p>
+                      <p>{item.availableQuantity || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-700">Category</p>
+                      <p>{item.item_category}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-700">Location</p>
+                      <p>{item.item_location}</p>
+                    </div>
                   </div>
-                  <div className="flex space-x-2 pt-2">
+
+                  <div>
+                    <p className="text-sm font-bold text-gray-700">Description :</p>
+                    <p className="text-sm text-gray-600 line-clamp-2">{item.item_description}</p>
+                  </div>
+
+                  {item.item_specification && (
+                    <div>
+                      <p className="text-sm font-bold text-gray-700">Specifications :</p>
+                      <p className="text-sm text-gray-600 line-clamp-2">{item.item_specification}</p>
+                    </div>
+                  )}
+                  <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
                         setEditingItem(item)
                         setIsAddDialogOpen(true)
+                        // Set image previews if images exist
+                        if (item.imageUrl) {
+                          setFrontImagePreview(item.imageUrl)
+                        }
+                        if (item.backImageUrl) {
+                          setBackImagePreview(item.backImageUrl)
+                        }
                       }}
+                      className="text-blue-600 hover:text-blue-700"
                     >
-                      <Edit className="h-4 w-4 mr-1" /> Edit
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
                       onClick={() => {
                         setItemToDelete(item)
                         setIsDeleteDialogOpen(true)
                       }}
+                      className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" /> Delete
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
