@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image } from "lucide-react"
+import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -1815,26 +1815,35 @@ export function ManageLibrary() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <Input
-          placeholder="Search library items..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categoryOptions.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
+        <div className="relative w-full md:w-1/2 lg:w-1/3">
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+            <Search className="h-4 w-4" />
+          </span>
+          <Input
+            placeholder="Search library items..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8 pr-2 h-9 w-full text-sm"
+          />
+        </div>
+        <span className="flex items-center ml-4 mr-1 text-gray-400"><Filter className="h-5 w-5" /></span>
+        <span className="text-sm text-gray-600 font-medium ml-1">Category</span>
+        <div className="w-40 flex flex-col">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Category">{selectedCategory !== "all" ? selectedCategory : undefined}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categoryOptions.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredItems.length === 0 ? (
@@ -1950,10 +1959,6 @@ export function ManageLibrary() {
                       <p>{item.item_quantity}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-700">Available</p>
-                      <p>{item.availableQuantity || 0}</p>
-                    </div>
-                    <div>
                       <p className="text-sm font-bold text-gray-700">Category</p>
                       <p>{item.item_category}</p>
                     </div>
@@ -1962,18 +1967,6 @@ export function ManageLibrary() {
                       <p>{item.item_location}</p>
                     </div>
                   </div>
-
-                  <div>
-                    <p className="text-sm font-bold text-gray-700">Description :</p>
-                    <p className="text-sm text-gray-600 line-clamp-2">{item.item_description}</p>
-                  </div>
-
-                  {item.item_specification && (
-                    <div>
-                      <p className="text-sm font-bold text-gray-700">Specifications :</p>
-                      <p className="text-sm text-gray-600 line-clamp-2">{item.item_specification}</p>
-                    </div>
-                  )}
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
