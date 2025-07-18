@@ -355,6 +355,7 @@ export function ProjectManagement() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
         },
         body: JSON.stringify({
           status,
