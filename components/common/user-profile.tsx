@@ -233,8 +233,17 @@ export function UserProfile() {
           <div className="relative">
             <Avatar className="h-28 w-28 ring-4 ring-blue-200 shadow-lg rounded-full">
               <AvatarImage 
-                src={previewImage || user?.image || undefined} 
-                alt={user?.name || 'User avatar'} 
+                src={previewImage || (user?.role === 'FACULTY' && user?.profileData?.faculty_id ? `/profile-img/${user.profileData.faculty_id}.jpg` : user?.image) || undefined} 
+                alt={user?.name || 'User avatar'}
+                onError={(e) => {
+                  // Try different extensions if jpg fails
+                  const currentSrc = e.currentTarget.src;
+                  if (currentSrc.includes('.jpg') && !previewImage) {
+                    e.currentTarget.src = currentSrc.replace('.jpg', '.jpeg');
+                  } else if (currentSrc.includes('.jpeg') && !previewImage) {
+                    e.currentTarget.src = currentSrc.replace('.jpeg', '.png');
+                  }
+                }}
               />
               <AvatarFallback className="text-4xl font-bold bg-blue-100 text-blue-700">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
@@ -254,12 +263,42 @@ export function UserProfile() {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e)=>{
+              onChange={async (e)=>{
                 const file = e.target.files?.[0];
-                if(file){
+                if(file && user){
                   const url = URL.createObjectURL(file);
                   setPreviewImage(url);
-                  // TODO: send to backend
+                  
+                  // Upload the image if user is faculty
+                  if (user.role === 'FACULTY' && user.profileData?.id) {
+                    try {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      formData.append('facultyId', user.profileData.id);
+                      
+                      const response = await fetch('/api/faculty/upload', {
+                        method: 'POST',
+                        body: formData,
+                      });
+                      
+                      if (response.ok) {
+                        toast({
+                          title: "Success",
+                          description: "Profile image updated successfully",
+                        });
+                      } else {
+                        throw new Error('Upload failed');
+                      }
+                    } catch (error) {
+                      console.error('Image upload error:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to upload profile image",
+                        variant: "destructive",
+                      });
+                      setPreviewImage(null);
+                    }
+                  }
                 }
               }}
             />

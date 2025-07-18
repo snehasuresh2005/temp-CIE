@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
   GraduationCap,
@@ -256,6 +256,19 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                       </p>
                     </div>
                     <Avatar className="h-8 w-8">
+                      <AvatarImage 
+                        src={user?.role === 'FACULTY' && user?.profileData?.faculty_id ? `/profile-img/${user.profileData.faculty_id}.jpg` : undefined}
+                        alt={user?.name || 'User avatar'}
+                        onError={(e) => {
+                          // Try different extensions if jpg fails
+                          const currentSrc = e.currentTarget.src;
+                          if (currentSrc.includes('.jpg')) {
+                            e.currentTarget.src = currentSrc.replace('.jpg', '.jpeg');
+                          } else if (currentSrc.includes('.jpeg')) {
+                            e.currentTarget.src = currentSrc.replace('.jpeg', '.png');
+                          }
+                        }}
+                      />
                       <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-sm">
                         {user?.name.charAt(0)}
                       </AvatarFallback>
