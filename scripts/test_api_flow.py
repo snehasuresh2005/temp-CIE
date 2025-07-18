@@ -12,7 +12,9 @@ warnings.filterwarnings("ignore")
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
 
-sys.path.append('C:\\Users\\Karthik GS\\OneDrive\\Desktop\\CIE_Personal\\temp-CIE-personal\\scripts')
+# Add current script directory to Python path dynamically
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
 
 from resume_selector_main_class import ResumeSelector
 

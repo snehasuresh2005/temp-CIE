@@ -127,6 +127,7 @@ interface ProjectRequest {
   project: {
     name: string;
     description: string;
+    type?: string;  // Add the type field
     components_needed_details?: any[];
   };
 }
@@ -174,8 +175,10 @@ export function ProjectManagement() {
     useState<ProjectRequest[]>([]);
   const [isShortlistDialogOpen, setIsShortlistDialogOpen] = useState(false);
   const [shortlistResults, setShortlistResults] = useState<any>(null);
+  const [savedShortlistResults, setSavedShortlistResults] = useState<Record<string, any>>({});  // Store results per project
   const [isShortlisting, setIsShortlisting] = useState(false);
   const [showAIRanking, setShowAIRanking] = useState(false);
+  const [isAIResultsChoiceDialogOpen, setIsAIResultsChoiceDialogOpen] = useState(false); // New state for AI results choice
   const [selectedCandidateDetails, setSelectedCandidateDetails] =
     useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -782,6 +785,11 @@ export function ProjectManagement() {
         };
 
         setShortlistResults(cleanData);
+        // Save results for this project
+        setSavedShortlistResults(prev => ({
+          ...prev,
+          [project.id]: cleanData
+        }));
         setShowAIRanking(true); // Show AI ranking in the applications dialog
 
         toast({
@@ -813,7 +821,36 @@ export function ProjectManagement() {
   // Helper function for AI shortlisting within applications dialog
   const handleAIShortlistInDialog = async () => {
     if (!selectedProject) return;
+    
+    // Check if we have saved results for this project
+    const savedResults = savedShortlistResults[selectedProject.id];
+    if (savedResults) {
+      // Show dialog to choose between saved results or refresh
+      setIsAIResultsChoiceDialogOpen(true);
+      return;
+    }
+    
+    // Run new AI analysis
     await handleShortlistCandidates(selectedProject);
+  };
+
+  // Handle using previous AI results
+  const handleUsePreviousResults = () => {
+    if (!selectedProject) return;
+    const savedResults = savedShortlistResults[selectedProject.id];
+    if (savedResults) {
+      setShortlistResults(savedResults);
+      setShowAIRanking(true);
+    }
+    setIsAIResultsChoiceDialogOpen(false);
+  };
+
+  // Handle refreshing AI analysis
+  const handleRefreshAnalysis = async () => {
+    setIsAIResultsChoiceDialogOpen(false);
+    if (selectedProject) {
+      await handleShortlistCandidates(selectedProject);
+    }
   };
 
   // Function to show candidate details
@@ -1288,9 +1325,10 @@ export function ProjectManagement() {
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
-          {projectRequests.length > 0 ? (
+          {/* Filter to only show student-proposed projects that need faculty approval */}
+          {projectRequests.filter(request => (request.project as any)?.type === "STUDENT_PROPOSED").length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {projectRequests.map((request) => (
+              {projectRequests.filter(request => (request.project as any)?.type === "STUDENT_PROPOSED").map((request) => (
                 <Card
                   key={request.id}
                   className="hover:shadow-lg transition-shadow duration-200"
@@ -1381,10 +1419,10 @@ export function ProjectManagement() {
           ) : (
             <div className="text-center py-12 text-gray-500">
               <div className="text-lg font-medium mb-2">
-                No project requests found
+                No student project requests found
               </div>
               <p className="text-sm">
-                Students will appear here when they request project approvals.
+                Student-proposed projects will appear here when they need your approval.
               </p>
             </div>
           )}
@@ -1707,9 +1745,10 @@ export function ProjectManagement() {
         onOpenChange={(open) => {
           setIsApplicationsDialogOpen(open);
           if (!open) {
-            // Reset AI state when dialog closes
+            // Reset AI state when dialog closes, but preserve saved results
             setShowAIRanking(false);
             setShortlistResults(null);
+            // Note: savedShortlistResults is preserved to avoid re-computation
           }
         }}
       >
@@ -2711,6 +2750,41 @@ export function ProjectManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AI Results Choice Dialog */}
+      <AlertDialog
+        open={isAIResultsChoiceDialogOpen}
+        onOpenChange={setIsAIResultsChoiceDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>AI Analysis Results Available</AlertDialogTitle>
+            <AlertDialogDescription>
+              Previous AI shortlist results are already available for this project. 
+              Would you like to use the previous results or run a fresh analysis?
+              <br />
+              <span className="text-sm text-amber-600 mt-2 block">
+                Note: Fresh analysis will take 1-2 minutes to complete.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsAIResultsChoiceDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <Button 
+              variant="outline" 
+              onClick={handleUsePreviousResults}
+              className="mr-2"
+            >
+              Use Previous Results
+            </Button>
+            <AlertDialogAction onClick={handleRefreshAnalysis}>
+              Run Fresh Analysis
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

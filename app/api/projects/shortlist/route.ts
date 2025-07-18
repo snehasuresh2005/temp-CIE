@@ -174,8 +174,36 @@ if __name__ == "__main__":
     await fs.writeFile(scriptPath, pythonScript)
 
     try {
-      // Run the Python script with virtual environment Python
-      const pythonPath = "C:/Users/Karthik GS/OneDrive/Desktop/CIE_Personal/.venv/Scripts/python.exe"
+      // Get Python path from environment or use dynamic detection
+      let pythonPath = process.env.PYTHON_VENV_PATH;
+      
+      if (!pythonPath) {
+        // Try to detect virtual environment automatically
+        const venvPaths = [
+          path.join(process.cwd(), "..", ".venv", process.platform === "win32" ? "Scripts" : "bin", process.platform === "win32" ? "python.exe" : "python"),
+          path.join(process.cwd(), ".venv", process.platform === "win32" ? "Scripts" : "bin", process.platform === "win32" ? "python.exe" : "python"),
+          path.join(process.env.HOME || process.env.USERPROFILE || "", ".venv", process.platform === "win32" ? "Scripts" : "bin", process.platform === "win32" ? "python.exe" : "python"),
+        ];
+        
+        // Check which python path exists
+        for (const checkPath of venvPaths) {
+          try {
+            await fs.access(checkPath);
+            pythonPath = checkPath;
+            break;
+          } catch {
+            // Continue to next path
+          }
+        }
+        
+        // Fallback to system python
+        if (!pythonPath) {
+          pythonPath = process.platform === "win32" ? "python.exe" : "python3";
+          console.warn("Virtual environment not found, using system Python");
+        }
+      }
+      
+      console.log("Using Python path:", pythonPath);
       const { stdout, stderr } = await execAsync(`"${pythonPath}" "${scriptPath}"`, {
         cwd: process.cwd(),
         timeout: 120000, // 2 minutes timeout

@@ -413,17 +413,19 @@ Education: {', '.join(education)}
 {excerpt}
 
 ---
-Analyze candidate fit and provide EXACTLY in JSON:
+This candidate has been SELECTED as a top match for the project. Analyze why this candidate is SUITABLE and provide positive reasons for selection in EXACTLY this JSON format:
 {{
   "name": "{name}",
   "skills": {json.dumps(skills)},
   "reasons": [
-    "Reason 1",
-    "Reason 2", 
-    "Reason 3"
+    "Positive reason why this candidate is selected for this project",
+    "Another positive reason highlighting their strengths", 
+    "Third positive reason showing their fit for the role"
   ],
   "score": {candidate_info['score']:.2f}
 }}
+
+Focus on strengths, relevant experience, matching skills, and why they would be successful in this project.
 """
 
         try:
