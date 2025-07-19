@@ -12,9 +12,10 @@ async function getUserFromRequest(req) {
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
   try {
+    console.log('Calling findUnique on Opportunity with:', { where: { id } });
     const opportunity = await prisma.opportunity.findUnique({
       where: { id },
-      include: { faculty: true, applications: true },
+      include: { facultyInCharge: true, opportunityApplications: true },
     });
     if (!opportunity) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(opportunity);
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  if (user.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  if (user.role !== 'ADMIN' && user.role !== 'FACULTY') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   const { id } = params;
   const data = await req.json();
   try {
@@ -43,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         applicationEndDate: new Date(data.applicationEndDate),
         remuneration: data.remuneration,
         filePath: data.filePath || null,
-        facultyId: data.facultyId,
+        facultyId: user.id, // Always use authenticated user's ID
         capacity: data.capacity,
         status: data.status,
       },
@@ -63,6 +64,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   try {
     await prisma.opportunity.delete({ where: { id } });
     return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}
+
+// PATCH: Update only the facultyId of an opportunity using x-user-id header
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const facultyId = req.headers.get('x-user-id');
+  if (!facultyId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { id: opportunityId } = params;
+  try {
+    const updated = await prisma.opportunity.update({
+      where: { id: opportunityId },
+      data: { facultyId },
+    });
+    return NextResponse.json(updated);
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }

@@ -14,7 +14,7 @@ interface Opportunity {
   applicationEndDate: string;
   remuneration: string;
   filePath?: string | null;
-  facultyId: string;
+  facultyInChargeId: string;
   capacity: number;
   status: string;
 }
@@ -25,6 +25,7 @@ interface Application {
   status: string;
   appliedAt: string;
   student: { name: string; email: string; resume_id?: string; resume_path?: string };
+  resumePath?: string; // Added this field to the Application interface
 }
 
 export default function FacultyOpportunity() {
@@ -38,12 +39,12 @@ export default function FacultyOpportunity() {
   const [appError, setAppError] = useState('');
 
   useEffect(() => {
-    const facultyId = user?.profileData?.id;
-    if (!facultyId) return;
+    const facultyInChargeId = user?.id;
+    if (!facultyInChargeId) return;
     setLoading(true);
     fetch('/api/opportunities')
       .then(res => res.json())
-      .then((data: Opportunity[]) => setOpportunities(data.filter(o => o.facultyId === facultyId)))
+      .then((data: Opportunity[]) => setOpportunities(data.filter(o => o.facultyInChargeId === facultyInChargeId)))
       .catch(() => setError('Failed to load opportunities'))
       .finally(() => setLoading(false));
   }, [user]);
@@ -56,28 +57,32 @@ export default function FacultyOpportunity() {
       headers: { 'x-user-id': user?.id || '' },
     })
       .then(res => res.json())
-      .then((data: Application[]) => setApplications(data))
+      .then((data: Application[] | { error: string }) => {
+        if (Array.isArray(data)) {
+          setApplications(data);
+        } else {
+          setApplications([]);
+          setAppError(data.error || 'Failed to load applicants');
+        }
+      })
       .catch(() => setAppError('Failed to load applicants'))
       .finally(() => setAppLoading(false));
   };
 
-  const handleStatusChange = async (applicationId: string, status: string) => {
+  const handleStatusChange = async (applicationId: string, status: 'ACCEPTED' | 'REJECTED') => {
     setAppLoading(true);
     setAppError('');
     try {
-      const res = await fetch(`/api/opportunities/${selectedOppId}/applications`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?.id || '',
-        },
-        body: JSON.stringify({ applicationId, status }),
+      const res = await fetch(`/api/opportunities/applications/${applicationId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': user?.id || '' },
+        body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed to update');
-      // Refresh applications
+      if (!res.ok) throw new Error('Failed to update status');
+      // Refresh applicants list
       handleViewApplicants(selectedOppId!);
-    } catch (err: any) {
-      setAppError(err.message);
+    } catch (err) {
+      setAppError('Failed to update status');
     } finally {
       setAppLoading(false);
     }
@@ -132,8 +137,10 @@ export default function FacultyOpportunity() {
                       <div>Loading applicants...</div>
                     ) : (
                       <div className="space-y-2">
-                        {applications.length === 0 && <div>No applicants yet.</div>}
-                        {applications.map(app => (
+                        {(!Array.isArray(applications) || applications.length === 0) && <div>No applicants yet.</div>}
+                        {/* Old applicant rendering code commented out */}
+                        {/*
+                        {Array.isArray(applications) && applications.map(app => (
                           <Card key={app.id} className="p-2">
                             <CardContent>
                               <div className="font-medium">{app.student?.name || 'Unknown'} ({app.student?.email || app.studentId})</div>
@@ -158,6 +165,47 @@ export default function FacultyOpportunity() {
                                 <Button size="sm" variant="destructive" onClick={() => handleStatusChange(app.id, 'REJECTED')} disabled={app.status === 'REJECTED'}>
                                   Reject
                                 </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                        */}
+
+                        {/* New applicant rendering code */}
+                        {Array.isArray(applications) && applications.map(app => (
+                          <Card key={app.id} className="p-2">
+                            <CardContent>
+                              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                                <div>
+                                  <div className="font-medium">{app.student?.user?.name || 'Unknown'} ({app.student?.user?.email || app.studentId})</div>
+                                  <div className="text-sm text-gray-600">Status: {app.status}</div>
+                                  <div className="text-sm text-gray-600">Applied At: {app.appliedAt?.slice(0,10)}</div>
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                  {app.resumePath ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      asChild
+                                    >
+                                      <a
+                                        href={app.resumePath.startsWith('/') ? app.resumePath : `/resumes/${app.resumePath}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        View Resume
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <span>No Resume</span>
+                                  )}
+                                  <Button size="sm" variant="default" onClick={() => handleStatusChange(app.id, 'ACCEPTED')} disabled={app.status === 'ACCEPTED'}>
+                                    Accept
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleStatusChange(app.id, 'REJECTED')} disabled={app.status === 'REJECTED'}>
+                                    Reject
+                                  </Button>
+                                </div>
                               </div>
                             </CardContent>
                           </Card>

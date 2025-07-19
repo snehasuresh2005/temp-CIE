@@ -16,6 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { id: opportunityId } = params;
   // Only faculty assigned to this opportunity or admin can view
+  console.log('Calling findUnique on Opportunity with:', { where: { id: opportunityId } });
   const opportunity = await prisma.opportunity.findUnique({ where: { id: opportunityId } });
   if (!opportunity) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 });
   if (!(user.role === 'ADMIN' || (user.role === 'FACULTY' && user.id === opportunity.facultyId))) {

@@ -3,6 +3,16 @@ import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+const usedStudentIds = new Set<string>();
+function generateUniqueStudentId() {
+  let id;
+  do {
+    id = `STU${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+  } while (usedStudentIds.has(id));
+  usedStudentIds.add(id);
+  return id;
+}
+
 async function main() {
   // Clear existing data (preserve users, admins, faculty, students)
   await prisma.componentRequest.deleteMany();
@@ -104,7 +114,7 @@ async function main() {
         });
         createdUsers[userInfo.email] = user;
       } else if (userInfo.role === 'STUDENT') {
-        const studentId = `STU${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+        const studentId = generateUniqueStudentId();
         const user = await prisma.user.create({
           data: {
             email: userInfo.email,
