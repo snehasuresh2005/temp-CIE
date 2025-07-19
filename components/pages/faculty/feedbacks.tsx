@@ -108,7 +108,7 @@ export default function FacultyFeedbacks() {
     <div className="pt-12 max-w-2xl w-full mx-auto space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Submit an Feedback</CardTitle>
+          <CardTitle>Submit a Feedback</CardTitle>
           <CardDescription>Share suggestions, report bugs, or request improvements for the platform.</CardDescription>
         </CardHeader>
         <CardContent>

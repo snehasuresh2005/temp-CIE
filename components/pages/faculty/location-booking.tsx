@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Calendar, Clock, MapPin, Users, Plus, Search, Building, CalendarIcon, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Plus, Search, Building, CalendarIcon, Loader2, Filter, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LocationCalendar } from '@/components/location-calendar';
 import { useAuth } from '@/components/auth-provider';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -56,7 +56,7 @@ export function LocationBooking() {
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [locationTypeFilter, setLocationTypeFilter] = useState('all');
-  const [currentView, setCurrentView] = useState<'calendar' | 'list'>('calendar');
+  const [currentView, setCurrentView] = useState<'rooms' | 'bookings'>('rooms');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availabilityStatus, setAvailabilityStatus] = useState<'checking' | 'available' | 'unavailable' | null>(null);
 
@@ -74,6 +74,9 @@ export function LocationBooking() {
 
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const [calendarLocation, setCalendarLocation] = useState<Location | null>(null);
+
+  const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null);
+  const [infoImageIndex, setInfoImageIndex] = useState(0);
 
   useEffect(() => {
     fetchLocations();
@@ -344,137 +347,182 @@ export function LocationBooking() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Location Booking</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Room Booking</h1>
         </div>
       </div>
 
-
-      {/* Search and Filter */}
-      <div className="flex items-center gap-2">
-        <Input
-          placeholder="Search Locations..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={locationTypeFilter} onValueChange={setLocationTypeFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="CABIN">Cabin</SelectItem>
-            <SelectItem value="LECTURE_HALL">Lecture Hall</SelectItem>
-            <SelectItem value="AUDITORIUM">Auditorium</SelectItem>
-            <SelectItem value="SEMINAR_HALL">Seminar Hall</SelectItem>
-            <SelectItem value="LAB">Lab</SelectItem>
-            <SelectItem value="CLASSROOM">Classroom</SelectItem>
-            <SelectItem value="OFFICE">Office</SelectItem>
-            <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
-            <SelectItem value="OTHER">Other</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Search, Filter, and My Bookings */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          {/* Search with icon inside */}
+          <div className="relative flex-1 max-w-md">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+              <Search className="h-4 w-4" />
+            </span>
+            <Input
+              className="pl-10"
+              placeholder="Search rooms..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {/* Filter icon */}
+          <span className="text-gray-500">
+            <Filter className="h-5 w-5" />
+          </span>
+          {/* Filter select */}
+          <Select value={locationTypeFilter} onValueChange={setLocationTypeFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="CABIN">Cabin</SelectItem>
+              <SelectItem value="LECTURE_HALL">Lecture Hall</SelectItem>
+              <SelectItem value="AUDITORIUM">Auditorium</SelectItem>
+              <SelectItem value="SEMINAR_HALL">Seminar Hall</SelectItem>
+              <SelectItem value="LAB">Lab</SelectItem>
+              <SelectItem value="CLASSROOM">Classroom</SelectItem>
+              <SelectItem value="OFFICE">Office</SelectItem>
+              <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
+              <SelectItem value="OTHER">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Toggle buttons for Available Rooms and My Bookings */}
+        <div className="flex space-x-2">
+          <Button
+            variant={currentView === 'rooms' ? 'default' : 'outline'}
+            onClick={() => setCurrentView('rooms')}
+          >
+            <Building className="h-4 w-4 mr-2" />
+            Available Rooms
+          </Button>
+          <Button
+            variant={currentView === 'bookings' ? 'default' : 'outline'}
+            onClick={() => setCurrentView('bookings')}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            My Bookings ({myBookings.length})
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Available Locations */}
-        <Card className="col-span-2 p-0">
+      {/* Dynamic Content Based on Current View */}
+      {currentView === 'rooms' ? (
+        /* Available Rooms View */
+        <Card className="p-0">
           <CardHeader>
-            <CardTitle>Available Locations</CardTitle>
+            <CardTitle>Available Rooms</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {loading ? (
-                <div className="text-center py-4">Loading locations...</div>
+                <div className="text-center py-4">Loading rooms...</div>
               ) : filteredLocations.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">No available locations found</div>
+                <div className="text-center py-4 text-gray-500">No available rooms found</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredLocations.map((location) => (
-                    <Card key={location.id} className="overflow-hidden">
-                      {location.images && location.images.length > 0 && (
-                        <div className="relative h-48 group bg-gray-50 flex items-center justify-center">
-                          <Carousel className="w-full h-full">
-                            <CarouselContent>
-                              {location.images.map((image, index) => (
-                                <CarouselItem key={index} className="flex items-center justify-center h-48">
-                                  <img
-                                    src={image}
-                                    alt={`${location.name} ${index + 1}`}
-                                    className="w-full h-48 object-contain rounded"
-                                  />
-                                </CarouselItem>
-                              ))}
-                            </CarouselContent>
-                            {location.images.length > 1 && (
-                              <div className="absolute inset-0 flex items-center justify-between px-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="pointer-events-auto bg-white/80 rounded-full">
-                                  <CarouselPrevious className="left-2 top-1/2 -translate-y-1/2" />
-                                </div>
-                                <div className="pointer-events-auto bg-white/80 rounded-full">
-                                  <CarouselNext className="right-2 top-1/2 -translate-y-1/2" />
-                                </div>
-                              </div>
-                            )}
-                          </Carousel>
-                        </div>
-                      )}
-                      
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg">{capitalizeWords(location.name)}</CardTitle>
-                            <p className="text-sm text-gray-600">{location.room_number}</p>
+                    <Card key={location.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+                      <CardHeader className="p-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center space-x-2 text-sm">
+                              <Building className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate">{capitalizeWords(location.name)}</span>
+                            </CardTitle>
+                            <CardDescription className="text-xs">{location.location_type.replace('_', ' ')}</CardDescription>
                           </div>
-                          <Badge className={getLocationTypeColor(location.location_type)}>
-                            {location.location_type.replace('_', ' ')}
-                          </Badge>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Badge className="bg-green-100 text-green-800 text-xs px-1 py-0.5">
+                              Available
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                              onClick={() => setInfoDialogOpen(location.id)}
+                            >
+                              <Info className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </CardHeader>
                       
-                      <CardContent className="space-y-3">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Building className="h-4 w-4" />
-                          <span>{capitalizeWords(location.building)}, {getOrdinal(location.floor)}</span>
-                          {location.wing && <span>- {location.wing}</span>}
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Users className="h-4 w-4" />
-                          <span>Capacity: {location.capacity}</span>
-                        </div>
-                        
-                        {location.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">{location.description}</p>
-                        )}
-
-                        <div className="flex items-center justify-between pt-2">
-                          <Badge variant="default">
-                            Available
-                          </Badge>
+                      <CardContent className="flex-grow flex flex-col p-3 pt-0">
+                        <div className="space-y-3 flex-grow">
+                          {/* Image Display */}
+                          {location.images && location.images.length > 0 && (
+                            <div className="relative w-full h-48">
+                              <Carousel className="w-full h-full">
+                                <CarouselContent>
+                                  {location.images.map((image, index) => (
+                                    <CarouselItem key={index} className="flex items-center justify-center h-48">
+                                      <img
+                                        src={image}
+                                        alt={`${location.name} ${index + 1}`}
+                                        className="w-full h-full object-contain rounded-md bg-gray-50"
+                                        onError={(e) => {
+                                          e.currentTarget.src = "/placeholder.jpg"
+                                        }}
+                                      />
+                                    </CarouselItem>
+                                  ))}
+                                </CarouselContent>
+                                {location.images.length > 1 && (
+                                  <div className="absolute inset-0 flex items-center justify-between px-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="pointer-events-auto bg-white/80 rounded-full">
+                                      <CarouselPrevious className="left-2 top-1/2 -translate-y-1/2" />
+                                    </div>
+                                    <div className="pointer-events-auto bg-white/80 rounded-full">
+                                      <CarouselNext className="right-2 top-1/2 -translate-y-1/2" />
+                                    </div>
+                                  </div>
+                                )}
+                              </Carousel>
+                            </div>
+                          )}
                           
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setCalendarLocation(location);
-                                setCalendarDialogOpen(true);
-                              }}
-                              title="View Calendar"
-                            >
-                              <CalendarIcon className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="default" 
-                              onClick={() => handleLocationSelect(location.id)}
-                            >
-                              Book Now
-                            </Button>
+                          <div className="space-y-1">
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                              <div><span className="font-medium">Room:</span> {location.room_number}</div>
+                              <div><span className="font-medium">Capacity:</span> {location.capacity}</div>
+                            </div>
+                            
+                            <div className="text-xs text-gray-500">
+                              <span className="font-medium">Building:</span> {capitalizeWords(location.building)}, {getOrdinal(location.floor)}
+                              {location.wing && <span> - {location.wing}</span>}
+                            </div>
                           </div>
+                          
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex space-x-2 pt-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setCalendarLocation(location);
+                              setCalendarDialogOpen(true);
+                            }}
+                            className="flex-1"
+                          >
+                            <CalendarIcon className="h-3 w-3 mr-1" />
+                            Calendar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="default" 
+                            onClick={() => handleLocationSelect(location.id)}
+                            className="flex-1"
+                          >
+                            Book Now
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -484,9 +532,9 @@ export function LocationBooking() {
             </div>
           </CardContent>
         </Card>
-
-        {/* My Bookings */}
-        <Card className="col-span-1 p-0">
+      ) : (
+        /* My Bookings View */
+        <Card className="p-0">
           <CardHeader>
             <CardTitle>My Bookings</CardTitle>
           </CardHeader>
@@ -494,7 +542,7 @@ export function LocationBooking() {
             {myBookings.length === 0 ? (
               <div className="text-center py-4 text-gray-500">No bookings found</div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {myBookings.map((booking) => (
                   <Card key={booking.id} className="overflow-hidden">
                     <CardHeader className="pb-2">
@@ -541,7 +589,7 @@ export function LocationBooking() {
             )}
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {/* Booking Dialog */}
       <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
@@ -698,6 +746,118 @@ export function LocationBooking() {
               />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Info Dialog */}
+      <Dialog open={infoDialogOpen !== null} onOpenChange={(open) => {
+        if (!open) {
+          setInfoDialogOpen(null);
+          setInfoImageIndex(0);
+        }
+      }}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Room Details</DialogTitle>
+          </DialogHeader>
+          {infoDialogOpen && (() => {
+            const location = locations.find(loc => loc.id === infoDialogOpen);
+            if (!location) return null;
+            
+            return (
+              <div className="flex flex-col md:flex-row gap-8">
+                {/* Left: Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Building className="h-5 w-5 text-gray-500" />
+                        {capitalizeWords(location.name)}
+                      </h3>
+                      <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">Available</span>
+                    </div>
+                    <div className="flex flex-row items-end justify-center pl-8">
+                      <div>
+                        <h4 className="font-medium text-sm">Room Number</h4>
+                        <p className="text-lg font-semibold text-gray-900 text-center">{location.room_number}</p>
+                      </div>
+                      <div className="ml-16 text-center">
+                        <h4 className="font-medium text-sm">Capacity</h4>
+                        <p className="text-lg font-semibold text-green-600 text-center">{location.capacity}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Location & Type</h4>
+                      <p className="text-sm text-gray-700">
+                        {capitalizeWords(location.building)}, {getOrdinal(location.floor)}
+                        {location.wing && <span> - {location.wing}</span>} • {location.location_type.replace('_', ' ')}
+                      </p>
+                    </div>
+                    {location.description && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Description</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-line">{location.description}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Right: Image Preview */}
+                <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+                  <div className="relative w-full max-w-xs aspect-square bg-gray-50 rounded-lg border flex items-center justify-center overflow-hidden">
+                    {location.images && location.images.length > 0 ? (
+                      <>
+                        <img
+                          src={location.images[infoImageIndex]}
+                          alt={`${location.name} ${infoImageIndex + 1}`}
+                          className="object-contain w-full h-full"
+                          onError={e => { e.currentTarget.src = '/placeholder.jpg'; }}
+                        />
+                        {location.images.length > 1 && (
+                          <>
+                            {/* Left arrow */}
+                            {infoImageIndex > 0 && (
+                              <button
+                                className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                onClick={() => setInfoImageIndex(prev => prev - 1)}
+                                type="button"
+                                aria-label="Previous Image"
+                              >
+                                <ChevronLeft className="h-6 w-6" />
+                              </button>
+                            )}
+                            {/* Right arrow */}
+                            {infoImageIndex < location.images.length - 1 && (
+                              <button
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center border z-10"
+                                onClick={() => setInfoImageIndex(prev => prev + 1)}
+                                type="button"
+                                aria-label="Next Image"
+                              >
+                                <ChevronRight className="h-6 w-6" />
+                              </button>
+                            )}
+                            {/* Image indicators */}
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+                              {location.images.map((_, index) => (
+                                <div 
+                                  key={index}
+                                  className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                                    index === infoImageIndex ? 'bg-white' : 'bg-white/50'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">No Image</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

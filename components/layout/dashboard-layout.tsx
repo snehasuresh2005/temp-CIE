@@ -31,10 +31,17 @@ import {
   Sun,
   Bell,
   BarChart3,
+  Award,
+  Briefcase,
+  Wrench,
+  FolderOpen,
+  ClipboardCheck,
 } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useTheme } from 'next-themes'
+import { NotificationDropdown } from "@/components/ui/notification-dropdown"
+import { useNotifications } from "@/components/notification-provider"
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -117,6 +124,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { activities, unreadActivities, loading } = useNotifications()
 
   const sidebarWidth = sidebarCollapsed ? "w-16" : "w-64"
   const mainMargin = sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
@@ -168,16 +176,6 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           specialization: "Software Engineering",
           office_hours: "Mon-Wed-Fri: 2:00 PM - 4:00 PM",
         }
-      case "PROFESSOR":
-        return {
-          ...baseData,
-          role: "professor" as const,
-          department: "Computer Science",
-          office: "Engineering Building, Room 210",
-          assigned_courses: ["CS102 - Programming Fundamentals", "CS202 - Object Oriented Programming"],
-          specialization: "Database Systems",
-          office_hours: "Tue-Thu: 1:00 PM - 3:00 PM",
-        }
       case "STUDENT":
         return {
           ...baseData,
@@ -205,6 +203,40 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
 
   const profileData = getProfileData()
 
+  // Get role-specific quick actions
+  const getQuickActions = () => {
+    if (!user) return []
+    
+    switch (user.role) {
+      case "ADMIN":
+        return [
+          { id: "domains", label: "Coordinators", icon: Award },
+          { id: "faculty", label: "Faculty", icon: Briefcase },
+          { id: "students", label: "Students", icon: Users },
+          { id: "locations", label: "Room Bookings", icon: MapPin },
+        ]
+      case "FACULTY":
+        return [
+          { id: "coordinator", label: "CIE Coordinator", icon: Award },
+          { id: "projects", label: "Projects", icon: FolderOpen },
+          { id: "locations", label: "Book Room", icon: MapPin },
+          { id: "lab-components", label: "Lab Components", icon: Wrench },
+          { id: "library", label: "Library", icon: BookOpen },
+        ]
+      case "STUDENT":
+        return [
+          { id: "projects", label: "Projects", icon: FolderOpen },
+          { id: "lab-components", label: "Lab Components", icon: Wrench },
+          { id: "library", label: "Library", icon: BookOpen },
+          { id: "attendance", label: "Attendance", icon: ClipboardCheck },
+        ]
+      default:
+        return []
+    }
+  }
+
+  const quickActions = getQuickActions()
+
   const handleSignOut = () => {
     logout()
   }
@@ -226,8 +258,26 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
             </Button>
           </div>
 
-          {/* Spacer for desktop to push profile to the right */}
-          <div className="hidden lg:block flex-1" />
+          {/* Quick Actions - Middle Section */}
+          <div className={`hidden lg:flex items-center space-x-4 flex-1 ${
+            sidebarCollapsed ? 'justify-start pl-4' : 'justify-center'
+          }`}>
+            <div className="flex items-center space-x-3 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Quick Actions:</span>
+              {quickActions.map((action) => (
+                <Button
+                  key={action.id}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full transition-all duration-200 hover:bg-white dark:hover:bg-gray-700"
+                  onClick={() => onPageChange(action.id)}
+                  title={action.label}
+                >
+                  <action.icon className="h-5 w-5 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" />
+                </Button>
+              ))}
+            </div>
+          </div>
 
           <div className="flex items-center gap-2">
             {/* Dark mode toggle button */}
@@ -240,9 +290,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
 
-            <Button variant="ghost" size="icon" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <NotificationDropdown activities={activities} loading={loading} onPageChange={onPageChange} />
 
             {/* Profile dropdown */}
             <DropdownMenu>

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X, Filter } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { useAuth } from '@/components/auth-provider';
 
@@ -470,7 +470,7 @@ export function ManageLocations() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Manage Locations</h1>
+          <h1 className="text-3xl font-bold">Manage Room Bookings</h1>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -480,156 +480,179 @@ export function ManageLocations() {
               Add Location
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[1200px] max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingLocation ? 'Edit Location' : 'Add New Location'}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-              <div>
-                  <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                    placeholder="Enter location name (e.g., Computer Lab 101)"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                />
-              </div>
-              <div>
-                  <Label htmlFor="room_number">Room Number</Label>
-                <Input
-                    id="room_number"
-                    placeholder="Enter room number (e.g., 101, A-201)"
-                    value={formData.room_number}
-                    onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-5 gap-6">
+                {/* Left Section - Basic Details (60%) */}
+                <div className="col-span-3 space-y-4">
+                  {/* Row 1: Name + Building */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="name">Name *</Label>
+                      <Input
+                        id="name"
+                        placeholder="Enter location name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="building">Building *</Label>
+                      <Input
+                        id="building"
+                        placeholder="Enter building name"
+                        value={formData.building}
+                        onChange={(e) => setFormData({ ...formData, building: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="building">Building</Label>
-                  <Input
-                    id="building"
-                    placeholder="Enter building name (e.g., Main Building, Science Block)"
-                    value={formData.building}
-                    onChange={(e) => setFormData({ ...formData, building: e.target.value })}
-                    required
-                />
-              </div>
-              <div>
-                <Label htmlFor="floor">Floor</Label>
-                <Input
-                  id="floor"
-                    placeholder="Enter floor number (e.g., 1, 2, Ground)"
-                    value={formData.floor}
-                    onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+                  {/* Row 2: Room Number + Floor + Capacity */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label htmlFor="room_number">Room Number *</Label>
+                      <Input
+                        id="room_number"
+                        placeholder="Enter room number"
+                        value={formData.room_number}
+                        onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="floor">Floor *</Label>
+                      <Input
+                        id="floor"
+                        placeholder="Enter floor number"
+                        value={formData.floor}
+                        onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="capacity">Capacity *</Label>
+                      <Input
+                        id="capacity"
+                        type="number"
+                        min="1"
+                        placeholder="Enter capacity"
+                        value={formData.capacity}
+                        onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <Label htmlFor="wing">Wing (Optional)</Label>
-                  <Input
-                    id="wing"
-                    placeholder="Enter wing name (e.g., North, South, East)"
-                    value={formData.wing}
-                    onChange={(e) => setFormData({ ...formData, wing: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-end justify-between">
-                    <Label htmlFor="location_type">Location Type</Label>
-                    <div className="flex space-x-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAddLocationType(true)}
-                        className="h-6 w-6 p-0"
-                        title="Add location type"
-                        aria-label="Add location type"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      {formData.location_type && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setLocationTypeToDelete(formData.location_type)
-                            setIsDeleteLocationTypeDialogOpen(true)
-                          }}
-                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                          title="Delete location type"
-                          aria-label="Delete location type"
+                  {/* Row 3: Wing + Location Type */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="wing">Wing (Optional)</Label>
+                      <Input
+                        id="wing"
+                        placeholder="Enter wing name"
+                        value={formData.wing}
+                        onChange={(e) => setFormData({ ...formData, wing: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="location_type">Location Type *</Label>
+                        <div className="flex space-x-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAddLocationType(true)}
+                            className="h-6 w-6 p-0"
+                            title="Add location type"
+                            aria-label="Add location type"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                          {formData.location_type && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocationTypeToDelete(formData.location_type)
+                                setIsDeleteLocationTypeDialogOpen(true)
+                              }}
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              title="Delete location type"
+                              aria-label="Delete location type"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {showAddLocationType ? (
+                        <div ref={locationTypeInputRef} className="flex gap-2 mt-1">
+                          <Input
+                            placeholder="Enter location type"
+                            value={newLocationType}
+                            onChange={(e) => setNewLocationType(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleAddLocationType}
+                            disabled={!newLocationType.trim() || isSavingLocationType}
+                          >
+                            {isSavingLocationType ? "Adding..." : "Add"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Select
+                          value={formData.location_type}
+                          onValueChange={(value) => setFormData({ ...formData, location_type: value })}
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select location type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locationTypeOptions.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type.replace(/_/g, ' ')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     </div>
                   </div>
-                  {showAddLocationType ? (
-                    <div ref={locationTypeInputRef} className="flex gap-2 mt-1">
-                      <Input
-                        placeholder="Enter location type (e.g., Conference Room, Gym)"
-                        value={newLocationType}
-                        onChange={(e) => setNewLocationType(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleAddLocationType}
-                        disabled={!newLocationType.trim() || isSavingLocationType}
-                      >
-                        {isSavingLocationType ? "Adding..." : "Add"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Select
-                      value={formData.location_type}
-                      onValueChange={(value) => setFormData({ ...formData, location_type: value })}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select location type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locationTypeOptions.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type.replace(/_/g, ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                </div>
+
+                {/* Right Section - Description (40%) */}
+                <div className="col-span-2">
+                  <div>
+                    <Label htmlFor="description">Description *</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Describe the location's purpose, features, and functionality"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={8}
+                      className="h-full min-h-[200px]"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="capacity">Capacity</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  min="1"
-                  placeholder="Enter maximum capacity (e.g., 30, 100)"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Images</Label>
-                <div className="space-y-2">
+              {/* Unified Bottom Section - Location Images */}
+              <div className="space-y-4">
+                <Label>Location Images</Label>
+                <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Input
                       type="file"
@@ -641,13 +664,13 @@ export function ManageLocations() {
                     {uploadingImages && <span className="text-sm text-gray-500">Uploading...</span>}
                   </div>
                   {formData.images.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-4">
                       {formData.images.map((image, index) => (
                         <div key={index} className="relative group cursor-pointer">
                           <img
                             src={image}
                             alt={`Location ${index + 1}`}
-                            className="w-full h-20 object-cover rounded border"
+                            className="w-full h-40 object-cover rounded border"
                             onClick={() => setPreviewImage(image)}
                           />
                           <Button
@@ -691,17 +714,6 @@ export function ManageLocations() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter location description (e.g., Computer lab with 30 workstations, projector, and whiteboard)"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -719,12 +731,16 @@ export function ManageLocations() {
       </div>
 
       <div className="flex items-center space-x-2">
-        <Input
-          placeholder="Search courses..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search locations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Filter className="h-5 w-5 text-gray-400" />
         <Select value={locationTypeFilter} onValueChange={setLocationTypeFilter}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Filter by type" />
@@ -745,6 +761,20 @@ export function ManageLocations() {
 
       {loading ? (
         <div className="text-center py-8">Loading locations...</div>
+      ) : locations.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="max-w-md mx-auto">
+            <Building className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No locations found</h3>
+            <p className="text-gray-500 mb-6">
+              {searchTerm || locationTypeFilter !== '' 
+                ? 'No locations match your search criteria. Try adjusting your filters.'
+                : 'No locations have been created yet. Get started by adding your first location.'
+              }
+            </p>
+
+          </div>
+        </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {locations.map((location) => (

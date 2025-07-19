@@ -13,6 +13,7 @@ import { UserProfile } from "@/components/common/user-profile"
 import { LibraryDashboard } from "@/components/pages/common/library-dashboard"
 import { StudentRequestHistory } from "@/components/pages/student/request-history"
 import StudentOpportunity from '@/components/pages/student/student-opportunity';
+import { NotificationsPage } from "@/components/pages/common/notifications-page"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -58,6 +59,8 @@ export function StudentDashboard() {
         return <LibraryDashboard />
       case "opportunities":
         return <StudentOpportunity />
+      case "notifications":
+        return <NotificationsPage />
       default:
         return <StudentHome onPageChange={setCurrentPage} />
     }

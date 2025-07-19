@@ -14,6 +14,7 @@ import { UserProfile } from "@/components/common/user-profile"
 import { ManageLibrary } from "@/components/pages/admin/manage-library"
 import { ManageDomains } from "@/components/pages/admin/manage-domains"
 import ManageOpportunity from '@/components/pages/admin/manage-opportunity';
+import { NotificationsPage } from "@/components/pages/common/notifications-page"
 
 const menuItems = [
   { id: "home", label: "Dashboard", icon: Home },
@@ -22,7 +23,7 @@ const menuItems = [
   { id: "students", label: "Students", icon: Users },
   { id: "courses", label: "Courses", icon: BookOpen },
   { id: "schedules", label: "Class Schedules", icon: Calendar },
-  { id: "locations", label: "Locations", icon: MapPin },
+  { id: "locations", label: "Room Bookings", icon: MapPin },
   { id: "lab-components", label: "Lab Components", icon: Wrench },
   { id: "library", label: "Library", icon: BookOpen },
   { id: "opportunities", label: "Opportunities", icon: Briefcase },
@@ -55,6 +56,8 @@ export function AdminDashboard() {
         return <ManageLibrary />
       case "opportunities":
         return <ManageOpportunity />
+      case "notifications":
+        return <NotificationsPage />
       default:
         return <AdminHome onPageChange={setCurrentPage} />
     }

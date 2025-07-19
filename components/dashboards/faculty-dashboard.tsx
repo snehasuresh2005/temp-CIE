@@ -17,6 +17,7 @@ import { CoordinatorDashboard } from "@/components/pages/faculty/coordinator-das
 import { useAuth } from "@/components/auth-provider"
 import FacultyOpportunity from '@/components/pages/faculty/faculty-opportunity';
 import FacultyFeedbacks from '@/components/pages/faculty/feedbacks';
+import { NotificationsPage } from "@/components/pages/common/notifications-page"
 
 export function FacultyDashboard() {
   const { user } = useAuth()
@@ -50,7 +51,7 @@ export function FacultyDashboard() {
     const baseItems = [
       { id: "home", label: "Dashboard", icon: Home },
       { id: "courses", label: "Courses", icon: Users },
-      { id: "locations", label: "Book Locations", icon: MapPin },
+      { id: "locations", label: "Book Rooms", icon: MapPin },
       { id: "calendar", label: "Calendar", icon: Calendar },
       { id: "projects", label: "Projects", icon: FolderOpen },
       { id: "attendance", label: "Attendance", icon: ClipboardCheck },
@@ -97,6 +98,8 @@ export function FacultyDashboard() {
         return <FacultyOpportunity />
       case "feedbacks":
         return <FacultyFeedbacks />;
+      case "notifications":
+        return <NotificationsPage />
       default:
         return <FacultyHome onPageChange={setCurrentPage} />
     }

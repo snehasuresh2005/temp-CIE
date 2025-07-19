@@ -98,10 +98,6 @@ export function StudentHome({ onPageChange }: StudentHomeProps) {
               <div className="flex-1 z-6">
                 <div className="flex items-center mb-2 justify-between">
                   <span className="text-white text-3xl font-extrabold tracking-tight">CIE Student Portal</span>
-                  <div className="flex gap-4">
-                  <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100">Learn More</button>
-                  <button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100" onClick={handleQuickActionsClick}>Quick Actions</button>
-                  </div>
                 </div>
                 <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-2">Welcome to your learning hub!</h2>
                 <p className="text-white/90 mb-4 max-w-2xl text-lg whitespace-nowrap">Track your courses, projects, and academic progress—all in one place.</p>
