@@ -56,6 +56,7 @@ export function ManageFaculty() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
+  const [editMode, setEditMode] = useState(false)
 
   const [newFaculty, setNewFaculty] = useState({
     name: "",
@@ -73,6 +74,13 @@ export function ManageFaculty() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
 
+  const [editFaculty, setEditFaculty] = useState<Faculty | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editFacultyData, setEditFacultyData] = useState<any>(null);
+  const [facultyToDelete, setFacultyToDelete] = useState<Faculty | null>(null);
+  const [editFacultyImage, setEditFacultyImage] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+
   // Image preview handler
   useEffect(() => {
     if (newFacultyImage) {
@@ -83,6 +91,17 @@ export function ManageFaculty() {
       setImagePreview(null)
     }
   }, [newFacultyImage])
+
+  // Image preview handler for edit
+  useEffect(() => {
+    if (editFacultyImage) {
+      const reader = new FileReader();
+      reader.onload = (e) => setEditImagePreview(e.target?.result as string);
+      reader.readAsDataURL(editFacultyImage);
+    } else {
+      setEditImagePreview(null);
+    }
+  }, [editFacultyImage]);
 
   // Add form validation check
   const isFormValid = useMemo(() => {
@@ -251,6 +270,75 @@ export function ManageFaculty() {
     e.currentTarget.src = '/placeholder-user.jpg';
   };
 
+  // Edit handlers
+  const handleEditFaculty = (faculty: Faculty) => {
+    setEditFaculty(faculty);
+    setEditFacultyData({
+      name: faculty.user.name,
+      email: faculty.user.email,
+      phone: faculty.user.phone || "",
+      facultyId: faculty.facultyId,
+      department: faculty.department,
+      office: faculty.office,
+      specialization: faculty.specialization,
+      officeHours: faculty.officeHours,
+    });
+    setIsEditDialogOpen(true);
+  };
+  const handleUpdateFaculty = async () => {
+    if (!editFacultyData.name || !editFacultyData.email || !editFacultyData.facultyId || !editFacultyData.department) {
+      toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    try {
+      const response = await fetch(`/api/faculty/${editFaculty?.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFacultyData),
+      });
+      if (response.ok) {
+        // Upload image if selected
+        if (editFacultyImage) {
+          const formData = new FormData();
+          formData.append('file', editFacultyImage);
+          formData.append('facultyId', editFaculty?.id);
+          await fetch('/api/faculty/upload', {
+            method: 'POST',
+            body: formData,
+          });
+        }
+        await fetchData();
+        setIsEditDialogOpen(false);
+        setEditFaculty(null);
+        setEditFacultyImage(null);
+        setEditImagePreview(null);
+        toast({ title: "Success", description: "Faculty details updated" });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update faculty", variant: "destructive" });
+    }
+  };
+  // Delete handlers
+  const handleDeleteFaculty = async () => {
+    if (!facultyToDelete) return;
+    try {
+      const response = await fetch(`/api/faculty/${facultyToDelete.id}`, { method: "DELETE" });
+      if (response.ok) {
+        await fetchData();
+        setFacultyToDelete(null);
+        toast({ title: "Success", description: "Faculty deleted" });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete faculty", variant: "destructive" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -263,13 +351,19 @@ export function ManageFaculty() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Faculty Management</h1>
+          <h1 className="admin-page-title">Faculty Management</h1>
         </div>
 
         <div className="flex space-x-2">
           <Button onClick={fetchData} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
           </Button>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -448,7 +542,7 @@ export function ManageFaculty() {
             const facultyCourses = getFacultyCourses(member.id)
 
             return (
-              <Card key={member.id} className="hover:shadow-lg transition-shadow">
+              <div key={member.id} className="admin-card hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-center gap-4">
                     <img
@@ -517,11 +611,181 @@ export function ManageFaculty() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+                {editMode && (
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button className="btn-edit" onClick={() => handleEditFaculty(member)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                      Edit
+                    </button>
+                    <button className="btn-delete" onClick={() => setFacultyToDelete(member)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             )
           })
         )}
       </div>
+      {/* Edit Faculty Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Faculty Member</DialogTitle>
+            <DialogDescription>Update the details for the faculty member</DialogDescription>
+          </DialogHeader>
+          {editFacultyData && (
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-name">Full Name *</Label>
+                  <Input
+                    id="edit-name"
+                    value={editFacultyData.name}
+                    onChange={(e) => setEditFacultyData((prev: any) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Dr. John Doe"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-email">Email *</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editFacultyData.email}
+                    onChange={(e) => setEditFacultyData((prev: any) => ({ ...prev, email: e.target.value }))}
+                    placeholder="john.doe@college.edu"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-phone">Phone</Label>
+                  <Input
+                    id="edit-phone"
+                    value={editFacultyData.phone}
+                    onChange={(e) => setEditFacultyData((prev: any) => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+91-9876543210"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-facultyId">Faculty ID *</Label>
+                  <Input
+                    id="edit-facultyId"
+                    value={editFacultyData.facultyId}
+                    onChange={(e) => setEditFacultyData((prev: any) => ({ ...prev, facultyId: e.target.value }))}
+                    placeholder="FAC001"
+                  />
+                </div>
+              </div>
+              {/* Right Column */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-department">Department *</Label>
+                  <Select value={editFacultyData.department} onValueChange={(value) => setEditFacultyData((prev: any) => ({ ...prev, department: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-office">Office</Label>
+                  <Input
+                    id="edit-office"
+                    value={editFacultyData.office}
+                    onChange={(e) => setEditFacultyData((prev: any) => ({ ...prev, office: e.target.value }))}
+                    placeholder="CS Block - 301"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-specialization">Specialization</Label>
+                  <Input
+                    id="edit-specialization"
+                    value={editFacultyData.specialization}
+                    onChange={(e) => setEditFacultyData((prev: any) => ({ ...prev, specialization: e.target.value }))}
+                    placeholder="Data Structures and Algorithms"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-officeHours">Office Hours</Label>
+                  <Input
+                    id="edit-officeHours"
+                    value={editFacultyData.officeHours}
+                    onChange={(e) => setEditFacultyData((prev: any) => ({ ...prev, officeHours: e.target.value }))}
+                    placeholder="10:00 AM - 4:00 PM"
+                  />
+                </div>
+              </div>
+              {/* Image Upload Section - Full Width */}
+              <div className="col-span-2 space-y-4 border-t pt-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="edit-image">Profile Image</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setEditFacultyImage(e.target.files?.[0] || null)}
+                      className="mb-2"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Preview</Label>
+                    {editImagePreview ? (
+                      <div className="border rounded-lg p-2 bg-gray-50">
+                        <img
+                          src={editImagePreview}
+                          alt="Profile Preview"
+                          className="w-full h-32 object-contain rounded bg-white"
+                        />
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50 h-32 flex items-center justify-center">
+                        <div className="text-gray-400">
+                          <svg className="mx-auto h-8 w-8 mb-1" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <p className="text-xs text-gray-500">{editFaculty?.profilePhotoUrl ? 'Current image shown' : 'No image selected'}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="col-span-2 flex justify-end space-x-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateFaculty}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Delete Faculty Dialog */}
+      <Dialog open={!!facultyToDelete} onOpenChange={() => setFacultyToDelete(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this faculty member?</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setFacultyToDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteFaculty}>
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

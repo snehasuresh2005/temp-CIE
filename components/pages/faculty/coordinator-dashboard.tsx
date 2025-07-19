@@ -705,7 +705,7 @@ export function CoordinatorDashboard() {
   if (!loading && !hasAnyCoordinatorRole && !hasAnySpecialRole) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">CIE Team Coordinator Dashboard</h1>
+        <h1 className="faculty-page-title">CIE Team Coordinator Dashboard</h1>
         <div className="text-lg text-gray-600">You are not assigned as a coordinator, platform manager, or developer.</div>
       </div>
     );
@@ -724,9 +724,10 @@ export function CoordinatorDashboard() {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">CIE Team Coordinator Dashboard</h1>
+          <h1 className="faculty-page-title">CIE Team Coordinator Dashboard</h1>
           <p className="text-gray-600">Choose which role you want to manage</p>
         </div>
+        <div className="mt-10"></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {userRoles.includes('library') && (
             <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-50 hover:border-blue-300" onClick={() => setSelectedRole('library')}>
@@ -792,7 +793,7 @@ export function CoordinatorDashboard() {
         Debug: selectedRole = {String(selectedRole)}
       </div>
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">CIE Team Coordinator Dashboard</h1>
+        <h1 className="faculty-page-title-global">CIE Team Coordinator Dashboard</h1>
       </div>
 
       {/* Role Selection - Show when faculty has multiple roles and no role is selected */}

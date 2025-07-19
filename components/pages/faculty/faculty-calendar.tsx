@@ -90,7 +90,7 @@ export function FacultyCalendar() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Calendar</h1>
+        <h1 className="faculty-page-title">My Calendar</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -218,7 +218,7 @@ export function ManageStudents() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Manage Students</h1>
+          <h1 className="admin-page-title">Manage Students</h1>
           <p className="text-gray-500">View, add, and manage student records and enrollments.</p>
         </div>
         <div className="flex space-x-2">
@@ -235,7 +235,7 @@ export function ManageStudents() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Add New Student</DialogTitle>
+                <DialogTitle className="admin-page-title-2">Add New Student</DialogTitle>
                 <DialogDescription>Enter the details for the new student</DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-4">

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X, RefreshCw } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { useAuth } from '@/components/auth-provider';
 
@@ -77,6 +77,7 @@ export function ManageLocations() {
   const [showAddLocationType, setShowAddLocationType] = useState(false);
   const [locationTypeToDelete, setLocationTypeToDelete] = useState<string | null>(null);
   const [isDeleteLocationTypeDialogOpen, setIsDeleteLocationTypeDialogOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // Refs for click-outside detection
   const locationTypeInputRef = useRef<HTMLDivElement>(null);
@@ -209,7 +210,7 @@ export function ManageLocations() {
         fetchLocations();
       } else {
         const error = await response.json();
-    toast({
+        toast({
           title: 'Error',
           description: error.error || 'Failed to save location',
           variant: 'destructive',
@@ -217,7 +218,7 @@ export function ManageLocations() {
       }
     } catch (error) {
       console.error('Error saving location:', error);
-    toast({
+      toast({
         title: 'Error',
         description: 'Failed to save location',
         variant: 'destructive',
@@ -252,7 +253,7 @@ export function ManageLocations() {
         fetchLocations();
       } else {
         const error = await response.json();
-    toast({
+        toast({
           title: 'Error',
           description: error.error || 'Failed to delete location',
           variant: 'destructive',
@@ -299,15 +300,15 @@ export function ManageLocations() {
       }
     } catch (error) {
       console.error("Error adding location type:", error)
-      toast({ 
-        title: "Error", 
-        description: "Failed to add location type.", 
-        variant: "destructive" 
-      })
+        toast({ 
+          title: "Error", 
+          description: "Failed to add location type.", 
+          variant: "destructive" 
+        })
     } finally {
       setIsSavingLocationType(false)
     }
-  }
+  };
 
   const handleDeleteLocationType = async (type: string) => {
     try {
@@ -348,7 +349,7 @@ export function ManageLocations() {
       setIsDeleteLocationTypeDialogOpen(false)
       setLocationTypeToDelete(null)
     }
-  }
+  };
 
   const handleImageUpload = async (files: FileList) => {
     if (!files.length) return;
@@ -468,259 +469,270 @@ export function ManageLocations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-3xl font-bold">Manage Locations</h1>
+          <h1 className="admin-page-title">Location Management</h1>
         </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Location
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingLocation ? 'Edit Location' : 'Add New Location'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-              <div>
-                  <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                    placeholder="Enter location name (e.g., Computer Lab 101)"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                />
-              </div>
-              <div>
-                  <Label htmlFor="room_number">Room Number</Label>
-                <Input
-                    id="room_number"
-                    placeholder="Enter room number (e.g., 101, A-201)"
-                    value={formData.room_number}
-                    onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
-                    required
-                  />
+        <div className="flex space-x-2">
+          <Button onClick={fetchLocations} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Location
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingLocation ? 'Edit Location' : 'Add New Location'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="Enter location name (e.g., Computer Lab 101)"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="room_number">Room Number</Label>
+                    <Input
+                      id="room_number"
+                      placeholder="Enter room number (e.g., 101, A-201)"
+                      value={formData.room_number}
+                      onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="building">Building</Label>
-                  <Input
-                    id="building"
-                    placeholder="Enter building name (e.g., Main Building, Science Block)"
-                    value={formData.building}
-                    onChange={(e) => setFormData({ ...formData, building: e.target.value })}
-                    required
-                />
-              </div>
-              <div>
-                <Label htmlFor="floor">Floor</Label>
-                <Input
-                  id="floor"
-                    placeholder="Enter floor number (e.g., 1, 2, Ground)"
-                    value={formData.floor}
-                    onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="building">Building</Label>
+                    <Input
+                      id="building"
+                      placeholder="Enter building name (e.g., Main Building, Science Block)"
+                      value={formData.building}
+                      onChange={(e) => setFormData({ ...formData, building: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="floor">Floor</Label>
+                    <Input
+                      id="floor"
+                      placeholder="Enter floor number (e.g., 1, 2, Ground)"
+                      value={formData.floor}
+                      onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <Label htmlFor="wing">Wing (Optional)</Label>
-                  <Input
-                    id="wing"
-                    placeholder="Enter wing name (e.g., North, South, East)"
-                    value={formData.wing}
-                    onChange={(e) => setFormData({ ...formData, wing: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-end justify-between">
-                    <Label htmlFor="location_type">Location Type</Label>
-                    <div className="flex space-x-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAddLocationType(true)}
-                        className="h-6 w-6 p-0"
-                        title="Add location type"
-                        aria-label="Add location type"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      {formData.location_type && (
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="wing">Wing (Optional)</Label>
+                    <Input
+                      id="wing"
+                      placeholder="Enter wing name (e.g., North, South, East)"
+                      value={formData.wing}
+                      onChange={(e) => setFormData({ ...formData, wing: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-end justify-between">
+                      <Label htmlFor="location_type">Location Type</Label>
+                      <div className="flex space-x-1">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setLocationTypeToDelete(formData.location_type)
-                            setIsDeleteLocationTypeDialogOpen(true)
-                          }}
-                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                          title="Delete location type"
-                          aria-label="Delete location type"
+                          onClick={() => setShowAddLocationType(true)}
+                          className="h-6 w-6 p-0"
+                          title="Add location type"
+                          aria-label="Add location type"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Plus className="h-3 w-3" />
                         </Button>
-                      )}
-                    </div>
-                  </div>
-                  {showAddLocationType ? (
-                    <div ref={locationTypeInputRef} className="flex gap-2 mt-1">
-                      <Input
-                        placeholder="Enter location type (e.g., Conference Room, Gym)"
-                        value={newLocationType}
-                        onChange={(e) => setNewLocationType(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleAddLocationType}
-                        disabled={!newLocationType.trim() || isSavingLocationType}
-                      >
-                        {isSavingLocationType ? "Adding..." : "Add"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Select
-                      value={formData.location_type}
-                      onValueChange={(value) => setFormData({ ...formData, location_type: value })}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select location type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locationTypeOptions.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type.replace(/_/g, ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="capacity">Capacity</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  min="1"
-                  placeholder="Enter maximum capacity (e.g., 30, 100)"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Images</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
-                      disabled={uploadingImages}
-                    />
-                    {uploadingImages && <span className="text-sm text-gray-500">Uploading...</span>}
-                  </div>
-                  {formData.images.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {formData.images.map((image, index) => (
-                        <div key={index} className="relative group cursor-pointer">
-                          <img
-                            src={image}
-                            alt={`Location ${index + 1}`}
-                            className="w-full h-20 object-cover rounded border"
-                            onClick={() => setPreviewImage(image)}
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            className="absolute -top-1 -right-1 h-6 w-6 p-0"
-                            onClick={() => removeImage(index)}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {previewImage && (
-                    <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-                      <DialogContent className="max-w-4xl max-h-[90vh] p-6">
-                        <DialogHeader>
-                          <DialogTitle>Image Preview</DialogTitle>
-                        </DialogHeader>
-                        <div className="flex items-center justify-center">
-                          <img 
-                            src={previewImage} 
-                            alt="Location Preview" 
-                            className="w-full h-96 object-contain rounded-lg bg-gray-50" 
-                          />
-                        </div>
-                        <div className="flex justify-end">
+                        {formData.location_type && (
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setPreviewImage(null)}
+                            size="sm"
+                            onClick={() => {
+                              setLocationTypeToDelete(formData.location_type)
+                              setIsDeleteLocationTypeDialogOpen(true)
+                            }}
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            title="Delete location type"
+                            aria-label="Delete location type"
                           >
-                            Close
+                            <Trash2 className="h-3 w-3" />
                           </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
+                        )}
+                      </div>
+                    </div>
+                    {showAddLocationType ? (
+                      <div ref={locationTypeInputRef} className="flex gap-2 mt-1">
+                        <Input
+                          placeholder="Enter location type (e.g., Conference Room, Gym)"
+                          value={newLocationType}
+                          onChange={(e) => setNewLocationType(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleAddLocationType}
+                          disabled={!newLocationType.trim() || isSavingLocationType}
+                        >
+                          {isSavingLocationType ? "Adding..." : "Add"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select
+                        value={formData.location_type}
+                        onValueChange={(value) => setFormData({ ...formData, location_type: value })}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select location type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locationTypeOptions.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type.replace(/_/g, ' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter location description (e.g., Computer lab with 30 workstations, projector, and whiteboard)"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
+                <div>
+                  <Label htmlFor="capacity">Capacity</Label>
+                  <Input
+                    id="capacity"
+                    type="number"
+                    min="1"
+                    placeholder="Enter maximum capacity (e.g., 30, 100)"
+                    value={formData.capacity}
+                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={!formData.name || !formData.room_number || !formData.building || !formData.floor || !formData.location_type || formData.capacity <= 0}
-                >
-                  {editingLocation ? 'Update Location' : 'Create Location'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div>
+                  <Label>Images</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
+                        disabled={uploadingImages}
+                      />
+                      {uploadingImages && <span className="text-sm text-gray-500">Uploading...</span>}
+                    </div>
+                    {formData.images.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {formData.images.map((image, index) => (
+                          <div key={index} className="relative group cursor-pointer">
+                            <img
+                              src={image}
+                              alt={`Location ${index + 1}`}
+                              className="w-full h-20 object-cover rounded border"
+                              onClick={() => setPreviewImage(image)}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              className="absolute -top-1 -right-1 h-6 w-6 p-0"
+                              onClick={() => removeImage(index)}
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {previewImage && (
+                      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+                        <DialogContent className="max-w-4xl max-h-[90vh] p-6">
+                          <DialogHeader>
+                            <DialogTitle>Image Preview</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex items-center justify-center">
+                            <img 
+                              src={previewImage} 
+                              alt="Location Preview" 
+                              className="w-full h-96 object-contain rounded-lg bg-gray-50" 
+                            />
+                          </div>
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setPreviewImage(null)}
+                            >
+                              Close
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Enter location description (e.g., Computer lab with 30 workstations, projector, and whiteboard)"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={!formData.name || !formData.room_number || !formData.building || !formData.floor || !formData.location_type || formData.capacity <= 0}
+                  >
+                    {editingLocation ? 'Update Location' : 'Create Location'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 mb-4">
         <Input
-          placeholder="Search courses..."
+          placeholder="Search locations..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
@@ -740,15 +752,12 @@ export function ManageLocations() {
         </Select>
       </div>
 
-        
-
-
       {loading ? (
         <div className="text-center py-8">Loading locations...</div>
       ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {locations.map((location) => (
-            <Card key={location.id} className="overflow-hidden">
+            <div key={location.id} className="admin-card overflow-hidden">
               {location.images.length > 0 && (
                 <div className="relative h-48 group bg-gray-50 flex items-center justify-center">
                   <Carousel className="w-full h-full">
@@ -786,7 +795,7 @@ export function ManageLocations() {
                   <Badge className={getLocationTypeColor(location.location_type)}>
                     {location.location_type.replace('_', ' ')}
                   </Badge>
-                  </div>
+                </div>
               </CardHeader>
               
               <CardContent className="space-y-3">
@@ -794,7 +803,7 @@ export function ManageLocations() {
                   <Building className="h-4 w-4" />
                   <span>{capitalizeWords(location.building)}, {getOrdinal(location.floor)}</span>
                   {location.wing && <span>- {location.wing}</span>}
-                  </div>
+                </div>
                 
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="h-4 w-4" />
@@ -804,7 +813,7 @@ export function ManageLocations() {
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <MapPin className="h-4 w-4" />
                   <span>{location.bookings?.length || 0} upcoming bookings</span>
-                    </div>
+                </div>
                 
                 {location.description && (
                   <p className="text-sm text-gray-600 line-clamp-2">{location.description}</p>
@@ -814,28 +823,23 @@ export function ManageLocations() {
                   <Badge variant={location.is_available ? "default" : "secondary"}>
                     {location.is_available ? 'Available' : 'Unavailable'}
                   </Badge>
-                  
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditDialog(location)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                    variant="outline"
-                      onClick={() => { setLocationToDelete(location); setDeleteDialogOpen(true); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {editMode ? (
+                    <div className="flex space-x-2">
+                      <button className="btn-edit" onClick={() => openEditDialog(location)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                        Edit
+                      </button>
+                      <button className="btn-delete" onClick={() => { setLocationToDelete(location); setDeleteDialogOpen(true); }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Delete
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </div>
+          ))}
+        </div>
       )}
 
       {totalPages > 1 && (

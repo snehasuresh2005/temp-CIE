@@ -371,7 +371,7 @@ export function LabComponentsManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Lab Components Management</h1>
+          <h1 className="faculty-page-title">Lab Components</h1>
           <p className="text-gray-600">Manage lab component requests and inventory</p>
         </div>
         <Button onClick={fetchData} variant="outline">
@@ -475,6 +475,44 @@ export function LabComponentsManagement() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Section Heading for Available Lab Components */}
+      <h2 className="faculty-page-title" style={{ color: '#1a202c' }}>Available Lab Components</h2>
+
+      {/* Components Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-[1100px] mx-auto">
+        {filteredComponents.map((component) => (
+          <Card key={component.id} className="faculty-card p-8 min-h-[260px]">
+            <CardHeader className="p-4">
+              <CardTitle className="flex items-center space-x-2 text-sm">
+                <Wrench className="h-4 w-4" />
+                <span>{component.component_name}</span>
+              </CardTitle>
+              <CardDescription className="text-xs">{component.component_category}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Total:</span>
+                  <span className="font-medium">{component.component_quantity}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Available:</span>
+                  <span className={`font-medium ${component.available_quantity === 0 ? 'text-red-600' : 'text-green-600'}`}>{component.available_quantity}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>On Loan:</span>
+                  <span className="font-medium">{component.component_quantity - component.available_quantity}</span>
+                </div>
+                <div className="text-xs text-gray-500">Location: {component.component_location}</div>
+                {component.available_quantity === 0 && (
+                  <Badge className="bg-red-100 text-red-800 text-xs">Out of Stock</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Search Bar */}

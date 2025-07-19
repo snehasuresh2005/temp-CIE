@@ -84,6 +84,7 @@ export function LibraryManagement() {
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null)
   const [imageStates, setImageStates] = useState<Record<string, boolean>>({})
+  const [showBack, setShowBack] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [infoDialogOpen, setInfoDialogOpen] = useState<string | null>(null)
@@ -94,6 +95,10 @@ export function LibraryManagement() {
   useEffect(() => {
     fetchData()
   }, [user])
+
+  useEffect(() => {
+    setShowBack(false);
+  }, [infoDialogOpen]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -572,7 +577,7 @@ export function LibraryManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Library</h1>
+          <h1 className="faculty-page-title-global" style={{ color: 'var(--library-title-color, #1a202c)' }}>Library</h1>
         </div>
         <Button onClick={fetchData} variant="outline">
           <RotateCcw className="h-4 w-4 mr-2" />
@@ -580,8 +585,8 @@ export function LibraryManagement() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-yellow-600" />
@@ -592,7 +597,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Package className="h-5 w-5 text-blue-600" />
@@ -603,7 +608,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-orange-600" />
@@ -614,7 +619,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -625,7 +630,7 @@ export function LibraryManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="faculty-card p-8 min-h-[220px]">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -749,7 +754,7 @@ export function LibraryManagement() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex flex-wrap gap-2 items-center mb-4 pb-1">
-                  <div className="relative w-56">
+                  <div className="relative w-full md:w-1/2 lg:w-1/3">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
                       <Search className="h-4 w-4" />
                     </span>
@@ -776,36 +781,38 @@ export function LibraryManagement() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredItems.map((item) => (
-                    <Card key={item.id} className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200 border border-gray-200 bg-white">
-                      <CardHeader className="p-3 pb-0">
+                    <Card key={item.id} className="flex flex-col h-full hover:shadow-md transition-shadow duration-200">
+                      <CardHeader className="p-3">
                         <div className="flex justify-between items-start">
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="flex items-center space-x-2 text-base font-semibold">
-                              <Package className="h-5 w-5 flex-shrink-0 text-purple-600" />
+                            <CardTitle className="flex items-center space-x-2 text-sm">
+                              <Package className="h-4 w-4 flex-shrink-0" />
                               <span className="truncate">{item.item_name}</span>
                             </CardTitle>
-                            <CardDescription className="text-xs text-gray-500">{item.item_category}</CardDescription>
+                            <CardDescription className="text-xs">{item.item_category}</CardDescription>
                           </div>
                           <div className="flex items-center space-x-1 flex-shrink-0">
-                            <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-2 py-0.5 rounded-full font-medium`}>{getAvailabilityText(item.available_quantity, item.item_quantity)}</Badge>
+                            <Badge className={`${getAvailabilityColor(item.available_quantity, item.item_quantity)} text-xs px-1 py-0.5`}>
+                              {getAvailabilityText(item.available_quantity, item.item_quantity)}
+                            </Badge>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 text-gray-400 hover:text-gray-600"
                               onClick={() => setInfoDialogOpen(item.id)}
                             >
-                              <Info className="h-4 w-4" />
+                              <Info className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="flex-grow flex flex-col p-3 pt-2">
+                      <CardContent className="flex-grow flex flex-col p-3 pt-0">
                         <div className="space-y-3 flex-grow">
                           {/* Image Display */}
                           {(item.image_url || item.back_image_url) && (
-                            <div className="relative w-full h-32 mb-2">
+                            <div className="relative w-full h-48 mb-2">
                               {/* Front Image */}
                               <div 
                                 className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${imageStates[item.id] ? 'opacity-0' : 'opacity-100'}`}
@@ -1278,7 +1285,7 @@ export function LibraryManagement() {
 
       {/* Library Item Info Dialog */}
       <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Library Item Details</DialogTitle>
             <DialogDescription>
