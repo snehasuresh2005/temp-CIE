@@ -29,7 +29,7 @@ const initialForm = {
   applicationEndDate: '',
   remuneration: 'PAID',
   filePath: '',
-  facultyId: '',
+  facultyInChargeId: '',
   capacity: 1,
 };
 
@@ -44,7 +44,7 @@ interface Opportunity {
   applicationEndDate: string;
   remuneration: string;
   filePath?: string | null;
-  facultyId: string;
+  facultyInChargeId: string;
   faculty?: { name?: string; user?: { name?: string; email?: string } };
   capacity: number;
   status: string;
@@ -69,11 +69,29 @@ export default function ManageOpportunity() {
 
   useEffect(() => {
     fetch('/api/opportunities')
-      .then(res => res.json())
-      .then((data: Opportunity[]) => setOpportunities(data));
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to fetch opportunities');
+        const text = await res.text();
+        return text ? JSON.parse(text) : [];
+      })
+      .then((data: Opportunity[]) => setOpportunities(data))
+      .catch(err => {
+        setOpportunities([]);
+        setError('Failed to load opportunities');
+        console.error(err);
+      });
     fetch('/api/faculty')
-      .then(res => res.json())
-      .then(data => setFacultyOptions(data.faculty || []));
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to fetch faculty');
+        const text = await res.text();
+        return text ? JSON.parse(text) : { faculty: [] };
+      })
+      .then(data => setFacultyOptions(data.faculty || []))
+      .catch(err => {
+        setFacultyOptions([]);
+        setError('Failed to load faculty');
+        console.error(err);
+      });
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -223,17 +241,17 @@ export default function ManageOpportunity() {
                 </select>
               </div>
               <div>
-                <Label htmlFor="facultyId">Faculty</Label>
+                <Label htmlFor="facultyInChargeId">Faculty in charge</Label>
                 <Select
-                  value={form.facultyId}
-                  onValueChange={value => setForm(f => ({ ...f, facultyId: value }))}
+                  value={form.facultyInChargeId}
+                  onValueChange={value => setForm(f => ({ ...f, facultyInChargeId: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select faculty" />
+                    <SelectValue placeholder="Select faculty in charge" />
                   </SelectTrigger>
                   <SelectContent>
                     {facultyOptions.map(faculty => (
-                      <SelectItem key={faculty.id} value={faculty.id}>
+                      <SelectItem key={faculty.id} value={faculty.user.id}>
                         {faculty.user.name} ({faculty.user.email})
                       </SelectItem>
                     ))}
@@ -266,7 +284,7 @@ export default function ManageOpportunity() {
                   {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
                     <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
                   ) : (
-                    <span>{opp.facultyId}</span>
+                    <span>{opp.facultyInChargeId}</span>
                   )}
                 </div>
                 <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>

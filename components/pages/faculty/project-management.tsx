@@ -45,6 +45,8 @@ import {
   Info,
   Brain,
   Clipboard,
+  Edit,
+  Trash,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
@@ -189,6 +191,7 @@ export function ProjectManagement() {
   const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const { toast } = useToast();
+  const [editMode, setEditMode] = useState(false);
 
   const [newProject, setNewProject] = useState({
     name: "",
@@ -939,26 +942,28 @@ export function ProjectManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">
-          Project Management
-        </h2>
-        <div className="flex items-center space-x-2">
-          {isLabComponentsCoordinator && (
-            <Button
-              variant="outline"
-              onClick={() => setShowFacultyRequests(true)}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Manage Project Requests
-            </Button>
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="faculty-page-title">Project Management</h2>
+        <div className="flex gap-4">
+          <button
+            className="btn-edit"
+            onClick={() => fetchData()}
+            style={{ background: '#fffff', color: '#00000' }}
+          >
+            Refresh
+          </button>
+          <button
+            className="btn-edit"
+            onClick={() => setEditMode((v) => !v)}
+            style={editMode ? { background: '#002D62', color: '#fff' } : {}}
+          >
+            {editMode ? 'Editing' : 'Edit Mode'}
+          </button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Project
-              </Button>
+              <button className="btn-edit flex items-center" style={{ background: '#002D62', color: '#fff' }}>
+                <Plus className="h-4 w-4 mr-1" /> Create Project
+              </button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
@@ -1025,10 +1030,9 @@ export function ProjectManagement() {
                       return (
                         <Badge key={componentId} variant="secondary">
                           {component?.component_name}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="ml-1 h-auto p-0"
+                          <button
+                            type="button"
+                            className="ml-1 h-auto p-0 text-red-500 hover:text-red-700"
                             onClick={() =>
                               setNewProject({
                                 ...newProject,
@@ -1040,7 +1044,7 @@ export function ProjectManagement() {
                             }
                           >
                             ×
-                          </Button>
+                          </button>
                         </Badge>
                       );
                     })}
@@ -1062,13 +1066,13 @@ export function ProjectManagement() {
                 </div>
               </div>
               <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
+                <button
+                  className="btn-edit"
                   onClick={() => setIsAddDialogOpen(false)}
                 >
                   Cancel
-                </Button>
-                <Button onClick={handleAddProject}>Create Project</Button>
+                </button>
+                <button className="btn-edit" onClick={handleAddProject}>Create Project</button>
               </div>
             </DialogContent>
           </Dialog>
@@ -1090,7 +1094,7 @@ export function ProjectManagement() {
               return (
                 <Card
                   key={project.id}
-                  className="flex flex-col h-full hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  className="faculty-card"
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -1297,26 +1301,22 @@ export function ProjectManagement() {
                           </Button>
                         )}
 
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => handleEditProject(project)}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Edit Project
-                      </Button>
-
-                      <Button
-                        variant="destructive"
-                        className="w-full"
-                        onClick={() => {
-                          setProjectToDelete(project);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Project
-                      </Button>
+                      {editMode && (
+                        <div className="flex gap-4 mt-2">
+                          <button className="btn-edit" onClick={() => handleEditProject(project)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4 mr-1">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487a2.25 2.25 0 1 1 3.182 3.182L7.5 20.213l-4.182.545.545-4.182 13-13z" />
+                            </svg>
+                            Edit
+                          </button>
+                          <button className="btn-delete" onClick={() => handleDeleteProject(project.id)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4 mr-1">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>

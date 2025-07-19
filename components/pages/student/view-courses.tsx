@@ -162,7 +162,7 @@ export function ViewCourses() {
             const totalHours = getTotalHours(course.course_units || [])
             const totalAssignments = getTotalAssignments(course.course_units || [])
             return (
-              <Card key={course.id} className="flex flex-col justify-between min-h-[280px] max-w-md mx-auto hover:shadow-lg transition-shadow rounded-xl border border-gray-200 p-4">
+              <Card key={course.id} className="student-card flex flex-col justify-between min-h-[280px] max-w-md mx-auto hover:shadow-lg transition-shadow rounded-xl border border-gray-200 p-4">
                 <CardHeader className="pb-2 px-0">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">

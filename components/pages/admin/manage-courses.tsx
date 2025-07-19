@@ -71,6 +71,7 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
+  const [editMode, setEditMode] = useState(false);
 
   const [newCourse, setNewCourse] = useState({
     course_code: "",
@@ -405,15 +406,20 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Course Management</h1>
+          <h1 className="admin-page-title">Course Management</h1>
         </div>
-
         <div className="flex space-x-2">
           <Button onClick={fetchCourses} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
           </Button>
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -600,15 +606,15 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
           </Card>
         ) : (
           filteredCourses.map((course) => (
-            <Card key={course.id} className="rounded-xl shadow-sm border hover:shadow-md transition-shadow flex flex-col justify-between h-full">
+            <div key={course.id} className="admin-card rounded-xl shadow-sm border hover:shadow-md transition-shadow flex flex-col justify-between h-full">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <BookOpen className="h-4 w-4 text-gray-500" />
-                      <span className="text-xl font-bold text-gray-900 truncate">{course.course_name}</span>
+                      <span className="text-xl font-bold text-gray-900 /*dark:text-white*/ truncate">{course.course_name}</span>
                     </div>
-                    <CardDescription className="mt-1 text-gray-600 text-sm truncate">{course.course_description}</CardDescription>
+                    <CardDescription className="mt-1 text-gray-600 text-sm truncate /*dark:text-white*/">{course.course_description}</CardDescription>
                   </div>
                   <Badge variant="outline" className="ml-2 whitespace-nowrap">{course.course_units?.length || 0} Units</Badge>
                 </div>
@@ -633,20 +639,25 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
                       <List className="h-4 w-4 mr-1" />
                       View Units
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => {
-                      setCourseToDelete(course)
-                      setIsDeleteDialogOpen(true)
-                    }}>
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => openEditDialog(course)}>
-                      Edit
-                    </Button>
+                    {editMode && (
+                      <>
+                        <button className="btn-edit" onClick={() => openEditDialog(course)}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                          Edit
+                        </button>
+                        <button className="btn-delete" onClick={() => {
+                          setCourseToDelete(course)
+                          setIsDeleteDialogOpen(true)
+                        }}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           ))
         )}
       </div>

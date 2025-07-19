@@ -299,7 +299,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
                   <div className="flex items-center space-x-2">
                     <div className="text-right">
                       <p className="font-medium text-gray-900 text-sm">{user?.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
+                      <p className="text-xs leading-none text-muted-foreground dark:text-white">
                         {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase() : ''}
                       </p>
                     </div>
@@ -350,7 +350,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
           "fixed inset-y-0 left-0 z-40 transform transition-all duration-500 ease-in-out lg:translate-x-0 rounded-r-2xl overflow-hidden shadow-2xl",
           sidebarWidth,
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          "bg-gradient-to-b from-blue-100 to-indigo-100 dark:bg-dark4 dark:text-dark1"
+          "bg-[#e3f0ff] dark:bg-sidebar text-sidebar-foreground"
         )}
         style={{
           boxShadow: '4px 0 15px rgba(0, 0, 0, 0.1)'

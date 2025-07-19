@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Calendar, Clock, MapPin, Trash2, Edit } from "lucide-react"
+import { Plus, Calendar, Clock, MapPin, Trash2, Edit, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useAuth } from "@/components/auth-provider"
@@ -31,7 +31,7 @@ interface Course {
   created_date: string
   modified_by?: string
   modified_date: string
-  course_code?: string // Added for course code
+  course_code?: string
 }
 
 interface Faculty {
@@ -75,6 +75,7 @@ export function ManageClassSchedules() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const { user } = useAuth()
+  const [editMode, setEditMode] = useState(false)
 
   const [newSchedule, setNewSchedule] = useState({
     courseId: "",
@@ -92,40 +93,40 @@ export function ManageClassSchedules() {
 
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true)
-      try {
-        // Fetch courses
-        const coursesResponse = await fetch("/api/courses", {
-          headers: {
-            "x-user-id": user?.id || "",
-          },
-        })
-        const coursesData = await coursesResponse.json()
-        setCourses(coursesData.courses || [])
+  const fetchData = async () => {
+    setIsLoading(true)
+    try {
+      // Fetch courses
+      const coursesResponse = await fetch("/api/courses", {
+        headers: {
+          "x-user-id": user?.id || "",
+        },
+      })
+      const coursesData = await coursesResponse.json()
+      setCourses(coursesData.courses || [])
 
-        // Fetch faculty
-        const facultyResponse = await fetch("/api/faculty")
-        const facultyData = await facultyResponse.json()
-        setFaculty(facultyData.faculty || [])
+      // Fetch faculty
+      const facultyResponse = await fetch("/api/faculty")
+      const facultyData = await facultyResponse.json()
+      setFaculty(facultyData.faculty || [])
 
-        // Fetch schedules
-        const schedulesResponse = await fetch("/api/class-schedules")
-        const schedulesData = await schedulesResponse.json()
-        setSchedules(schedulesData.schedules || [])
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load data. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+      // Fetch schedules
+      const schedulesResponse = await fetch("/api/class-schedules")
+      const schedulesData = await schedulesResponse.json()
+      setSchedules(schedulesData.schedules || [])
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchData()
   }, [toast, user])
 
@@ -175,7 +176,6 @@ export function ManageClassSchedules() {
       const data = await response.json()
       setSchedules((prev) => [...prev, data.schedule])
       
-      // Reset form after successful creation
       setNewSchedule({
         courseId: "",
         facultyId: "",
@@ -288,7 +288,6 @@ export function ManageClassSchedules() {
     return course ? ["A", "B", "C", "D"] : []
   }
 
-  // Add form validation check for new schedule
   const isFormValid = useMemo(() => {
     return !!(
       newSchedule.courseId?.trim() &&
@@ -309,7 +308,6 @@ export function ManageClassSchedules() {
     newSchedule.section
   ])
 
-  // Add form validation check for edit schedule
   const isEditFormValid = useMemo(() => {
     if (!editingSchedule) return false
     return !!(
@@ -341,196 +339,205 @@ export function ManageClassSchedules() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Class Schedule Management</h1>
+          <h1 className="admin-page-title">Class Schedules Management</h1>
         </div>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Schedule
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[800px]">
-            <DialogHeader>
-              <DialogTitle>Add New Class Schedule</DialogTitle>
-              <DialogDescription>
-                Create a new class schedule entry for students and faculty.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="course">Course *</Label>
-                  <Select 
-                    value={newSchedule.courseId} 
-                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, courseId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.course_name} ({course.course_code || course.id})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="faculty">Faculty *</Label>
-                  <Select 
-                    value={newSchedule.facultyId} 
-                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, facultyId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select faculty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {faculty.map((f) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.user.name} ({f.department})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="room">Room *</Label>
-                  <Input
-                    id="room"
-                    value={newSchedule.room}
-                    onChange={(e) => setNewSchedule((prev) => ({ ...prev, room: e.target.value }))}
-                    placeholder="Enter room number (e.g., Room 101, Lab A)"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="section">Section *</Label>
-                  <Select 
-                    value={newSchedule.section} 
-                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, section: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select section" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableSections(newSchedule.courseId).map((section) => (
-                        <SelectItem key={section} value={section}>
-                          Section {section}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="dayOfWeek">Day *</Label>
-                  <Select 
-                    value={newSchedule.dayOfWeek} 
-                    onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, dayOfWeek: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {daysOfWeek.map((day) => (
-                        <SelectItem key={day} value={day}>
-                          {day}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="startTime">Start Time *</Label>
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={newSchedule.startTime}
-                    onChange={(e) => setNewSchedule((prev) => ({ ...prev, startTime: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">End Time *</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={newSchedule.endTime}
-                    onChange={(e) => setNewSchedule((prev) => ({ ...prev, endTime: e.target.value }))}
-                  />
-                </div>
-              </div>
-              
-              {/* Course Details Display */}
-              {newSchedule.courseId && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
-                  <h4 className="font-semibold text-blue-900 mb-2">Selected Course Details</h4>
-                  {(() => {
-                    const selectedCourse = courses.find(c => c.id === newSchedule.courseId);
-                    if (!selectedCourse) return null;
-                    return (
-                      <div className="space-y-1 text-blue-800">
-                        <div className="grid grid-cols-2 gap-x-4">
-                          <p>
-                            <strong>Course:</strong> {selectedCourse.course_name}
-                          </p>
-                          <p>
-                            <strong>Code:</strong> {selectedCourse.course_code || selectedCourse.id}
-                          </p>
-                        </div>
-                        <p>
-                          <strong>Description:</strong>{" "}
-                          {selectedCourse.course_description.length > 100
-                            ? `${selectedCourse.course_description.substring(0, 100)}...`
-                            : selectedCourse.course_description}
-                        </p>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end space-x-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => {
-                setIsAddDialogOpen(false)
-                // Reset form when closing
-                setNewSchedule({
-                  courseId: "",
-                  facultyId: "",
-                  room: "",
-                  dayOfWeek: "",
-                  startTime: "",
-                  endTime: "",
-                  section: "",
-                })
-              }}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleAddSchedule}
-                disabled={!isFormValid}
-                className={!isFormValid ? "opacity-50 cursor-not-allowed" : ""}
-              >
+        <div className="flex space-x-2">
+          <Button onClick={fetchData} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
                 Add Schedule
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[800px]">
+              <DialogHeader>
+                <DialogTitle>Add New Class Schedule</DialogTitle>
+                <DialogDescription>
+                  Create a new class schedule entry for students and faculty.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-6 py-4">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="course">Course *</Label>
+                    <Select 
+                      value={newSchedule.courseId} 
+                      onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, courseId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>
+                            {course.course_name} ({course.course_code || course.id})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="faculty">Faculty *</Label>
+                    <Select 
+                      value={newSchedule.facultyId} 
+                      onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, facultyId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select faculty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {faculty.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.user.name} ({f.department})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="room">Room *</Label>
+                    <Input
+                      id="room"
+                      value={newSchedule.room}
+                      onChange={(e) => setNewSchedule((prev) => ({ ...prev, room: e.target.value }))}
+                      placeholder="Enter room number (e.g., Room 101, Lab A)"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="section">Section *</Label>
+                    <Select 
+                      value={newSchedule.section} 
+                      onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, section: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select section" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableSections(newSchedule.courseId).map((section) => (
+                          <SelectItem key={section} value={section}>
+                            Section {section}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="dayOfWeek">Day *</Label>
+                    <Select 
+                      value={newSchedule.dayOfWeek} 
+                      onValueChange={(value) => setNewSchedule((prev) => ({ ...prev, dayOfWeek: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {daysOfWeek.map((day) => (
+                          <SelectItem key={day} value={day}>
+                            {day}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="startTime">Start Time *</Label>
+                    <Input
+                      id="startTime"
+                      type="time"
+                      value={newSchedule.startTime}
+                      onChange={(e) => setNewSchedule((prev) => ({ ...prev, startTime: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime">End Time *</Label>
+                    <Input
+                      id="endTime"
+                      type="time"
+                      value={newSchedule.endTime}
+                      onChange={(e) => setNewSchedule((prev) => ({ ...prev, endTime: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                
+                {newSchedule.courseId && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
+                    <h4 className="font-semibold text-blue-900 mb-2">Selected Course Details</h4>
+                    {(() => {
+                      const selectedCourse = courses.find(c => c.id === newSchedule.courseId);
+                      if (!selectedCourse) return null;
+                      return (
+                        <div className="space-y-1 text-blue-800">
+                          <div className="grid grid-cols-2 gap-x-4">
+                            <p>
+                              <strong>Course:</strong> {selectedCourse.course_name}
+                            </p>
+                            <p>
+                              <strong>Code:</strong> {selectedCourse.course_code || selectedCourse.id}
+                            </p>
+                          </div>
+                          <p>
+                            <strong>Description:</strong>{" "}
+                            {selectedCourse.course_description.length > 100
+                              ? `${selectedCourse.course_description.substring(0, 100)}...`
+                              : selectedCourse.course_description}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => {
+                  setIsAddDialogOpen(false)
+                  setNewSchedule({
+                    courseId: "",
+                    facultyId: "",
+                    room: "",
+                    dayOfWeek: "",
+                    startTime: "",
+                    endTime: "",
+                    section: "",
+                  })
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleAddSchedule}
+                  disabled={!isFormValid}
+                  className={!isFormValid ? "opacity-50 cursor-not-allowed" : ""}
+                >
+                  Add Schedule
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-4 mb-6">
         <Input
           placeholder="Search schedules..."
           value={searchTerm}
@@ -570,44 +577,19 @@ export function ManageClassSchedules() {
               </Card>
             ) : (
               filteredSchedules.map((schedule) => (
-                <Card key={schedule.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center space-x-2">
-                          <Calendar className="h-5 w-5" />
-                          <span>{schedule.course.course_name}</span>
-                        </CardTitle>
-                        <CardDescription>
-                          {schedule.faculty.user.name} • {schedule.room} • Section {schedule.section}
-                        </CardDescription>
+                <div key={schedule.id} className="admin-card">
+                  <div className="pb-2">
+                    <div>
+                      <div className="flex items-center space-x-2 text-base font-semibold">
+                        <Calendar className="h-5 w-5" />
+                        <span>{schedule.course.course_name}</span>
                       </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingSchedule(schedule)
-                            setIsEditDialogOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setScheduleToDelete(schedule)
-                            setIsDeleteDialogOpen(true)
-                          }}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="text-xs text-gray-500">
+                        {schedule.faculty.user.name} • {schedule.room} • Section {schedule.section}
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
+                  </div>
+                  <div>
                     <div className="grid grid-cols-1 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <Clock className="h-4 w-4 text-gray-400" />
@@ -620,8 +602,8 @@ export function ManageClassSchedules() {
                         <span>{schedule.room}</span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))
             )}
           </div>
@@ -790,7 +772,6 @@ export function ManageClassSchedules() {
                 </div>
               </div>
               
-              {/* Course Details Display */}
               {editingSchedule.courseId && (
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
                   <h4 className="font-semibold text-blue-900 mb-2">Selected Course Details</h4>
@@ -890,12 +871,17 @@ export function ManageClassSchedules() {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => {
-              if (scheduleToDelete) {
-                handleDeleteSchedule(scheduleToDelete.id)
-              }
-              setIsDeleteDialogOpen(false)
-            }}>Delete Schedule</Button>
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (scheduleToDelete) {
+                  handleDeleteSchedule(scheduleToDelete.id)
+                }
+                setIsDeleteDialogOpen(false)
+              }}
+            >
+              Delete Schedule
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -11,14 +11,18 @@ async function getUserFromRequest(req: NextRequest) {
 
 // GET: List all opportunities
 export async function GET(req: NextRequest) {
-  const opportunities = await prisma.opportunity.findMany({
-    include: {
-      faculty: { include: { user: true } },
-      applications: true,
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-  return NextResponse.json(opportunities);
+  try {
+    const opportunities = await prisma.opportunity.findMany({
+      include: {
+        facultyInCharge: true,
+        opportunityApplications: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return NextResponse.json(opportunities || []);
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
 
 // POST: Create a new opportunity (admin only)
@@ -39,15 +43,16 @@ export async function POST(req: NextRequest) {
         applicationEndDate: new Date(data.applicationEndDate),
         remuneration: data.remuneration,
         filePath: data.filePath || null,
-        facultyId: data.facultyId,
+        facultyInChargeId: data.facultyInChargeId,
         capacity: data.capacity,
         status: data.status || 'OPEN',
       },
     });
-    // Fetch with faculty user info for UI
+    console.log('Calling findUnique on Opportunity with:', { where: { id: opportunity.id }, include: { facultyInCharge: true, opportunityApplications: true } });
+    // Fetch with facultyInCharge user info for UI
     const fullOpportunity = await prisma.opportunity.findUnique({
       where: { id: opportunity.id },
-      include: { faculty: { include: { user: true } }, applications: true },
+      include: { facultyInCharge: true, opportunityApplications: true },
     });
     return NextResponse.json(fullOpportunity);
   } catch (error) {

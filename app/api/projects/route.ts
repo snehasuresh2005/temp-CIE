@@ -175,8 +175,6 @@ export async function POST(request: NextRequest) {
       components_needed: components_needed || [],
       expected_completion_date: new Date(expected_completion_date),
       type,
-      created_date: new Date(),
-      modified_date: new Date(),
     }
 
     // Only include course_id if it's provided

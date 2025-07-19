@@ -740,7 +740,7 @@ export function LocationBooking() {
           {calendarLocation && (
             <div className="mt-4">
               <LocationCalendar
-                userRole="faculty"
+                userRole="FACULTY"
                 userId={user?.id}
                 locationId={calendarLocation.id}
               />

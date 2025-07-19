@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { TodoList } from "@/components/ui/todo-list"
 import { DailyCalendar } from "@/components/ui/daily-calendar"
+import { useTheme } from "next-themes"
 
 interface AdminHomeProps {
   onPageChange?: (page: string) => void
@@ -13,6 +14,7 @@ interface AdminHomeProps {
 
 export function AdminHome({ onPageChange }: AdminHomeProps) {
   const { user } = useAuth()
+  const { theme } = useTheme();
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -87,65 +89,64 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
 
   return (
     <div className="space-y-6">
-      {(() => {
-        return (
-          <>
-            {/* Colorful Hero Window */}
-
-            <div className="rounded-lg shadow-2xl bg-gradient-to-br from-[#0056a6] via-[#00b6e3] to-[#ff7f32] p-4 min-h-[100px] flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
-              <div className="flex-1 z-6">
-                <div className="flex items-center mb-2 justify-between">
-                  <span className="text-white text-2xl font-extrabold tracking-tight">CIE Admin Portal</span>
-                </div>
-                <h2 className="text-3xl md:text-3xl font-extrabold text-white mb-2">Are you ready to manage innovation?</h2>
-                <p className="text-white/90 mb-4 max-w-2xl text-lg whitespace-nowrap">Welcome to the Centre for Innovation & Entrepreneurship, oversee faculty, students, courses, and more—all in one place.</p>
-
-                </div>
-              
-              {/* <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" /> */}
+      {/* Hero Section */}
+      <div className="rounded-lg shadow-2xl p-4 min-h-[100px] flex flex-col md:flex-row items-center justify-between relative overflow-hidden" style={{ background: "linear-gradient(120deg, #0056a6 0%, #2196f3 30%, #00b6e3 60%, #ffb347 85%, #ff7f32 100%)" }}>
+        <div className="flex-1 z-6">
+          <div className="flex items-center mb-2 justify-between">
+            <span className="text-white text-2xl font-extrabold tracking-tight">CIE Admin Portal</span>
+            <div className="flex gap-4">
+              <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100">Learn More</button>
+              {/*<button className="bg-white hover:bg-gray-100 text-blue-700 font-semibold px-8 py-3 rounded-lg shadow-lg transition-colors text-lg opacity-100" onClick={handleQuickActionsClick}>Quick Actions</button>*/}
             </div>
+          </div>
+          <h2 className="text-3xl md:text-3xl font-extrabold text-white mb-2">Are you ready to manage innovation?</h2>
+          <p className="text-white/90 mb-4 max-w-2xl text-lg whitespace-nowrap">Welcome to the Centre for Innovation & Entrepreneurship, oversee faculty, students, courses, and more—all in one place.</p>
+        </div>
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              {loading ? (
-                Array.from({ length: 6 }).map((_, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <div className="h-4 bg-gray-200 rounded w-20"></div>
-                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-24"></div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                stats.map((stat, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                      <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stat.value}</div>
-                      <p className="text-xs text-muted-foreground">{stat.description}</p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
-              <div className="lg:col-span-4">
-                <TodoList role="admin" />
-              </div>
-              <div className="lg:col-span-6">
-                <DailyCalendar role="admin" />
-              </div>
-            </div>
-          </>
-        );
-      })()}
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        {loading ? (
+          Array.from({ length: 6 }).map((_, index) => (
+            <Card key={index} className="hover:shadow-lg transition-shadow animate-pulse" style={theme === 'light' ? { background: '#e3f0ff' } : {}}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-gray-200 rounded w-20"></div>
+                <div className="h-4 w-4 bg-gray-200 rounded"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-24"></div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          stats.map((stat, index) => (
+            <Card key={index} className="hover:shadow-lg transition-shadow transform hover:scale-105 focus:scale-105 transition-transform duration-200" style={theme === 'light' ? { background: '#e3f0ff' } : {}}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground">{stat.description}</p>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+          
+          <Card>
+  <CardContent>
+    <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
+      <div className="lg:col-span-4">
+        <TodoList role="admin" />
+      </div>
+      <div className="lg:col-span-6">
+        <DailyCalendar role="admin" />
+      </div>
+    </div>
+  </CardContent>
+</Card>
     </div>
   )
 }

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Search, Building, Users, MapPin, X, RefreshCw , Filter } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { useAuth } from '@/components/auth-provider';
 
@@ -77,6 +77,7 @@ export function ManageLocations() {
   const [showAddLocationType, setShowAddLocationType] = useState(false);
   const [locationTypeToDelete, setLocationTypeToDelete] = useState<string | null>(null);
   const [isDeleteLocationTypeDialogOpen, setIsDeleteLocationTypeDialogOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // Refs for click-outside detection
   const locationTypeInputRef = useRef<HTMLDivElement>(null);
@@ -209,7 +210,7 @@ export function ManageLocations() {
         fetchLocations();
       } else {
         const error = await response.json();
-    toast({
+        toast({
           title: 'Error',
           description: error.error || 'Failed to save location',
           variant: 'destructive',
@@ -217,7 +218,7 @@ export function ManageLocations() {
       }
     } catch (error) {
       console.error('Error saving location:', error);
-    toast({
+      toast({
         title: 'Error',
         description: 'Failed to save location',
         variant: 'destructive',
@@ -252,7 +253,7 @@ export function ManageLocations() {
         fetchLocations();
       } else {
         const error = await response.json();
-    toast({
+        toast({
           title: 'Error',
           description: error.error || 'Failed to delete location',
           variant: 'destructive',
@@ -299,15 +300,15 @@ export function ManageLocations() {
       }
     } catch (error) {
       console.error("Error adding location type:", error)
-      toast({ 
-        title: "Error", 
-        description: "Failed to add location type.", 
-        variant: "destructive" 
-      })
+        toast({ 
+          title: "Error", 
+          description: "Failed to add location type.", 
+          variant: "destructive" 
+        })
     } finally {
       setIsSavingLocationType(false)
     }
-  }
+  };
 
   const handleDeleteLocationType = async (type: string) => {
     try {
@@ -348,7 +349,7 @@ export function ManageLocations() {
       setIsDeleteLocationTypeDialogOpen(false)
       setLocationTypeToDelete(null)
     }
-  }
+  };
 
   const handleImageUpload = async (files: FileList) => {
     if (!files.length) return;
@@ -468,7 +469,7 @@ export function ManageLocations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-3xl font-bold">Manage Room Bookings</h1>
         </div>
@@ -703,9 +704,13 @@ export function ManageLocations() {
                           <Button
                             type="button"
                             variant="outline"
+                            size="sm"
                             onClick={() => setPreviewImage(null)}
+                            className="h-6 w-6 p-0"
+                            title="Close preview"
+                            aria-label="Close preview"
                           >
-                            Close
+                            <X className="h-3 w-3" />
                           </Button>
                         </div>
                       </DialogContent>
@@ -756,9 +761,6 @@ export function ManageLocations() {
         </Select>
       </div>
 
-        
-
-
       {loading ? (
         <div className="text-center py-8">Loading locations...</div>
       ) : locations.length === 0 ? (
@@ -776,9 +778,9 @@ export function ManageLocations() {
           </div>
         </div>
       ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {locations.map((location) => (
-            <Card key={location.id} className="overflow-hidden">
+            <div key={location.id} className="admin-card overflow-hidden">
               {location.images.length > 0 && (
                 <div className="relative h-48 group bg-gray-50 flex items-center justify-center">
                   <Carousel className="w-full h-full">
@@ -816,7 +818,7 @@ export function ManageLocations() {
                   <Badge className={getLocationTypeColor(location.location_type)}>
                     {location.location_type.replace('_', ' ')}
                   </Badge>
-                  </div>
+                </div>
               </CardHeader>
               
               <CardContent className="space-y-3">
@@ -824,7 +826,7 @@ export function ManageLocations() {
                   <Building className="h-4 w-4" />
                   <span>{capitalizeWords(location.building)}, {getOrdinal(location.floor)}</span>
                   {location.wing && <span>- {location.wing}</span>}
-                  </div>
+                </div>
                 
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="h-4 w-4" />
@@ -834,7 +836,7 @@ export function ManageLocations() {
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <MapPin className="h-4 w-4" />
                   <span>{location.bookings?.length || 0} upcoming bookings</span>
-                    </div>
+                </div>
                 
                 {location.description && (
                   <p className="text-sm text-gray-600 line-clamp-2">{location.description}</p>
@@ -844,28 +846,23 @@ export function ManageLocations() {
                   <Badge variant={location.is_available ? "default" : "secondary"}>
                     {location.is_available ? 'Available' : 'Unavailable'}
                   </Badge>
-                  
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditDialog(location)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                    variant="outline"
-                      onClick={() => { setLocationToDelete(location); setDeleteDialogOpen(true); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {editMode ? (
+                    <div className="flex space-x-2">
+                      <button className="btn-edit" onClick={() => openEditDialog(location)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                        Edit
+                      </button>
+                      <button className="btn-delete" onClick={() => { setLocationToDelete(location); setDeleteDialogOpen(true); }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Delete
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </div>
+          ))}
+        </div>
       )}
 
       {totalPages > 1 && (

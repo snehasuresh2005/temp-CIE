@@ -159,6 +159,8 @@ export function ManageLabComponents() {
   const locationInputRef = useRef<HTMLDivElement>(null)
   const categoryInputRef = useRef<HTMLDivElement>(null)
 
+  const [editMode, setEditMode] = useState(false);
+
   useEffect(() => {
     fetchComponents()
     fetchCategories()
@@ -1360,15 +1362,20 @@ export function ManageLabComponents() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-3xl font-bold text-gray-900">Lab Components Management</h3>
+          <h1 className="admin-page-title">Lab Components Management</h1>
         </div>
-
         <div className="flex space-x-2">
           <Button onClick={fetchComponents} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
           </Button>
           <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
             <DialogTrigger asChild>
@@ -1906,7 +1913,7 @@ export function ManageLabComponents() {
           </Card>
         ) : (
           filteredComponents.map((component) => (
-            <Card key={component.id} className="hover:shadow-lg transition-shadow">
+            <div key={component.id} className="admin-card hover:shadow-lg transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -2027,39 +2034,41 @@ export function ManageLabComponents() {
 
 
                   <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingComponent(component)
-                        setIsEditDialogOpen(true)
-                        // Set image previews if images exist
-                        if (component.imageUrl) {
-                          setFrontImagePreview(component.imageUrl)
-                        }
-                        if (component.backImageUrl) {
-                          setBackImagePreview(component.backImageUrl)
-                        }
-                      }}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setComponentToDelete(component)
-                        setIsDeleteDialogOpen(true)
-                      }}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {editMode && (
+                      <>
+                        <button
+                          className="btn-edit"
+                          onClick={() => {
+                            setEditingComponent(component)
+                            setIsEditDialogOpen(true)
+                            // Set image previews if images exist
+                            if (component.imageUrl) {
+                              setFrontImagePreview(component.imageUrl)
+                            }
+                            if (component.backImageUrl) {
+                              setBackImagePreview(component.backImageUrl)
+                            }
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                          Edit
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={() => {
+                            setComponentToDelete(component)
+                            setIsDeleteDialogOpen(true)
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           ))
         )}
       </div>

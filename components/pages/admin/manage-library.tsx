@@ -143,6 +143,8 @@ export function ManageLibrary() {
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null)
   const [isBulkUploading, setIsBulkUploading] = useState(false)
 
+  const [editMode, setEditMode] = useState(false);
+
   useEffect(() => {
     fetchItems()
     fetchCategories()
@@ -1275,14 +1277,20 @@ export function ManageLibrary() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-3xl font-bold text-gray-900">Library Books Management</h3>
+          <h1 className="admin-page-title">Library Management</h1>
         </div>
         <div className="flex space-x-2">
           <Button onClick={fetchItems} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
+          </Button>
+          <Button
+            variant={editMode ? "default" : "outline"}
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? "Editing..." : "Edit Mode"}
           </Button>
           <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
             <DialogTrigger asChild>
@@ -1856,7 +1864,7 @@ export function ManageLibrary() {
           </Card>
         ) : (
           filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-lg transition-shadow">
+            <div key={item.id} className="admin-card rounded-xl shadow-sm border hover:shadow-md transition-shadow flex flex-col justify-between h-full">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -2000,7 +2008,7 @@ export function ManageLibrary() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           ))
         )}
       </div>
