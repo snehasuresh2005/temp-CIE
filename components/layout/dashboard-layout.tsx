@@ -246,7 +246,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       {/* Navbar */}
       <div
         className={cn(
-          "fixed top-0 right-0 left-0 h-16 bg-white dark:bg-dark4 border-b border-gray-200 dark:border-dark3 z-30 transition-all duration-300",
+          "fixed top-0 right-0 left-0 h-20 bg-[#e3f0ff] dark:bg-dark4 border-b border-gray-200 dark:border-dark3 z-30 transition-all duration-300",
           sidebarCollapsed ? "lg:left-16" : "lg:left-64",
         )}
       >
@@ -258,28 +258,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
             </Button>
           </div>
 
-          {/* Quick Actions - Middle Section */}
-          <div className={`hidden lg:flex items-center space-x-4 flex-1 ${
-            sidebarCollapsed ? 'justify-start pl-4' : 'justify-center'
-          }`}>
-            <div className="flex items-center space-x-3 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Quick Actions:</span>
-              {quickActions.map((action) => (
-                <Button
-                  key={action.id}
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full transition-all duration-200 hover:bg-white dark:hover:bg-gray-700"
-                  onClick={() => onPageChange(action.id)}
-                  title={action.label}
-                >
-                  <action.icon className="h-5 w-5 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" />
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end flex-1">
             {/* Dark mode toggle button */}
             <Button
               variant="ghost"
@@ -463,7 +442,9 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       {/* Main content */}
       <div className={cn("transition-all duration-300", mainMargin)}>
         <div className="pt-16">
-          <div className="p-4 lg:p-8 rounded-tl-2xl min-h-[calc(100vh-4rem)]">{children}</div>
+          <div className="p-4 lg:p-8 rounded-tl-2xl min-h-[calc(100vh-4rem)]">
+            {children}
+          </div>
         </div>
       </div>
 

@@ -186,8 +186,8 @@ body {
 
 /* Kenburns-top animation from Animista */
 .kenburns-top {
-  -webkit-animation: kenburns-center 5s ease-out infinite both;
-  animation: kenburns-center 5s ease-out infinite both;
+  -webkit-animation: kenburns-center 12s ease-out 1 both;
+  animation: kenburns-center 12s ease-out 1 both;
 }
 
 @-webkit-keyframes kenburns-center {
@@ -301,7 +301,7 @@ body {
 
 
 .admin-card {
-  background: #dff9ff;
+  background: #ffffff;
   border: 1px solid #e5e7eb; /* gray-200 */
   border-radius: 0.75rem;     /* rounded-xl */
   box-shadow: 0 2px 8px 0 rgba(16,30,54,0.04);
@@ -310,6 +310,7 @@ body {
 }
 .admin-card:hover, .admin-card:focus-within {
   box-shadow: 0 4px 16px 0 rgba(16,30,54,0.08);
+  background-color: #e3f0ff;
 }
 .dark .admin-card:not(.bg-green-50):not(.dark\:bg-green-50) {
   background: #283042;
@@ -317,7 +318,7 @@ body {
 }
 
 .faculty-card {
-  background: #dff9ff;
+  background: #ffffff;
   border: 1px solid #e5e7eb; /* gray-200 */
   border-radius: 0.75rem;     /* rounded-xl */
   box-shadow: 0 2px 8px 0 rgba(16,30,54,0.04);
@@ -326,6 +327,7 @@ body {
 }
 .faculty-card:hover, .admin-card:focus-within {
   box-shadow: 0 4px 16px 0 rgba(16,30,54,0.08);
+  background-color: #e3f0ff;
 }
 .dark .faculty-card:not(.bg-green-50):not(.dark\:bg-green-50) {
   background: #283042;
@@ -346,6 +348,10 @@ body {
 .dark .student-card:not(.bg-green-50):not(.dark\:bg-green-50) {
   background: #283042;
   border-color: #2d3650;
+}
+
+.dark .dashboard-tab-card, .dark .todo-list-card {
+  background: #23253a !important;
 }
 
 @font-face {

@@ -194,98 +194,98 @@ export function DailyCalendar({ role = 'admin' }: DailyCalendarProps) {
   };
 
   return (
-    <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+    <Card className="dashboard-tab-card transform hover:scale-105 focus:scale-105 transition-transform duration-200">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
             <CardTitle className="text-xl">Daily Schedule</CardTitle>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="px-3">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Appointment</DialogTitle>
+                  <DialogDescription>
+                    Schedule a new appointment or meeting for today.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Title</label>
+                    <Input
+                      placeholder="Meeting title..."
+                      value={newAppointment.title}
+                      onChange={(e) => setNewAppointment({...newAppointment, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Time</label>
+                      <input
+                        type="time"
+                        value={newAppointment.time}
+                        onChange={(e) => setNewAppointment({...newAppointment, time: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min={new Date().toTimeString().slice(0, 5)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Duration (minutes)</label>
+                      <input
+                        type="number"
+                        min="15"
+                        max="480"
+                        step="15"
+                        value={newAppointment.duration}
+                        onChange={(e) => setNewAppointment({...newAppointment, duration: parseInt(e.target.value) || 60})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="60"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Type</label>
+                    <select
+                      value={newAppointment.type}
+                      onChange={(e) => setNewAppointment({...newAppointment, type: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="meeting">Meeting</option>
+                      <option value="class">Class</option>
+                      <option value="office-hours">Office Hours</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Description (optional)</label>
+                    <Input
+                      placeholder="Additional details..."
+                      value={newAppointment.description}
+                      onChange={(e) => setNewAppointment({...newAppointment, description: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={addAppointment}>
+                      Add Appointment
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
             <Calendar className="h-4 w-4" />
             <span>{getCurrentDateString()}</span>
             <span>•</span>
             <Clock className="h-4 w-4" />
             <span>{getCurrentTimeString()}</span>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="px-3">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Appointment</DialogTitle>
-                <DialogDescription>
-                  Schedule a new appointment or meeting for today.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Title</label>
-                  <Input
-                    placeholder="Meeting title..."
-                    value={newAppointment.title}
-                    onChange={(e) => setNewAppointment({...newAppointment, title: e.target.value})}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Time</label>
-                    <input
-                      type="time"
-                      value={newAppointment.time}
-                      onChange={(e) => setNewAppointment({...newAppointment, time: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min={new Date().toTimeString().slice(0, 5)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Duration (minutes)</label>
-                    <input
-                      type="number"
-                      min="15"
-                      max="480"
-                      step="15"
-                      value={newAppointment.duration}
-                      onChange={(e) => setNewAppointment({...newAppointment, duration: parseInt(e.target.value) || 60})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="60"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Type</label>
-                  <select
-                    value={newAppointment.type}
-                    onChange={(e) => setNewAppointment({...newAppointment, type: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="meeting">Meeting</option>
-                    <option value="class">Class</option>
-                    <option value="office-hours">Office Hours</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Description (optional)</label>
-                  <Input
-                    placeholder="Additional details..."
-                    value={newAppointment.description}
-                    onChange={(e) => setNewAppointment({...newAppointment, description: e.target.value})}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={addAppointment}>
-                    Add Appointment
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </CardHeader>
       <CardContent className="pb-4">
