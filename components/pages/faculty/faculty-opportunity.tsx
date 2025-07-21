@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { User as UserIcon, Calendar as CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
 
 interface Opportunity {
   id: string;
@@ -26,6 +28,8 @@ interface Application {
   appliedAt: string;
   student: { name: string; email: string; resume_id?: string; resume_path?: string };
   resumePath?: string; // Added this field to the Application interface
+  studentName?: string;
+  studentUserId?: string;
 }
 
 export default function FacultyOpportunity() {
@@ -107,113 +111,131 @@ export default function FacultyOpportunity() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
+    <div className="w-full p-4">
       <h2 className="text-2xl font-bold mb-4">Faculty Opportunity Management</h2>
       {error && <div className="text-red-600 mb-2">{error}</div>}
       {loading ? (
         <div>Loading...</div>
       ) : (
-        <div className="space-y-4">
-          {opportunities.length === 0 && <div>No assigned opportunities found.</div>}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full">
+          {opportunities.length === 0 && <div className='col-span-full'>No assigned opportunities found.</div>}
           {opportunities.map(opp => (
-            <Card key={opp.id} className="border p-4 rounded">
-              <CardContent>
+            <Card key={opp.id} className="border p-4 rounded flex flex-col h-full">
+              <CardContent className="flex flex-col flex-1">
                 <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
                 <div className="text-gray-600 mb-2">{opp.description}</div>
-                <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
+                <div className="text-sm">Due Date: {opp.applicationEndDate?.slice(0,10)}</div>
                 <div className="text-sm">Capacity: {opp.capacity}</div>
                 <div className="text-sm">Status: {opp.status}</div>
-                <Button className="mt-2" variant="default" onClick={() => handleViewApplicants(opp.id)}>
-                  View Applicants
-                </Button>
-                <Button className="mt-2 ml-2" variant="secondary" onClick={() => handleBulkDownloadResumes(opp.id)}>
-                  Bulk Download Resumes
-                </Button>
-                {selectedOppId === opp.id && (
-                  <div className="mt-4">
-                    <h4 className="font-semibold mb-2">Applicants</h4>
-                    {appError && <div className="text-red-600 mb-2">{appError}</div>}
-                    {appLoading ? (
-                      <div>Loading applicants...</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {(!Array.isArray(applications) || applications.length === 0) && <div>No applicants yet.</div>}
-                        {/* Old applicant rendering code commented out */}
-                        {/*
-                        {Array.isArray(applications) && applications.map(app => (
-                          <Card key={app.id} className="p-2">
-                            <CardContent>
-                              <div className="font-medium">{app.student?.name || 'Unknown'} ({app.student?.email || app.studentId})</div>
-                              <div>Status: {app.status}</div>
-                              <div>Applied At: {app.appliedAt?.slice(0,10)}</div>
-                              {app.student?.resume_id && (
-                                <div className="mt-1">
-                                  <a
-                                    href={`/${app.student.resume_path || 'Resume'}/${app.student.resume_id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 underline"
-                                  >
-                                    View Resume
-                                  </a>
-                                </div>
-                              )}
-                              <div className="flex gap-2 mt-2">
-                                <Button size="sm" variant="default" onClick={() => handleStatusChange(app.id, 'ACCEPTED')} disabled={app.status === 'ACCEPTED'}>
-                                  Accept
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleStatusChange(app.id, 'REJECTED')} disabled={app.status === 'REJECTED'}>
-                                  Reject
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                        */}
-
-                        {/* New applicant rendering code */}
-                        {Array.isArray(applications) && applications.map(app => (
-                          <Card key={app.id} className="p-2">
-                            <CardContent>
-                              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                                <div>
-                                  <div className="font-medium">{app.student?.user?.name || 'Unknown'} ({app.student?.user?.email || app.studentId})</div>
-                                  <div className="text-sm text-gray-600">Status: {app.status}</div>
-                                  <div className="text-sm text-gray-600">Applied At: {app.appliedAt?.slice(0,10)}</div>
-                                </div>
-                                <div className="flex gap-2 items-center">
-                                  {app.resumePath ? (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      asChild
-                                    >
-                                      <a
-                                        href={app.resumePath.startsWith('/') ? app.resumePath : `/resumes/${app.resumePath}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        View Resume
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <span>No Resume</span>
-                                  )}
-                                  <Button size="sm" variant="default" onClick={() => handleStatusChange(app.id, 'ACCEPTED')} disabled={app.status === 'ACCEPTED'}>
-                                    Accept
-                                  </Button>
-                                  <Button size="sm" variant="destructive" onClick={() => handleStatusChange(app.id, 'REJECTED')} disabled={app.status === 'REJECTED'}>
-                                    Reject
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="mt-auto pt-2 flex gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="mt-2" variant="default" onClick={() => handleViewApplicants(opp.id)}>
+                        View Applicants
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[80vw] max-w-[1100px] p-10">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">Applicants - {opp.title}</DialogTitle>
+                      </DialogHeader>
+                      {appError && <div className="text-red-600 mb-2">{appError}</div>}
+                      {appLoading ? (
+                        <div>Loading applicants...</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          {(!Array.isArray(applications) || applications.length === 0) ? (
+                            <div>No applicants yet.</div>
+                          ) : (
+                            <table className="w-full text-base table-fixed">
+                              <thead>
+                                <tr className="border-b">
+                                  <th className="py-3 px-4 text-left w-1/4">Student</th>
+                                  <th className="py-3 px-4 text-left w-1/6">Status</th>
+                                  {applications.some(app => app.appliedAt) && <th className="py-3 px-4 text-left w-1/6 min-w-[140px]">Applied Date</th>}
+                                  <th className="py-3 px-4 text-left w-1/6">Resume</th>
+                                  <th className="py-3 px-4 text-left w-1/4">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {applications.map(app => (
+                                  <tr key={app.id} className="border-b align-middle hover:bg-gray-50 transition">
+                                    <td className="py-4 px-4 whitespace-normal">
+                                      <div className="flex items-center gap-2">
+                                        <UserIcon className="h-5 w-5 text-gray-500" />
+                                        <span className="font-semibold text-base">{app.studentName || '-'}</span>
+                                      </div>
+                                      {app.studentUserId && <div className="text-xs text-gray-500 break-all ml-7">{app.studentUserId}</div>}
+                                    </td>
+                                    <td className="py-4 px-4">
+                                      <span className={
+                                        app.status === 'ACCEPTED'
+                                          ? 'border border-green-500 text-green-700 bg-green-50 px-3 py-1 rounded font-semibold'
+                                          : app.status === 'REJECTED'
+                                          ? 'border border-red-500 text-red-700 bg-red-50 px-3 py-1 rounded font-semibold'
+                                          : 'border border-yellow-500 text-yellow-700 bg-yellow-50 px-3 py-1 rounded font-semibold'
+                                      }>
+                                        {app.status.charAt(0) + app.status.slice(1).toLowerCase()}
+                                      </span>
+                                    </td>
+                                    <td className="py-4 px-4 min-w-[140px]">
+                                      {app.appliedAt ? (
+                                        <div className="flex items-center gap-2">
+                                          <CalendarIcon className="h-4 w-4 text-gray-400" />
+                                          <span>{app.appliedAt.slice(0,10)}</span>
+                                        </div>
+                                      ) : null}
+                                    </td>
+                                    <td className="py-4 px-4">
+                                      {app.resumePath ? (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          asChild
+                                          className="w-full max-w-[140px]"
+                                        >
+                                          <a
+                                            href={app.resumePath.startsWith('/') ? app.resumePath : `/resumes/${app.resumePath}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            View Resume
+                                          </a>
+                                        </Button>
+                                      ) : (
+                                        <span>No Resume</span>
+                                      )}
+                                    </td>
+                                    <td className="py-4 px-4 w-40 min-w-max">
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          className="bg-green-600 hover:bg-green-700 text-white px-3"
+                                          onClick={() => handleStatusChange(app.id, 'ACCEPTED')}
+                                          disabled={app.status === 'ACCEPTED'}
+                                        >
+                                          <CheckCircle className="h-4 w-4 mr-1" /> Accept
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          className="px-3"
+                                          onClick={() => handleStatusChange(app.id, 'REJECTED')}
+                                          disabled={app.status === 'REJECTED'}
+                                        >
+                                          <XCircle className="h-4 w-4 mr-1" /> Reject
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardContent>
             </Card>
           ))}

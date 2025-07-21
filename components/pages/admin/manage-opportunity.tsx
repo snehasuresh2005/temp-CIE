@@ -145,14 +145,20 @@ export default function ManageOpportunity() {
   };
 
   const handleEdit = (opp: Opportunity) => {
-    setForm({
-      ...opp,
-      startDate: opp.startDate?.slice(0, 10) || '',
-      endDate: opp.endDate?.slice(0, 10) || '',
-      applicationStartDate: opp.applicationStartDate?.slice(0, 10) || '',
-      applicationEndDate: opp.applicationEndDate?.slice(0, 10) || '',
-    });
     setEditingId(opp.id);
+    setForm({
+      title: opp.title,
+      type: opp.type,
+      description: opp.description,
+      startDate: opp.startDate,
+      endDate: opp.endDate,
+      applicationStartDate: opp.applicationStartDate,
+      applicationEndDate: opp.applicationEndDate,
+      remuneration: opp.remuneration,
+      filePath: opp.filePath || '',
+      facultyInChargeId: opp.facultyInChargeId,
+      capacity: opp.capacity,
+    });
     setShowForm(true);
   };
 
@@ -183,7 +189,7 @@ export default function ManageOpportunity() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
+    <div className="w-full p-0">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Opportunities</h2>
         <Button onClick={() => setShowForm(f => !f)} variant="default">
@@ -251,7 +257,7 @@ export default function ManageOpportunity() {
                   </SelectTrigger>
                   <SelectContent>
                     {facultyOptions.map(faculty => (
-                      <SelectItem key={faculty.id} value={faculty.user.id}>
+                      <SelectItem key={faculty.id} value={faculty.id}>
                         {faculty.user.name} ({faculty.user.email})
                       </SelectItem>
                     ))}
@@ -270,51 +276,49 @@ export default function ManageOpportunity() {
           </CardContent>
         </Card>
       )}
-      <h3 className="text-xl font-semibold mb-2">All Opportunities</h3>
-      <div className="space-y-4">
+      <h3 className="text-xl font-semibold mb-4">All Opportunities</h3>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full p-0">
         {opportunities.length === 0 && <div>No opportunities found.</div>}
-        {opportunities.map((opp) => {
-          return (
-            <Card key={opp.id} className="border p-4 rounded">
-              <CardContent>
-                <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
-                <div className="text-gray-600 mb-2">{opp.description}</div>
-                <div className="flex items-center gap-2 text-sm mb-1">
-                  <UserIcon className="h-4 w-4 text-gray-500" />
-                  {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
-                    <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
-                  ) : (
-                    <span>{opp.facultyInChargeId}</span>
-                  )}
-                </div>
-                <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
-                <div className="text-sm">Capacity: {opp.capacity}</div>
-                <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
-                <div className="text-sm">Status: {opp.status}</div>
-                <div className="flex gap-2 mt-2">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" onClick={() => setDeleteId(opp.id)}>Delete</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure you want to delete this opportunity?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(deleteId!)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <Button variant="secondary" size="sm" onClick={() => handleEdit(opp)}>Edit</Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {opportunities.map((opp) => (
+          <Card key={opp.id} className="border p-4 rounded">
+            <CardContent>
+              <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
+              <div className="text-gray-600 mb-2">{opp.description}</div>
+              <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
+              <div className="text-sm">Capacity: {opp.capacity}</div>
+              <div className="text-sm">Status: {opp.status}</div>
+              <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
+              <div className="flex items-center gap-2 text-sm mb-1 mt-2">
+                <UserIcon className="h-4 w-4 text-gray-500" />
+                {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
+                  <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
+                ) : (
+                  <span>{opp.facultyInChargeId}</span>
+                )}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleteId(opp.id)}>Delete</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure you want to delete this opportunity?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(deleteId!)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button variant="secondary" size="sm" onClick={() => handleEdit(opp)}>Edit</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

@@ -463,7 +463,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       {/* Main content */}
       <div className={cn("transition-all duration-300", mainMargin)}>
         <div className="pt-16">
-          <div className="p-4 lg:p-8 rounded-tl-2xl min-h-[calc(100vh-4rem)]">{children}</div>
+          <div className="p-0 lg:p-0 rounded-tl-2xl min-h-[calc(100vh-4rem)]">{children}</div>
         </div>
       </div>
 
