@@ -98,16 +98,13 @@ export function FacultyHome({ onPageChange }: FacultyHomeProps) {
       {(() => {
         return (
           <>
-            {/* Colorful Hero Window */}
-            <div className="rounded-3xl shadow-2xl p-6 min-h-[100px] flex flex-col md:flex-row items-center justify-between mb-0 relative overflow-hidden" style={{ background: "linear-gradient(120deg, #0056a6 0%, #2196f3 30%, #00b6e3 60%, #ffb347 85%, #ff7f32 100%)" }}>
+            {/* Hero Section - match admin dashboard style */}
+            <div className="rounded-lg shadow-2xl p-4 min-h-[100px] flex flex-col md:flex-row items-center justify-between relative overflow-hidden mb-0" style={{ background: "linear-gradient(90deg, #023E8A 0%, #0077B6 40%, #00B4D8 80%, #b6e6fa 100%)" }}>
               <div className="flex-1 z-6">
-                <div className="flex items-center mb-2 justify-between">
-                  <span className="text-white text-3xl font-extrabold tracking-tight">CIE Faculty Portal</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-2">Empower your teaching journey!</h2>
-                <p className="text-white/90 mb-4 max-w-2xl text-lg whitespace-nowrap">Access your courses, manage students, and track progress—all in one place.</p>
-                </div>
-              {/* <img src="/logo.png" alt="CIE Watermark" className="absolute right-10 bottom-0 opacity-10 h-64 w-auto hidden md:block select-none pointer-events-none" /> */}
+                <span className="text-white text-2xl font-extrabold tracking-tight">CIE Faculty Portal</span>
+                <h2 className="text-3xl md:text-3xl font-extrabold text-white mb-2 mt-2">Empower your teaching journey!</h2>
+                <p className="text-white/90 mb-4 max-w-2xl text-lg">Access your courses, manage students, and track progress—all in one place.</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-2">

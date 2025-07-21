@@ -117,14 +117,14 @@ export function TodoList({ role = 'admin' }: TodoListProps) {
   };
 
   return (
-    <Card className="transform hover:scale-105 focus:scale-105 transition-transform duration-200">
+    <Card className="todo-list-card transform hover:scale-105 focus:scale-105 transition-transform duration-200">
       <CardHeader>
         <CardTitle className="text-xl">To-Do List</CardTitle>
       </CardHeader>
       <CardContent className="pb-4">
-        <div className="space-y-4">
+        <div className="space-y-2">
           {/* Add new task */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-baseline gap-2">
             <Input
               placeholder="Add a new task..."
               value={newTask}
@@ -159,8 +159,8 @@ export function TodoList({ role = 'admin' }: TodoListProps) {
                   key={todo.id}
                   className={`flex items-center gap-3 p-3 border rounded-lg transition-all ${
                     todo.completed 
-                      ? 'bg-gray-50 border-gray-200' 
-                      : 'bg-white border-gray-300 hover:border-gray-400'
+                      ? 'bg-gray-50 dark:bg-dm-tab-purple border-gray-200' 
+                      : 'bg-white dark:bg-dm-tab-purple border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   <button

@@ -2050,7 +2050,7 @@ export function ManageLabComponents() {
                             }
                           }}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
+                          <Edit className="h-4 w-4" />
                           Edit
                         </button>
                         <button
@@ -2060,7 +2060,7 @@ export function ManageLabComponents() {
                             setIsDeleteDialogOpen(true)
                           }}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                          <Trash2 className="h-4 w-4" />
                           Delete
                         </button>
                       </>
@@ -2090,7 +2090,7 @@ export function ManageLabComponents() {
                       <Input 
                         id="edit-name" 
                         value={editingComponent.component_name} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, component_name: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, component_name: e.target.value } : null)}
                         className="mt-1" 
                       />
                     </div>
@@ -2099,7 +2099,7 @@ export function ManageLabComponents() {
                       <Input 
                         id="edit-tagId" 
                         value={editingComponent.component_tag_id || ""} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, component_tag_id: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, component_tag_id: e.target.value } : null)}
                         className="mt-1" 
                       />
                     </div>
@@ -2111,7 +2111,7 @@ export function ManageLabComponents() {
                       <Input 
                         id="edit-location" 
                         value={editingComponent.component_location} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, component_location: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, component_location: e.target.value } : null)}
                         className="mt-1" 
                       />
                     </div>
@@ -2120,7 +2120,7 @@ export function ManageLabComponents() {
                       <Input 
                         id="edit-category" 
                         value={editingComponent.component_category} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, component_category: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, component_category: e.target.value } : null)}
                         className="mt-1" 
                       />
                     </div>
@@ -2130,7 +2130,7 @@ export function ManageLabComponents() {
                         id="edit-quantity" 
                         type="number" 
                         value={editingComponent.component_quantity} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, component_quantity: Number.parseInt(e.target.value) }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, component_quantity: Number.parseInt(e.target.value) } : null)}
                         min="1" 
                         className="mt-1" 
                       />
@@ -2193,7 +2193,7 @@ export function ManageLabComponents() {
                     <Textarea 
                       id="edit-description" 
                       value={editingComponent.component_description} 
-                      onChange={e => setEditingComponent(prev => ({ ...prev, component_description: e.target.value }))}
+                      onChange={e => setEditingComponent(prev => prev ? { ...prev, component_description: e.target.value } : null)}
                       rows={4} 
                       className="mt-1 resize-none leading-relaxed" 
                       placeholder="Describe the component's purpose, key features, and functionality (max 250 characters)"
@@ -2255,7 +2255,7 @@ export function ManageLabComponents() {
                       <Input 
                         id="edit-invoiceNumber" 
                         value={editingComponent.invoice_number || ""} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, invoice_number: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, invoice_number: e.target.value } : null)}
                         className="mt-1" 
                       />
                     </div>
@@ -2264,7 +2264,7 @@ export function ManageLabComponents() {
                       <Input 
                         id="edit-purchasedFrom" 
                         value={editingComponent.purchased_from || ""} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, purchased_from: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, purchased_from: e.target.value } : null)}
                         className="mt-1" 
                       />
                     </div>
@@ -2276,7 +2276,7 @@ export function ManageLabComponents() {
                         id="edit-purchaseDate" 
                         type="date" 
                         value={editingComponent.purchase_date ? new Date(editingComponent.purchase_date).toISOString().split('T')[0] : ''} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, purchase_date: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, purchase_date: e.target.value } : null)}
                         className="mt-1" 
                       />
                     </div>
@@ -2288,7 +2288,7 @@ export function ManageLabComponents() {
                         min="0" 
                         step="0.01" 
                         value={editingComponent.purchase_value || ""} 
-                        onChange={e => setEditingComponent(prev => ({ ...prev, purchase_value: e.target.value }))}
+                        onChange={e => setEditingComponent(prev => prev ? { ...prev, purchase_value: e.target.value } : null)}
                         placeholder="0.00" 
                         className="mt-1" 
                       />
@@ -2297,7 +2297,7 @@ export function ManageLabComponents() {
                       <Label htmlFor="edit-purchaseCurrency">Currency</Label>
                       <Select 
                         value={editingComponent.purchase_currency} 
-                        onValueChange={value => setEditingComponent(prev => ({ ...prev, purchase_currency: value }))}
+                        onValueChange={value => setEditingComponent(prev => prev ? { ...prev, purchase_currency: value } : null)}
                       >
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Select currency" />

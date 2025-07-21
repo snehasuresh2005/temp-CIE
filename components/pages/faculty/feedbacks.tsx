@@ -173,7 +173,7 @@ export default function FacultyFeedbacks() {
               )}
             </div>
             <div className="flex justify-end">
-              <Button type="submit" variant="primary" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={submitting}>
+              <Button type="submit" variant="default" className="bg-[#0a2c74] hover:bg-[#08224a] text-white" disabled={submitting}>
                 {submitting ? "Submitting..." : "Submit Feedback"}
               </Button>
             </div>

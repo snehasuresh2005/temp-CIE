@@ -1975,10 +1975,9 @@ export function ManageLibrary() {
                       <p>{item.item_location}</p>
                     </div>
                   </div>
+                  {editMode && (
                   <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <button
                       onClick={() => {
                         setEditingItem(item)
                         setIsAddDialogOpen(true)
@@ -1990,22 +1989,23 @@ export function ManageLibrary() {
                           setBackImagePreview(item.backImageUrl)
                         }
                       }}
-                      className="text-blue-600 hover:text-blue-700"
+                      className="btn-edit"
                     >
                       <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                      Edit
+                    </button>
+                    <button
                       onClick={() => {
                         setItemToDelete(item)
                         setIsDeleteDialogOpen(true)
                       }}
-                      className="text-red-600 hover:text-red-700"
+                      className="btn-delete"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                      Delete
+                    </button>
                   </div>
+                  )}
                 </div>
               </CardContent>
             </div>

@@ -52,6 +52,7 @@
     "cmdk": "latest",
     "csv-parser": "^3.2.0",
     "date-fns": "4.1.0",
+    "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "latest",
     "form-data": "^4.0.3",
     "formidable": "^3.5.4",

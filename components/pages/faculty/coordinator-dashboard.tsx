@@ -145,6 +145,7 @@ export function CoordinatorDashboard() {
     description?: string;
     hasLibraryItems?: boolean;
     hasLabComponents?: boolean;
+    status?: string; // Added status for domain assignment
   }>>([])
 
   // New state for selected domain
@@ -228,11 +229,12 @@ export function CoordinatorDashboard() {
             return {
               ...domain,
               hasLibraryItems,
-              hasLabComponents
+              hasLabComponents,
+              status: 'Assigned' // Mark as assigned
             }
           } catch (error) {
             console.error(`Error checking inventory for domain ${domain.name}:`, error)
-            return { ...domain, hasLibraryItems: false, hasLabComponents: false }
+            return { ...domain, hasLibraryItems: false, hasLabComponents: false, status: 'Not Assigned' } // Mark as not assigned
           }
         })
       )
@@ -793,77 +795,8 @@ export function CoordinatorDashboard() {
         Debug: selectedRole = {String(selectedRole)}
       </div> */}
       <div>
-        <h1 className="faculty-page-title-global">CIE Team Coordinator Dashboard</h1>
+        <h1 className="faculty-page-title">CIE Team Coordinator Dashboard</h1>
       </div>
-
-      {/* Role Selection - Show when faculty has multiple roles and no role is selected */}
-      {hasMultipleRoles && !selectedRole && (
-        <div className="space-y-6">
-          <div className="text-center">
-            
-            <p className="text-gray-600">Choose which coordinator role you want to manage</p>
-                </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-        <Card 
-              className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-blue-50 hover:border-blue-300"
-              onClick={() => setSelectedRole('library')}
-            >
-              <CardContent className="p-8 text-center">
-                <BookOpen className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Library Coordinator</h3>
-                <p className="text-gray-600 mb-4">Manage library items, requests, and inventory</p>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                  <Package className="h-4 w-4" />
-                  <span>Library Management</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card 
-              className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-green-50 hover:border-green-300"
-              onClick={() => setSelectedRole('lab')}
-            >
-              <CardContent className="p-8 text-center">
-                <Package className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Lab Coordinator</h3>
-                <p className="text-gray-600 mb-4">Manage lab components, requests, and inventory</p>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                  <Package className="h-4 w-4" />
-                  <span>Lab Components Management</span>
-            </div>
-          </CardContent>
-        </Card>
-        {hasPlatformManagerRoleUnified && (
-          <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-indigo-50 hover:border-indigo-300" onClick={() => setSelectedRole('platformManager')}>
-            <CardContent className="p-8 text-center">
-              <Settings className="h-16 w-16 text-indigo-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Platform Manager</h3>
-              <p className="text-gray-600 mb-4">Review and approve faculty insights, assign to developers</p>
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                <Settings className="h-4 w-4" />
-                <span>Insights Management</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        {hasDeveloperRoleUnified && (
-          <Card className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 hover:bg-pink-50 hover:border-pink-300" onClick={() => setSelectedRole('developer')}>
-            <CardContent className="p-8 text-center">
-              <BarChart3 className="h-16 w-16 text-pink-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Developer</h3>
-              <p className="text-gray-600 mb-4">Work on approved insights and mark as done</p>
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                <BarChart3 className="h-4 w-4" />
-                <span>Insights Tasks</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-          </div>
-        </div>
-      )}
-
       {/* Role Selection Buttons - Show when role is selected to allow switching */}
       {userRoles.length > 1 && selectedRole && (
         <div className="flex flex-wrap gap-4 mb-4">
