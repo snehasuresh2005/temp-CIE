@@ -27,20 +27,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       include: {
         student: {
           select: {
+            student_id: true,
             user: { select: { name: true, email: true } }
           }
         }
       },
       orderBy: { appliedAt: 'desc' },
     });
-    // Attach resumePath from the application itself
-    const withResume = opportunityApplications.map(app => ({
+    // Attach resumePath and flatten student info for frontend
+    const withStudentInfo = opportunityApplications.map(app => ({
       ...app,
-      resumePath: app.resumePath
+      resumePath: app.resumePath,
+      studentName: app.student?.user?.name || '',
+      studentEmail: app.student?.user?.email || '',
+      studentUserId: app.student?.student_id || '',
     }));
-    return NextResponse.json(withResume);
+    return NextResponse.json(withStudentInfo);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: errMsg }, { status: 400 });
   }
 }
 
@@ -68,6 +73,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
     return NextResponse.json(updated);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: errMsg }, { status: 400 });
   }
 } 
