@@ -45,15 +45,7 @@ export function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Animated background image */}
-      {/* <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center">
-        <img
-          src="/login_page_background.jpg"
-          alt="Login Background"
-          className="object-cover w-full h-full kenburns-top"
-          style={{ pointerEvents: 'none', userSelect: 'none', opacity: 0.7 }}
-        />
-      </div> */}
+      {/* Animated background video full screen */}
       <video
         src="/login_background_animation.mp4"
         className="absolute inset-0 w-full h-full object-cover z-0"
@@ -61,10 +53,10 @@ export function LoginForm() {
         loop
         muted
         playsInline
-        style={{ pointerEvents: 'none', userSelect: 'none', opacity: 0.8 }}
+        style={{ pointerEvents: 'none', userSelect: 'none', opacity: 1 }}
       />
-      {/* Split card layout */}
-      <div className="w-full max-w-4xl z-10 flex flex-row rounded-2xl shadow-lg overflow-hidden bg-white">
+        {/* Split card layout */}
+        <div className="w-full max-w-4xl z-10 flex flex-row rounded-2xl shadow-lg overflow-hidden bg-white">
         {/* Login form card */}
         <div className="basis-1/2 flex flex-col items-center justify-center p-0 bg-white">
           <Card className="bg-gray-50 shadow-none p-0 rounded-2xl w-full">

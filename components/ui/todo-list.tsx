@@ -159,8 +159,8 @@ export function TodoList({ role = 'admin' }: TodoListProps) {
                   key={todo.id}
                   className={`flex items-center gap-3 p-3 border rounded-lg transition-all ${
                     todo.completed 
-                      ? 'bg-gray-50 border-gray-200' 
-                      : 'bg-white border-gray-300 hover:border-gray-400'
+                      ? 'bg-gray-50 dark:bg-dm-tab-purple border-gray-200' 
+                      : 'bg-white dark:bg-dm-tab-purple border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   <button

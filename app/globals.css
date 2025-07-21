@@ -354,6 +354,10 @@ body {
   background: #23253a !important;
 }
 
+.dark .bg-dm-tab-purple {
+  background-color: #a78bfa !important;
+}
+
 @font-face {
   font-family: 'Monopoly';
   src: url('/fonts/Monopoly.ttf') format('truetype');

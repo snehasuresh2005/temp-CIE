@@ -299,8 +299,8 @@ export function DailyCalendar({ role = 'admin' }: DailyCalendarProps) {
                 key={timeSlot}
                 className={`p-3 border rounded-lg transition-all ${
                   isCurrent 
-                    ? 'bg-blue-50 border-blue-300' 
-                    : 'bg-white border-gray-200 hover:border-gray-300'
+                    ? 'bg-blue-50 dark:bg-dm-tab-purple border-blue-300' 
+                    : 'bg-white dark:bg-dm-tab-purple border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -319,7 +319,7 @@ export function DailyCalendar({ role = 'admin' }: DailyCalendarProps) {
                       appointments.map((appointment) => (
                         <div
                           key={appointment.id}
-                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded"
+                          className="flex items-center justify-between p-3 bg-white dark:bg-dm-tab-purple border border-gray-200 rounded"
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
