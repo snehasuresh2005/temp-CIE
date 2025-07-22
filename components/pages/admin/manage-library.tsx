@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image, Search, Filter } from "lucide-react"
+import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image, Search, Filter, Settings } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -86,8 +86,7 @@ export function ManageLibrary() {
   const [specificationRows, setSpecificationRows] = useState<SpecificationRow[]>([
     { id: '1', attribute: '', value: '' },
     { id: '2', attribute: '', value: '' },
-    { id: '3', attribute: '', value: '' },
-    { id: '4', attribute: '', value: '' }
+    { id: '3', attribute: '', value: '' }
   ])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<LibraryItem | null>(null)
@@ -304,31 +303,41 @@ export function ManageLibrary() {
       }
     }
     
-    // Ensure we have at least 4 rows with default library specifications if needed
-    const defaultLibrarySpecs = [
-      'Author', 'Publisher', 'Edition', 'ISBN', 
-      'Pages', 'Publication Year', 'Language', 'Binding Type'
-    ]
-    
-    while (rows.length < 4) {
-      const defaultSpec = defaultLibrarySpecs[rows.length] || ''
-      rows.push({
-        id: (idCounter++).toString(),
-        attribute: defaultSpec,
-        value: ''
-      })
+    // Sort specifications by importance (most important first)
+    const getLibrarySpecPriority = (attribute: string): number => {
+      const attr = attribute.toLowerCase()
+      // Higher number = higher priority (will appear first)
+      if (attr.includes('author') || attr.includes('writer')) return 10
+      if (attr.includes('isbn')) return 9
+      if (attr.includes('publisher') || attr.includes('publication')) return 8
+      if (attr.includes('edition')) return 7
+      if (attr.includes('year') || attr.includes('date')) return 6
+      if (attr.includes('pages') || attr.includes('page')) return 5
+      if (attr.includes('language')) return 4
+      if (attr.includes('binding') || attr.includes('format')) return 3
+      if (attr.includes('subject') || attr.includes('topic')) return 2
+      return 1 // Default priority for other specs
     }
     
-    // Add more empty rows if we have fewer than 6 total
-    while (rows.length < 6) {
-      rows.push({
+    // Sort rows with actual content by priority
+    const filledRows = rows.filter(row => row.attribute.trim() || row.value.trim())
+    const emptyRows = rows.filter(row => !row.attribute.trim() && !row.value.trim())
+    
+    filledRows.sort((a, b) => getLibrarySpecPriority(b.attribute) - getLibrarySpecPriority(a.attribute))
+    
+    // Combine sorted filled rows with empty rows
+    const sortedRows = [...filledRows, ...emptyRows]
+    
+    // Always ensure we have at least 3 rows, but allow AI to add more
+    while (sortedRows.length < 3) {
+      sortedRows.push({
         id: (idCounter++).toString(),
         attribute: '',
         value: ''
       })
     }
     
-    return rows
+    return sortedRows
   }
   
   // Convert specification rows to string format for API
@@ -710,6 +719,12 @@ export function ManageLibrary() {
     setImageStates({})
     setFormErrors({})
     setIsSubmitting(false)
+    // Reset specification rows
+    setSpecificationRows([
+      { id: '1', attribute: '', value: '' },
+      { id: '2', attribute: '', value: '' },
+      { id: '3', attribute: '', value: '' }
+    ])
   }
 
   // Bulk upload functions
@@ -1674,7 +1689,7 @@ export function ManageLibrary() {
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
-                      <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                      <div className="mt-2 space-y-2 h-28 overflow-y-auto">
                         {specificationRows.map((row, index) => (
                           <div key={row.id} className="flex items-center space-x-2">
                             <Input
@@ -2024,8 +2039,10 @@ export function ManageLibrary() {
           </DialogHeader>
           {itemToView && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Left Column: Basic Information */}
-              <div className="bg-blue-50 rounded-lg p-3">
+              {/* Left Column: Basic Information + Audit Trail */}
+              <div className="space-y-3">
+                {/* Basic Information */}
+                <div className="bg-blue-50 rounded-lg p-3">
                 <h3 className="text-base font-semibold text-blue-900 mb-2 flex items-center gap-2">
                   <Package className="h-4 w-4" />
                   Basic Information
@@ -2057,16 +2074,82 @@ export function ManageLibrary() {
                   <Label className="text-xs font-medium text-gray-500">Description</Label>
                   <div className="text-xs text-gray-700 mt-1">{itemToView.item_description}</div>
                 </div>
-                {itemToView.item_specification && (
-                  <div className="mt-2">
-                    <Label className="text-xs font-medium text-gray-500">Specification</Label>
-                    <div className="text-xs text-gray-700 mt-1">{itemToView.item_specification}</div>
+              </div>
+
+              {/* Audit Trail - Separate Section */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Audit Trail
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Created By</Label>
+                    <div className="text-sm text-gray-900">{itemToView.created_by || '-'}</div>
                   </div>
-                )}
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Created At</Label>
+                    <div className="text-sm text-gray-900">
+                      {itemToView.created_at ? new Date(itemToView.created_at).toLocaleDateString() : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
+                    <div className="text-sm text-gray-900">{itemToView.modified_by || '-'}</div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
+                    <div className="text-sm text-gray-900">
+                      {itemToView.modified_at ? new Date(itemToView.modified_at).toLocaleDateString() : '-'}
+                    </div>
+                  </div>
+                </div>
+              </div>
               </div>
               
-              {/* Right Column: Purchase Details and Audit Trail */}
+              {/* Right Column: Specifications and Purchase Details */}
               <div className="space-y-3">
+                {/* Specifications */}
+                {itemToView.item_specification && (
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <h3 className="text-base font-semibold text-green-900 mb-2 flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Specifications
+                    </h3>
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {itemToView.item_specification.split('.').map((spec, index) => {
+                        if (!spec.trim()) return null
+                        const [attribute, value] = spec.split(':').map(s => s.trim())
+                        if (!attribute || !value) return null
+                        return { attribute, value, originalIndex: index }
+                      })
+                      .filter(Boolean)
+                      .sort((a, b) => {
+                        const getLibrarySpecPriority = (attribute: string): number => {
+                          const attr = attribute.toLowerCase()
+                          if (attr.includes('author') || attr.includes('writer')) return 10
+                          if (attr.includes('isbn')) return 9
+                          if (attr.includes('publisher') || attr.includes('publication')) return 8
+                          if (attr.includes('edition')) return 7
+                          if (attr.includes('year') || attr.includes('date')) return 6
+                          if (attr.includes('pages') || attr.includes('page')) return 5
+                          if (attr.includes('language')) return 4
+                          if (attr.includes('binding') || attr.includes('format')) return 3
+                          if (attr.includes('subject') || attr.includes('topic')) return 2
+                          return 1
+                        }
+                        return getLibrarySpecPriority(b.attribute) - getLibrarySpecPriority(a.attribute)
+                      })
+                      .map((spec, index) => (
+                        <div key={index} className="grid grid-cols-2 gap-2 text-xs border-b border-gray-100 pb-1">
+                          <div className="font-medium text-gray-600">{spec.attribute}</div>
+                          <div className="text-gray-700">{spec.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Purchase Details */}
                 <div className="bg-gray-50 rounded-lg p-3">
                   <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -2095,36 +2178,6 @@ export function ManageLibrary() {
                     <div>
                       <Label className="text-xs font-medium text-gray-500">Currency</Label>
                       <div className="text-sm text-gray-900">{itemToView.purchase_currency || '-'}</div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Audit Trail */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <History className="h-4 w-4" />
-                    Audit Trail
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Created By</Label>
-                      <div className="text-sm text-gray-900">{itemToView.created_by || '-'}</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Created At</Label>
-                      <div className="text-sm text-gray-900">
-                        {itemToView.created_at ? new Date(itemToView.created_at).toLocaleDateString() : '-'}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
-                      <div className="text-sm text-gray-900">{itemToView.modified_by || '-'}</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
-                      <div className="text-sm text-gray-900">
-                        {itemToView.modified_at ? new Date(itemToView.modified_at).toLocaleDateString() : '-'}
-                      </div>
                     </div>
                   </div>
                 </div>
