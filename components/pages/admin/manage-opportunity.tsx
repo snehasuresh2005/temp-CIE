@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/components/auth-provider';
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, Pencil, X, Search, Filter } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -18,6 +18,14 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 const initialForm = {
   title: '',
@@ -53,6 +61,7 @@ interface Opportunity {
 
 interface Faculty {
   id: string;
+  userId: string;
   user: { name: string; email: string };
 }
 
@@ -66,6 +75,22 @@ export default function ManageOpportunity() {
   const [facultyOptions, setFacultyOptions] = useState<Faculty[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const typeOptions = Array.from(new Set(opportunities.map(o => o.type)));
+  const statusOptions = Array.from(new Set(opportunities.map(o => o.status)));
+
+  const filteredOpportunities = opportunities.filter(opp => {
+    const matchesSearch =
+      opp.title.toLowerCase().includes(search.toLowerCase()) ||
+      opp.description.toLowerCase().includes(search.toLowerCase());
+    const matchesType = typeFilter === 'all' || opp.type === typeFilter;
+    const matchesStatus = statusFilter === 'all' || opp.status === statusFilter;
+    return matchesSearch && matchesType && matchesStatus;
+  });
 
   useEffect(() => {
     fetch('/api/opportunities')
@@ -188,132 +213,187 @@ export default function ManageOpportunity() {
     }
   };
 
+  // Helper to format date as dd/mm/yyyy
+  function formatDate(dateStr?: string) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB');
+  }
+
   return (
     <div className="w-full p-0">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Opportunities</h2>
-        <Button onClick={() => setShowForm(f => !f)} variant="default">
-          {showForm ? 'Cancel' : 'Add New Opportunity'}
-        </Button>
-      </div>
-      {showForm && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>{editingId ? 'Edit Opportunity' : 'Add New Opportunity'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={editingId ? handleUpdate : handleSubmit} className="space-y-4">
-              <div>
-                <label className="block font-medium">Title</label>
-                <Input name="title" value={form.title} onChange={handleChange} required />
-              </div>
-              <div>
-                <label className="block font-medium">Type</label>
-                <select name="type" value={form.type} onChange={handleChange} className="input">
-                  <option value="INTERN">Intern</option>
-                  <option value="TA">TA</option>
-                  <option value="RA">RA</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-medium">Description</label>
-                <Textarea name="description" value={form.description} onChange={handleChange} required />
-              </div>
-              <div className="flex gap-4">
-                <div>
-                  <label className="block font-medium">Start Date</label>
-                  <Input type="date" name="startDate" value={form.startDate} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="block font-medium">End Date</label>
-                  <Input type="date" name="endDate" value={form.endDate} onChange={handleChange} required />
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div>
-                  <label className="block font-medium">Application Start</label>
-                  <Input type="date" name="applicationStartDate" value={form.applicationStartDate} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="block font-medium">Application End</label>
-                  <Input type="date" name="applicationEndDate" value={form.applicationEndDate} onChange={handleChange} required />
-                </div>
-              </div>
-              <div>
-                <label className="block font-medium">Remuneration</label>
-                <select name="remuneration" value={form.remuneration} onChange={handleChange} className="input">
-                  <option value="PAID">Paid</option>
-                  <option value="UNPAID">Unpaid</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="facultyInChargeId">Faculty in charge</Label>
-                <Select
-                  value={form.facultyInChargeId}
-                  onValueChange={value => setForm(f => ({ ...f, facultyInChargeId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select faculty in charge" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {facultyOptions.map(faculty => (
-                      <SelectItem key={faculty.userId} value={faculty.userId}>
-                        {faculty.user.name} ({faculty.user.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block font-medium">Capacity</label>
-                <Input type="number" name="capacity" value={form.capacity} onChange={handleChange} min={1} required />
-              </div>
-              {error && <div className="text-red-600">{error}</div>}
-              <Button type="submit" variant="default" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Opportunity'}
+        <h2 className="admin-page-title">Opportunities</h2>
+        <div className="flex gap-4">
+          <button className="btn-edit" onClick={() => setEditMode(e => !e)}>
+            {editMode ? 'Editing' : 'Edit Mode'}
+          </button>
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setShowForm(true)} variant="default">
+                Add New Opportunity
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl w-full">
+              <DialogHeader>
+                <DialogTitle>Add New Opportunity</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={editingId ? handleUpdate : handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block font-medium">Title</label>
+                  <Input name="title" value={form.title} onChange={handleChange} required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium">Type</label>
+                    <select name="type" value={form.type} onChange={handleChange} className="input w-full">
+                      <option value="INTERN">Intern</option>
+                      <option value="TA">TA</option>
+                      <option value="RA">RA</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium">Remuneration</label>
+                    <select name="remuneration" value={form.remuneration} onChange={handleChange} className="input w-full">
+                      <option value="PAID">Paid</option>
+                      <option value="UNPAID">Unpaid</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-medium">Description</label>
+                  <Textarea name="description" value={form.description} onChange={handleChange} required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium">Start Date</label>
+                    <Input type="date" name="startDate" value={form.startDate} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <label className="block font-medium">End Date</label>
+                    <Input type="date" name="endDate" value={form.endDate} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <label className="block font-medium">Application Start</label>
+                    <Input type="date" name="applicationStartDate" value={form.applicationStartDate} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <label className="block font-medium">Application End</label>
+                    <Input type="date" name="applicationEndDate" value={form.applicationEndDate} onChange={handleChange} required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="facultyInChargeId">Faculty in charge</Label>
+                    <Select
+                      value={form.facultyInChargeId}
+                      onValueChange={value => setForm(f => ({ ...f, facultyInChargeId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select faculty in charge" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {facultyOptions.map(faculty => (
+                          <SelectItem key={faculty.userId} value={faculty.userId}>
+                            {faculty.user.name} ({faculty.user.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block font-medium">Capacity</label>
+                    <Input type="number" name="capacity" value={form.capacity} onChange={handleChange} min={1} required />
+                  </div>
+                </div>
+                {error && <div className="text-red-600">{error}</div>}
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="default" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create Opportunity'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
       <h3 className="text-xl font-semibold mb-4">All Opportunities</h3>
+      <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 mb-6">
+        <div className="relative max-w-xs w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search opportunities..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
+        <Filter className="h-5 w-5 text-gray-400 mx-2 hidden md:inline-block" />
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Types</option>
+          {typeOptions.map(type => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Statuses</option>
+          {statusOptions.map(status => (
+            <option key={status} value={status}>{status}</option>
+          ))}
+        </select>
+      </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full p-0">
-        {opportunities.length === 0 && <div>No opportunities found.</div>}
-        {opportunities.map((opp) => (
-          <Card key={opp.id} className="border p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow bg-white">
-            <CardContent>
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold text-xl">{opp.title}</div>
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${opp.type === 'INTERN' ? 'bg-blue-100 text-blue-700' : opp.type === 'TA' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{opp.type}</span>
+        {filteredOpportunities.length === 0 && <div>No opportunities found.</div>}
+        {filteredOpportunities.map((opp) => (
+          <div key={opp.id} className="rounded-xl bg-blue-50 p-6 shadow-sm border border-blue-100 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-bold text-xl">{opp.title}</div>
+              <span className={`px-2 py-1 rounded text-xs font-semibold ${opp.type === 'INTERN' ? 'bg-blue-100 text-blue-700' : opp.type === 'TA' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{opp.type}</span>
+            </div>
+            <div className="text-gray-600 mb-3">{opp.description}</div>
+            <div className="flex flex-col gap-1 text-sm mb-4">
+              <div>
+                <span className="font-medium">Application:</span>
+                <span className="ml-1">{formatDate(opp.applicationStartDate)} - {formatDate(opp.applicationEndDate)}</span>
               </div>
-              <div className="text-gray-600 mb-3">{opp.description}</div>
-              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                <div>
-                  <span className="font-medium">Application:</span>
-                  <span className="ml-1">{opp.applicationStartDate?.slice(0,10)} - {opp.applicationEndDate?.slice(0,10)}</span>
-                </div>
-                <div>
-                  <span className="font-medium">Capacity:</span>
-                  <span className="ml-1">{opp.capacity}</span>
-                </div>
-                <div>
-                  <span className="font-medium">Status:</span>
-                  <span className={`ml-1 ${opp.status === 'OPEN' ? 'text-green-600' : 'text-gray-600'}`}>{opp.status}</span>
-                </div>
-                <div>
-                  <span className="font-medium">Applicants:</span>
-                  <span className="ml-1">{opp.applications?.length ?? 0}</span>
-                </div>
+              <div>
+                <span className="font-medium">Capacity:</span>
+                <span className="ml-1">{opp.capacity}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm mb-3">
+              <div>
+                <span className="font-medium">Status:</span>
+                <span className={`ml-1 ${opp.status === 'OPEN' ? 'text-green-600' : 'text-gray-600'}`}>{opp.status}</span>
+              </div>
+              <div>
+                <span className="font-medium">Applicants:</span>
+                <span className="ml-1">{opp.applications?.length ?? 0}</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 text-sm mb-4 bg-white/60 rounded p-2">
+              <div className="flex items-center gap-2">
                 <UserIcon className="h-4 w-4 text-gray-500" />
-                <span className="font-medium">{opp.facultyInCharge?.name || opp.faculty?.user?.name}</span>
-                <span className="text-gray-400">({opp.facultyInCharge?.email || opp.faculty?.user?.email})</span>
+                <span className="font-medium">{opp.faculty?.user?.name}</span>
               </div>
+              <span className="text-gray-400 ml-6">{opp.faculty?.user?.email}</span>
+            </div>
+            {editMode && (
               <div className="flex gap-2 mt-2">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" onClick={() => setDeleteId(opp.id)}>Delete</Button>
+                    <button className="btn-delete flex items-center gap-2" onClick={() => setDeleteId(opp.id)}>
+                      <X className="h-5 w-5" /> Delete
+                    </button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -328,10 +408,12 @@ export default function ManageOpportunity() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-                <Button variant="secondary" size="sm" onClick={() => handleEdit(opp)}>Edit</Button>
+                <button className="btn-edit flex items-center gap-2" onClick={() => handleEdit(opp)}>
+                  <Pencil className="h-5 w-5" /> Edit
+                </button>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         ))}
       </div>
     </div>

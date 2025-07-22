@@ -106,3 +106,5 @@ next-env.d.ts
 *.bak
 *.tmp
 CLAUDE.md
+
+.venv/

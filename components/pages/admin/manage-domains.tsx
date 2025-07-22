@@ -439,18 +439,20 @@ export function ManageDomains() {
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {domains.map((domain) => {
           const domainAssignments = getAssignmentsForDomain(domain.id)
-          const hasCoordinator = domainAssignments.length > 0
-          
+          const isAssigned = domainAssignments.length > 0;
           return (
-            <div key={domain.id} className={hasCoordinator ? 'rounded-xl border-green-200 bg-green-50 dark:bg-green-50 dark:text-gray-900' : 'admin-card'}>
+            <div key={domain.id} className={
+              `rounded-xl p-6 shadow-sm border ` +
+              (isAssigned ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-100')
+            }>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center text-base">
-                    <Building className={`h-4 w-4 mr-2 text-gray-500`} />
+                    <Building className="h-4 w-4 mr-2 text-gray-500" />
                     {domain.name}
                   </CardTitle>
-                  <Badge variant={hasCoordinator ? "default" : "secondary"} className="text-xs">
-                    {hasCoordinator ? "Assigned" : "No Coordinator"}
+                  <Badge variant={isAssigned ? "default" : "secondary"} className="text-xs">
+                    {isAssigned ? "Assigned" : "No Coordinator"}
                   </Badge>
                 </div>
                 <CardDescription className="text-xs">{domain.description}</CardDescription>
@@ -495,16 +497,16 @@ export function ManageDomains() {
                 </Accordion>
               </CardContent>
               {editMode && (
-              <div className="flex justify-end gap-2 p-3 border-t bg-gray-100">
-                <button className="btn-edit" onClick={() => { setEditDomain({ id: domain.id, name: domain.name, description: domain.description || '' }); setIsEditDomainDialogOpen(true); }}>
+                <div className="flex justify-end gap-2 p-3 border-t bg-gray-100">
+                  <button className="btn-edit" onClick={() => { setEditDomain({ id: domain.id, name: domain.name, description: domain.description || '' }); setIsEditDomainDialogOpen(true); }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6v-2a2 2 0 012-2h2" /></svg>
-                  Edit
-                </button>
-                <button className="btn-delete" onClick={() => { setDomainToDelete(domain); }}>
+                    Edit
+                  </button>
+                  <button className="btn-delete" onClick={() => { setDomainToDelete(domain); }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{marginRight: 6}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                  Delete
-                </button>
-              </div>
+                    Delete
+                  </button>
+                </div>
               )}
             </div>
           )

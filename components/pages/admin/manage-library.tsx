@@ -384,7 +384,7 @@ export function ManageLibrary() {
       console.error("Error fetching items:", error)
       toast({
         title: "Error",
-        description: "Failed to load library items",
+        description: "Failed to load Books",
         variant: "destructive",
       })
     } finally {
@@ -582,7 +582,7 @@ export function ManageLibrary() {
 
         toast({
           title: "Success",
-          description: "Library item added successfully",
+          description: "Book added successfully",
         })
       } else {
         const errorData = await response.json()
@@ -1043,7 +1043,7 @@ export function ManageLibrary() {
         setIsAddDialogOpen(false)
         toast({
           title: "Success",
-          description: "Library item updated successfully",
+          description: "Book updated successfully",
         })
       } else {
         const errorData = await response.json()
@@ -1270,7 +1270,7 @@ export function ManageLibrary() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading library items...</div>
+        <div className="text-lg">Loading library books...</div>
       </div>
     )
   }
@@ -1301,9 +1301,9 @@ export function ManageLibrary() {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Bulk Upload Library Items</DialogTitle>
+                <DialogTitle>Bulk Upload Books</DialogTitle>
                 <DialogDescription>
-                  Upload a CSV file to add multiple library items at once. 
+                  Upload a CSV file to add multiple books at once. 
                   <br />
                   <a 
                     href="#" 
@@ -1829,7 +1829,7 @@ export function ManageLibrary() {
             <Search className="h-4 w-4" />
           </span>
           <Input
-            placeholder="Search library items..."
+            placeholder="Search books..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8 pr-2 h-9 w-full text-sm"
@@ -1859,7 +1859,7 @@ export function ManageLibrary() {
             <CardContent className="p-8 text-center">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
-              <p className="text-gray-600">Add your first library item to get started.</p>
+              <p className="text-gray-600">Add your first book to get started.</p>
             </CardContent>
           </Card>
         ) : (
@@ -2138,7 +2138,7 @@ export function ManageLibrary() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Library Item</DialogTitle>
+            <DialogTitle>Delete Books</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this item? This action cannot be undone.
             </DialogDescription>

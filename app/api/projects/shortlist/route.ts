@@ -206,7 +206,7 @@ if __name__ == "__main__":
       console.log("Using Python path:", pythonPath);
       const { stdout, stderr } = await execAsync(`"${pythonPath}" "${scriptPath}"`, {
         cwd: process.cwd(),
-        timeout: 120000, // 2 minutes timeout
+        timeout: 30000000, // 2 minutes timeout
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
       })
 

@@ -133,18 +133,14 @@ export function AdminHome({ onPageChange }: AdminHomeProps) {
         )}
       </div>
           
-          <Card>
-  <CardContent className="pt-8">
-    <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
-      <div className="lg:col-span-4 ">
-        <TodoList role="admin" />
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
+        <div className="lg:col-span-4">
+          <TodoList role="admin" />
+        </div>
+        <div className="lg:col-span-6">
+          <DailyCalendar role="admin" />
+        </div>
       </div>
-      <div className="lg:col-span-6 h-full pb-2">
-        <DailyCalendar role="admin" />
-      </div>
-    </div>
-  </CardContent>
-</Card>
     </div>
   )
 }

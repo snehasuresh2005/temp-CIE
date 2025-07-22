@@ -14,12 +14,23 @@ export async function GET(req: NextRequest) {
   try {
     const opportunities = await prisma.opportunity.findMany({
       include: {
-        facultyInCharge: true,
+        facultyInCharge: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         opportunityApplications: true,
       },
       orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json(opportunities || []);
+    // Map facultyInCharge to faculty for frontend compatibility
+    const mapped = (opportunities || []).map(o => ({
+      ...o,
+      faculty: o.facultyInCharge ? { user: { name: o.facultyInCharge.name, email: o.facultyInCharge.email } } : undefined,
+    }));
+    return NextResponse.json(mapped);
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
@@ -90,9 +101,26 @@ export async function POST(req: NextRequest) {
     // Fetch with facultyInCharge user info for UI
     const fullOpportunity = await prisma.opportunity.findUnique({
       where: { id: opportunity.id },
-      include: { facultyInCharge: true, opportunityApplications: true },
+      include: {
+        facultyInCharge: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        opportunityApplications: true,
+      },
     });
-    return NextResponse.json(fullOpportunity);
+    const mappedOpportunity = fullOpportunity
+      ? {
+          ...fullOpportunity,
+          faculty: fullOpportunity.facultyInCharge
+            ? { user: { name: fullOpportunity.facultyInCharge.name, email: fullOpportunity.facultyInCharge.email } }
+            : undefined,
+        }
+      : null;
+    return NextResponse.json(mappedOpportunity);
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }

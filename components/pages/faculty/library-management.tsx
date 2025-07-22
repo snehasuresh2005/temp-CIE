@@ -138,7 +138,7 @@ export function LibraryManagement() {
       console.error("Error fetching data:", error)
       toast({
         title: "Error",
-        description: "Failed to load library items and requests",
+        description: "Failed to load book and requests",
         variant: "destructive",
       })
     } finally {
@@ -203,7 +203,7 @@ export function LibraryManagement() {
 
         toast({
           title: "Success",
-          description: "Library item request submitted successfully",
+          description: "Book request submitted successfully",
         })
       } else {
         const errorData = await response.json()
@@ -568,7 +568,7 @@ export function LibraryManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading library items...</div>
+        <div className="text-lg">Loading book...</div>
       </div>
     )
   }
@@ -745,10 +745,10 @@ export function LibraryManagement() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Plus className="h-5 w-5" />
-                <span>Request Library Items</span>
+                <span>Request Book</span>
               </CardTitle>
               <CardDescription>
-                Browse available library items and submit requests for books you need.
+                Browse available book and submit requests for books you need.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1203,9 +1203,9 @@ export function LibraryManagement() {
       <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Request Library Item</DialogTitle>
+            <DialogTitle>Request Library Book</DialogTitle>
             <DialogDescription>
-              Submit a request for the selected library item.
+              Submit a request for the selected book.
             </DialogDescription>
           </DialogHeader>
           {selectedItem && (
@@ -1287,9 +1287,9 @@ export function LibraryManagement() {
       <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Library Item Details</DialogTitle>
+            <DialogTitle>Book Details</DialogTitle>
             <DialogDescription>
-              Complete information about this library item
+              Complete information about this book
             </DialogDescription>
           </DialogHeader>
           {infoDialogOpen && (() => {

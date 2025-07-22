@@ -233,7 +233,7 @@ export function LibraryRequest() {
 
         toast({
           title: "Success",
-          description: "Library item request submitted successfully",
+          description: "Book request submitted successfully",
         })
       } else {
         const errorData = await response.json()
@@ -467,7 +467,7 @@ export function LibraryRequest() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading library items...</div>
+        <div className="text-lg">Loading book...</div>
       </div>
     )
   }
@@ -644,9 +644,9 @@ export function LibraryRequest() {
                         {selectedItem && (
                           <>
                             <DialogHeader>
-                              <DialogTitle>Request Library Item</DialogTitle>
+                              <DialogTitle>Request Book</DialogTitle>
                               <DialogDescription>
-                                Confirm your request for this library item
+                                Confirm your request for this library book
                               </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-6 py-4">
@@ -753,7 +753,7 @@ export function LibraryRequest() {
               <CardContent className="p-4 text-center">
                 <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                 <h3 className="font-medium text-gray-900 mb-1">No active requests</h3>
-                <p className="text-sm text-gray-600">Submit a library item request to get started.</p>
+                <p className="text-sm text-gray-600">Submit a book request to get started.</p>
               </CardContent>
             </Card>
           ) : (
@@ -803,9 +803,9 @@ export function LibraryRequest() {
       <Dialog open={!!infoDialogOpen} onOpenChange={(open) => !open && setInfoDialogOpen(null)}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Library Item Details</DialogTitle>
+            <DialogTitle>Book Details</DialogTitle>
             <DialogDescription>
-              Complete information about this library item
+              Complete information about this book
             </DialogDescription>
           </DialogHeader>
           {infoDialogOpen && (() => {

@@ -33,17 +33,10 @@ export function DailyCalendar({ role = 'admin' }: DailyCalendarProps) {
 
   const storageKey = `cie-${role}-schedule`;
 
-  // Generate time slots from current time to 8 PM
+  // Generate all time slots for the day from 00:00 to 20:30
   const getTimeSlots = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    
-    // Start from next hour if current time is past 30 minutes
-    const startHour = currentMinute > 30 ? currentHour + 1 : currentHour;
-    
     const slots = [];
-    for (let hour = startHour; hour <= 20; hour++) {
+    for (let hour = 0; hour <= 20; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
       if (hour < 20) {
         slots.push(`${hour.toString().padStart(2, '0')}:30`);
@@ -197,8 +190,15 @@ export function DailyCalendar({ role = 'admin' }: DailyCalendarProps) {
     <Card className="dashboard-tab-card transform hover:scale-105 focus:scale-105 transition-transform duration-200">
       <CardHeader>
         <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl">Daily Schedule</CardTitle>
+          <CardTitle className="text-xl">Daily Schedule</CardTitle>
+          <div className="flex items-center justify-between mt-2 w-full">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Calendar className="h-4 w-4" />
+              <span>{getCurrentDateString()}</span>
+              <span>•</span>
+              <Clock className="h-4 w-4" />
+              <span>{getCurrentTimeString()}</span>
+            </div>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="px-3">
@@ -279,18 +279,11 @@ export function DailyCalendar({ role = 'admin' }: DailyCalendarProps) {
               </DialogContent>
             </Dialog>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
-            <Calendar className="h-4 w-4" />
-            <span>{getCurrentDateString()}</span>
-            <span>•</span>
-            <Clock className="h-4 w-4" />
-            <span>{getCurrentTimeString()}</span>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="pb-4">
         <div className="space-y-2 max-h-60 overflow-y-auto">
-          {timeSlots.filter(slot => !isTimeInPast(slot)).map((timeSlot) => {
+          {timeSlots.map((timeSlot) => {
             const appointments = getAppointmentsForTimeSlot(timeSlot);
             const isCurrent = isCurrentTimeSlot(timeSlot);
             

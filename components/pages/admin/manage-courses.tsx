@@ -23,7 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Plus, Trash2, BookOpen, Calendar, Users, RefreshCw, List, X } from "lucide-react"
+import { Plus, Trash2, BookOpen, Calendar, Users, RefreshCw, List, X, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 
@@ -67,6 +67,7 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
   const [isUnitsSheetOpen, setIsUnitsSheetOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [filter, setFilter] = useState("all")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
   const { toast } = useToast()
@@ -126,10 +127,15 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
   }
 
   const filteredCourses = courses.filter(
-    (course) =>
-      course.course_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.course_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (course.creator?.name || '').toLowerCase().includes(searchTerm.toLowerCase()),
+    (course) => {
+      const matchesSearch =
+        course.course_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.course_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.creator?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      // Placeholder filter logic (can be extended)
+      const matchesFilter = filter === "all";
+      return matchesSearch && matchesFilter;
+    }
   )
 
   const handleAddCourse = async () => {
@@ -586,13 +592,25 @@ export function ManageCourses({ facultyOnly }: ManageCoursesProps) {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Input
-          placeholder="Search courses..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
+      <div className="flex items-center gap-2 mb-2">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search courses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
+        <Filter className="h-5 w-5 text-gray-400 mx-2" />
+        <select
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Courses</option>
+          {/* Add more filter options here if needed */}
+        </select>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

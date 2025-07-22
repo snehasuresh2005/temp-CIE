@@ -3,7 +3,9 @@ import { useAuth } from '@/components/auth-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { User as UserIcon, Calendar as CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
+import { User as UserIcon, Calendar as CalendarIcon, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Opportunity {
   id: string;
@@ -41,6 +43,21 @@ export default function FacultyOpportunity() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [appLoading, setAppLoading] = useState(false);
   const [appError, setAppError] = useState('');
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const typeOptions = Array.from(new Set(opportunities.map(o => o.type)));
+  const statusOptions = Array.from(new Set(opportunities.map(o => o.status)));
+
+  const filteredOpportunities = opportunities.filter(opp => {
+    const matchesSearch =
+      opp.title.toLowerCase().includes(search.toLowerCase()) ||
+      opp.description.toLowerCase().includes(search.toLowerCase());
+    const matchesType = !typeFilter || opp.type === typeFilter;
+    const matchesStatus = !statusFilter || opp.status === statusFilter;
+    return matchesSearch && matchesType && matchesStatus;
+  });
 
   useEffect(() => {
     const facultyInChargeId = user?.id;
@@ -113,20 +130,56 @@ export default function FacultyOpportunity() {
   return (
     <div className="w-full p-4">
       <h2 className="text-2xl font-bold mb-4">Faculty Opportunity Management</h2>
+      <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 mb-6">
+        <div className="relative max-w-xs w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search opportunities..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
+        <Filter className="h-5 w-5 text-gray-400 mx-2 hidden md:inline-block" />
+        <Select value={typeFilter || 'all'} onValueChange={v => setTypeFilter(v === 'all' ? '' : v)}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {typeOptions.map(type => (
+              <SelectItem key={type} value={type}>{type}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter || 'all'} onValueChange={v => setStatusFilter(v === 'all' ? '' : v)}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {statusOptions.map(status => (
+              <SelectItem key={status} value={status}>{status}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       {error && <div className="text-red-600 mb-2">{error}</div>}
       {loading ? (
         <div>Loading...</div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full">
-          {opportunities.length === 0 && <div className='col-span-full'>No assigned opportunities found.</div>}
-          {opportunities.map(opp => (
-            <Card key={opp.id} className="border p-4 rounded flex flex-col h-full">
+          {filteredOpportunities.length === 0 && <div className='col-span-full'>No assigned opportunities found.</div>}
+          {filteredOpportunities.map(opp => (
+            <Card key={opp.id} className="border p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow bg-white flex flex-col h-full">
               <CardContent className="flex flex-col flex-1">
-                <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
-                <div className="text-gray-600 mb-2">{opp.description}</div>
-                <div className="text-sm">Due Date: {opp.applicationEndDate?.slice(0,10)}</div>
-                <div className="text-sm">Capacity: {opp.capacity}</div>
-                <div className="text-sm">Status: {opp.status}</div>
+                <div className="font-bold text-lg mb-1">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
+                <div className="text-gray-600 mb-2 line-clamp-2">{opp.description}</div>
+                <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                  <div><span className="font-medium">Due Date:</span> {opp.applicationEndDate?.slice(0,10)}</div>
+                  <div><span className="font-medium">Capacity:</span> {opp.capacity}</div>
+                  <div><span className="font-medium">Status:</span> <span className={opp.status === 'OPEN' ? 'text-green-600' : 'text-gray-600'}>{opp.status}</span></div>
+                </div>
                 <div className="mt-auto pt-2 flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>

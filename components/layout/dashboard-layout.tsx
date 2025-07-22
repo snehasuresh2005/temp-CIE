@@ -126,6 +126,9 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   const { theme, setTheme } = useTheme()
   const { activities, unreadActivities, loading } = useNotifications()
 
+  // Only disable scrolling for dashboard home pages (case-insensitive)
+  const isDashboardHome = ["home", "dashboard"].includes(currentPage.toLowerCase());
+
   const sidebarWidth = sidebarCollapsed ? "w-16" : "w-64"
   const mainMargin = sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
 
@@ -242,7 +245,7 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-dark5 dark:text-dark1">
+    <div className={cn("min-h-screen bg-white dark:bg-dark5 dark:text-dark1", isDashboardHome ? "overflow-hidden" : "overflow-auto") }>
       {/* Navbar */}
       <div
         className={cn(
@@ -440,10 +443,9 @@ export function DashboardLayout({ children, currentPage, onPageChange, menuItems
       </div>
 
       {/* Main content */}
-      <div className={cn("transition-all duration-300", mainMargin)}>
-        <div className="pt-16">
-
-          <div className="p-4 lg:p-8 rounded-tl-2xl min-h-[calc(100vh-4rem)]">
+      <div className={cn("transition-all duration-300", isDashboardHome ? "overflow-hidden" : "overflow-auto", mainMargin)}>
+        <div className={cn("pt-16", isDashboardHome ? "overflow-hidden" : "overflow-auto") }>
+          <div className={cn("p-4 lg:p-8 rounded-tl-2xl min-h-[calc(100vh-4rem)]", isDashboardHome ? "overflow-hidden" : "overflow-auto") }>
             {children}
           </div>
         </div>

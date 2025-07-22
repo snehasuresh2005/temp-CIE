@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Mail, Phone, RefreshCw } from "lucide-react"
+import { Plus, Mail, Phone, RefreshCw, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Faculty {
@@ -520,13 +520,16 @@ export function ManageFaculty() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <Input
-          placeholder="Search faculty..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
+      <div className="flex items-center gap-2 mb-2">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search faculty..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -32,7 +32,7 @@ export function LibraryInventoryStatus() {
       const data = await response.json()
       setItems(data.items || [])
     } catch (error) {
-      console.error("Error fetching library items:", error)
+      console.error("Error fetching books:", error)
     } finally {
       setLoading(false)
     }
@@ -66,7 +66,7 @@ export function LibraryInventoryStatus() {
       <div className="flex items-center space-x-2">
         <Search className="h-4 w-4 text-gray-500" />
         <Input
-          placeholder="Search library items..."
+          placeholder="Search book..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"

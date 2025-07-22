@@ -661,7 +661,7 @@ export function LibraryDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <BookOpen className="h-5 w-5" />
-                  <span>Library Items</span>
+                  <span>Books</span>
                 </CardTitle>
                 <CardDescription>
                  Do collect within 2 hours of reserving the book.
@@ -675,7 +675,7 @@ export function LibraryDashboard() {
                         <Search className="h-4 w-4" />
                       </span>
                       <Input
-                        placeholder="Search items..."
+                        placeholder="Search Books..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-8 pr-2 h-9 w-full text-sm"
@@ -862,7 +862,7 @@ export function LibraryDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Library</h1>
-          <p className="text-gray-600 mt-1">Reserve and manage your library items</p>
+          <p className="text-gray-600 mt-1">Reserve and manage your books</p>
         </div>
         <Button onClick={fetchData} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
