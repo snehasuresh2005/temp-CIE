@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image ,Search, Filter } from "lucide-react"
+import { Plus, Package, Trash2, RefreshCw, Edit, ChevronRight, ChevronLeft, Info, Receipt, History, Image ,Search, Filter, Settings } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -119,8 +119,7 @@ export function ManageLabComponents() {
   const [specificationRows, setSpecificationRows] = useState<SpecificationRow[]>([
     { id: '1', attribute: '', value: '' },
     { id: '2', attribute: '', value: '' },
-    { id: '3', attribute: '', value: '' },
-    { id: '4', attribute: '', value: '' }
+    { id: '3', attribute: '', value: '' }
   ])
 
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null)
@@ -1185,31 +1184,41 @@ export function ManageLabComponents() {
       }
     }
     
-    // Ensure we have at least 4 rows with default lab specifications if needed
-    const defaultLabSpecs = [
-      'Dimensions', 'Operating Voltage', 'Current Rating', 'Material', 
-      'Interface', 'Package Type', 'Temperature Range', 'Power Consumption'
-    ]
-    
-    while (rows.length < 4) {
-      const defaultSpec = defaultLabSpecs[rows.length] || ''
-      rows.push({
-        id: (idCounter++).toString(),
-        attribute: defaultSpec,
-        value: ''
-      })
+    // Sort specifications by importance (most important first)
+    const getLabSpecPriority = (attribute: string): number => {
+      const attr = attribute.toLowerCase()
+      // Higher number = higher priority (will appear first)
+      if (attr.includes('dimension') || attr.includes('size')) return 10
+      if (attr.includes('voltage') || attr.includes('power')) return 9
+      if (attr.includes('current') || attr.includes('rating')) return 8
+      if (attr.includes('material') || attr.includes('type')) return 7
+      if (attr.includes('interface') || attr.includes('connection')) return 6
+      if (attr.includes('package') || attr.includes('mounting')) return 5
+      if (attr.includes('temperature') || attr.includes('operating')) return 4
+      if (attr.includes('frequency') || attr.includes('speed')) return 3
+      if (attr.includes('weight') || attr.includes('mass')) return 2
+      return 1 // Default priority for other specs
     }
     
-    // Add more empty rows if we have fewer than 6 total
-    while (rows.length < 6) {
-      rows.push({
+    // Sort rows with actual content by priority
+    const filledRows = rows.filter(row => row.attribute.trim() || row.value.trim())
+    const emptyRows = rows.filter(row => !row.attribute.trim() && !row.value.trim())
+    
+    filledRows.sort((a, b) => getLabSpecPriority(b.attribute) - getLabSpecPriority(a.attribute))
+    
+    // Combine sorted filled rows with empty rows
+    const sortedRows = [...filledRows, ...emptyRows]
+    
+    // Always ensure we have at least 3 rows, but allow AI to add more
+    while (sortedRows.length < 3) {
+      sortedRows.push({
         id: (idCounter++).toString(),
         attribute: '',
         value: ''
       })
     }
     
-    return rows
+    return sortedRows
   }
   
   // Convert specification rows to string format for API
@@ -1253,12 +1262,9 @@ export function ManageLabComponents() {
     setIndividualItemErrors({})
     // Reset specification table with default lab specs
     setSpecificationRows([
-      { id: '1', attribute: 'Dimensions', value: '' },
-      { id: '2', attribute: 'Operating Voltage', value: '' },
-      { id: '3', attribute: 'Current Rating', value: '' },
-      { id: '4', attribute: 'Material', value: '' },
-      { id: '5', attribute: 'Interface', value: '' },
-      { id: '6', attribute: 'Package Type', value: '' }
+      { id: '1', attribute: '', value: '' },
+      { id: '2', attribute: '', value: '' },
+      { id: '3', attribute: '', value: '' }
     ])
   }
 
@@ -1759,7 +1765,7 @@ export function ManageLabComponents() {
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
-                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                    <div className="mt-2 space-y-2 h-28 overflow-y-auto">
                       {specificationRows.map((row, index) => (
                         <div key={row.id} className="flex items-center space-x-2">
                           <Input
@@ -2199,7 +2205,6 @@ export function ManageLabComponents() {
                       placeholder="Describe the component's purpose, key features, and functionality (max 250 characters)"
                       maxLength={250}
                     />
-                    <p className="text-xs text-gray-500 mt-1 text-right">{editingComponent.component_description.length}/250 characters</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-between">
@@ -2215,7 +2220,7 @@ export function ManageLabComponents() {
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
-                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                    <div className="mt-2 space-y-2 h-28 overflow-y-auto">
                       {specificationRows.map((row, index) => (
                         <div key={row.id} className="flex items-center space-x-2">
                           <Input
@@ -2426,8 +2431,10 @@ export function ManageLabComponents() {
           </DialogHeader>
           {componentToView && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Left Column: Basic Information */}
-              <div className="bg-blue-50 rounded-lg p-3">
+              {/* Left Column: Basic Information + Audit Trail */}
+              <div className="space-y-3">
+                {/* Basic Information */}
+                <div className="bg-blue-50 rounded-lg p-3">
                 <h3 className="text-base font-semibold text-blue-900 mb-2 flex items-center gap-2">
                   <Package className="h-4 w-4" />
                   Basic Information
@@ -2462,16 +2469,82 @@ export function ManageLabComponents() {
                   <Label className="text-xs font-medium text-gray-500">Description</Label>
                   <div className="text-xs text-gray-700 mt-1">{componentToView.component_description}</div>
                 </div>
-                {componentToView.component_specification && (
-                  <div className="mt-2">
-                    <Label className="text-xs font-medium text-gray-500">Specification</Label>
-                    <div className="text-xs text-gray-700 mt-1">{componentToView.component_specification}</div>
+              </div>
+
+              {/* Audit Trail - Separate Section */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Audit Trail
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Created By</Label>
+                    <div className="text-sm text-gray-900">{componentToView.created_by || '-'}</div>
                   </div>
-                )}
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Created At</Label>
+                    <div className="text-sm text-gray-900">
+                      {componentToView.created_at ? new Date(componentToView.created_at).toLocaleDateString() : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
+                    <div className="text-sm text-gray-900">{componentToView.modified_by || '-'}</div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
+                    <div className="text-sm text-gray-900">
+                      {componentToView.modified_at ? new Date(componentToView.modified_at).toLocaleDateString() : '-'}
+                    </div>
+                  </div>
+                </div>
+              </div>
               </div>
               
-              {/* Right Column: Purchase Details and Audit Trail */}
+              {/* Right Column: Specifications and Purchase Details */}
               <div className="space-y-3">
+                {/* Specifications */}
+                {componentToView.component_specification && (
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <h3 className="text-base font-semibold text-green-900 mb-2 flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Specifications
+                    </h3>
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {componentToView.component_specification.split('.').map((spec, index) => {
+                        if (!spec.trim()) return null
+                        const [attribute, value] = spec.split(':').map(s => s.trim())
+                        if (!attribute || !value) return null
+                        return { attribute, value, originalIndex: index }
+                      })
+                      .filter(Boolean)
+                      .sort((a, b) => {
+                        const getLabSpecPriority = (attribute: string): number => {
+                          const attr = attribute.toLowerCase()
+                          if (attr.includes('dimension') || attr.includes('size')) return 10
+                          if (attr.includes('voltage') || attr.includes('power')) return 9
+                          if (attr.includes('current') || attr.includes('rating')) return 8
+                          if (attr.includes('material') || attr.includes('type')) return 7
+                          if (attr.includes('interface') || attr.includes('connection')) return 6
+                          if (attr.includes('package') || attr.includes('mounting')) return 5
+                          if (attr.includes('temperature') || attr.includes('operating')) return 4
+                          if (attr.includes('frequency') || attr.includes('speed')) return 3
+                          if (attr.includes('weight') || attr.includes('mass')) return 2
+                          return 1
+                        }
+                        return getLabSpecPriority(b.attribute) - getLabSpecPriority(a.attribute)
+                      })
+                      .map((spec, index) => (
+                        <div key={index} className="grid grid-cols-2 gap-2 text-xs border-b border-gray-100 pb-1">
+                          <div className="font-medium text-gray-600">{spec.attribute}</div>
+                          <div className="text-gray-700">{spec.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Purchase Details */}
                 <div className="bg-gray-50 rounded-lg p-3">
                   <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -2497,36 +2570,6 @@ export function ManageLabComponents() {
                       <Label className="text-xs font-medium text-gray-500">Purchase Value</Label>
                       <div className="text-sm text-gray-900">
                         {componentToView.purchase_value ? `${componentToView.purchase_currency} ${typeof componentToView.purchase_value === 'number' ? componentToView.purchase_value.toLocaleString() : componentToView.purchase_value}` : '-'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Audit Trail */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <h3 className="text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <History className="h-4 w-4" />
-                    Audit Trail
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Created By</Label>
-                      <div className="text-sm text-gray-900">{componentToView.created_by || '-'}</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Created At</Label>
-                      <div className="text-sm text-gray-900">
-                        {componentToView.created_at ? new Date(componentToView.created_at).toLocaleDateString() : '-'}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Last Modified By</Label>
-                      <div className="text-sm text-gray-900">{componentToView.modified_by || '-'}</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-500">Last Modified At</Label>
-                      <div className="text-sm text-gray-900">
-                        {componentToView.modified_at ? new Date(componentToView.modified_at).toLocaleDateString() : '-'}
                       </div>
                     </div>
                   </div>
