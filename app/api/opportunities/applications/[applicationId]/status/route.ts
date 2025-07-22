@@ -17,7 +17,8 @@ export async function PUT(req: NextRequest, { params }: { params: { applicationI
     include: { opportunity: true },
   });
   if (!application) return NextResponse.json({ error: 'Application not found' }, { status: 404 });
-  if (application.opportunity.facultyInChargeId !== userId) {
+  const facultyInChargeId = application.opportunity?.facultyInChargeId;
+  if (facultyInChargeId !== userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
   // Update status

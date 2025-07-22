@@ -257,7 +257,7 @@ export default function ManageOpportunity() {
                   </SelectTrigger>
                   <SelectContent>
                     {facultyOptions.map(faculty => (
-                      <SelectItem key={faculty.id} value={faculty.id}>
+                      <SelectItem key={faculty.userId} value={faculty.userId}>
                         {faculty.user.name} ({faculty.user.email})
                       </SelectItem>
                     ))}
@@ -280,21 +280,35 @@ export default function ManageOpportunity() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full p-0">
         {opportunities.length === 0 && <div>No opportunities found.</div>}
         {opportunities.map((opp) => (
-          <Card key={opp.id} className="border p-4 rounded">
+          <Card key={opp.id} className="border p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow bg-white">
             <CardContent>
-              <div className="font-bold text-lg">{opp.title} <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{opp.type}</span></div>
-              <div className="text-gray-600 mb-2">{opp.description}</div>
-              <div className="text-sm">Application Window: {opp.applicationStartDate?.slice(0,10)} to {opp.applicationEndDate?.slice(0,10)}</div>
-              <div className="text-sm">Capacity: {opp.capacity}</div>
-              <div className="text-sm">Status: {opp.status}</div>
-              <div className="text-sm">Applicants: {opp.applications?.length ?? 0}</div>
-              <div className="flex items-center gap-2 text-sm mb-1 mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-bold text-xl">{opp.title}</div>
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${opp.type === 'INTERN' ? 'bg-blue-100 text-blue-700' : opp.type === 'TA' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{opp.type}</span>
+              </div>
+              <div className="text-gray-600 mb-3">{opp.description}</div>
+              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div>
+                  <span className="font-medium">Application:</span>
+                  <span className="ml-1">{opp.applicationStartDate?.slice(0,10)} - {opp.applicationEndDate?.slice(0,10)}</span>
+                </div>
+                <div>
+                  <span className="font-medium">Capacity:</span>
+                  <span className="ml-1">{opp.capacity}</span>
+                </div>
+                <div>
+                  <span className="font-medium">Status:</span>
+                  <span className={`ml-1 ${opp.status === 'OPEN' ? 'text-green-600' : 'text-gray-600'}`}>{opp.status}</span>
+                </div>
+                <div>
+                  <span className="font-medium">Applicants:</span>
+                  <span className="ml-1">{opp.applications?.length ?? 0}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm mb-3">
                 <UserIcon className="h-4 w-4 text-gray-500" />
-                {opp.faculty?.user?.name && opp.faculty?.user?.email ? (
-                  <span>{opp.faculty.user.name} <span className="text-gray-400">({opp.faculty.user.email})</span></span>
-                ) : (
-                  <span>{opp.facultyInChargeId}</span>
-                )}
+                <span className="font-medium">{opp.facultyInCharge?.name || opp.faculty?.user?.name}</span>
+                <span className="text-gray-400">({opp.facultyInCharge?.email || opp.faculty?.user?.email})</span>
               </div>
               <div className="flex gap-2 mt-2">
                 <AlertDialog>
